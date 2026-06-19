@@ -30,6 +30,9 @@ jobs:
           cache-disabled: true
 
       - name: Decode keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           mkdir -p signing
           echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > signing/release.keystore
@@ -37,6 +40,11 @@ jobs:
             echo "Error: decoded keystore is empty. Check KEYSTORE_BASE64 secret."
             exit 1
           fi
+          echo "Decoded keystore size: $(stat -c%s signing/release.keystore) bytes"
+          keytool -list -v -keystore signing/release.keystore -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" || {
+            echo "Error: keystore verification failed. Check KEYSTORE_BASE64, KEY_ALIAS and KEYSTORE_PASSWORD."
+            exit 1
+          }
 
       - name: Build Release APK
         env:
