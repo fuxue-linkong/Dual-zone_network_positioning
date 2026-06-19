@@ -51,6 +51,15 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports
+            app/build/outputs
+
       - name: Rename APK
         run: |
           cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ github.event.inputs.tag }}.apk
