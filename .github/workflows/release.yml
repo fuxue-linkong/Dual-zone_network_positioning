@@ -7,6 +7,11 @@ on:
         description: 'Release tag（例如 v1.0.0）'
         required: true
         type: string
+      prerelease:
+        description: '是否为预发行版本'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -81,5 +86,6 @@ jobs:
           tag_name: ${{ github.event.inputs.tag }}
           files: RadioAreaLocator-${{ github.event.inputs.tag }}.apk
           generate_release_notes: true
+          prerelease: ${{ inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
