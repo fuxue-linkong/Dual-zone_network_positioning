@@ -1,13 +1,13 @@
 # 双区网络定位
 
-一款基于 Jetpack Compose 的 Android 应用，自动获取手机定位并计算：
+使用AI构建9Android 应用，自动获取手机定位并计算：
 
 - **CQ 分区**（CQ Zone）
 - **ITU 分区**（ITU Zone）
 - **梅登兰德定位**（Maidenhead Locator）
 
 同时自动将每次查询结果保存到本地历史记录。
-
+如有bug请议题中提出，或者发我的QQ（3252647738@qq.com）/outlook邮箱（fuxuelingkong@outlook.com）
 ## 功能
 
 1. 一键获取当前 GPS 坐标。
