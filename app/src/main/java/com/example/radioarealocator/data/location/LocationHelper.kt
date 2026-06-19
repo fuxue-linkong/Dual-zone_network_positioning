@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -147,9 +146,6 @@ class LocationHelper(private val context: Context) {
                     setWaitForAccurateLocation(false)
                     setMinUpdateIntervalMillis(500L)
                     setMaxUpdateDelayMillis(2000L)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        setGranularity(android.location.LocationRequest.GRANULARITY_COARSE)
-                    }
                 }.build()
 
                 val callback = object : com.google.android.gms.location.LocationCallback() {
