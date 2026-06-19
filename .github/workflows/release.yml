@@ -16,15 +16,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create and push tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ github.event.inputs.tag }}"
-          git push origin "${{ github.event.inputs.tag }}"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -33,9 +24,10 @@ jobs:
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.4'
+          cache-disabled: true
 
       - name: Decode keystore
         run: |
@@ -49,7 +41,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          gradle assembleRelease \
+          gradle assembleRelease --no-daemon --stacktrace \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
@@ -58,6 +50,13 @@ jobs:
       - name: Rename APK
         run: |
           cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ github.event.inputs.tag }}"
+          git push origin "${{ github.event.inputs.tag }}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
