@@ -32,7 +32,11 @@ jobs:
       - name: Decode keystore
         run: |
           mkdir -p signing
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > signing/release.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > signing/release.keystore
+          if [ ! -s signing/release.keystore ]; then
+            echo "Error: decoded keystore is empty. Check KEYSTORE_BASE64 secret."
+            exit 1
+          fi
 
       - name: Build Release APK
         env:
