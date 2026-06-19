@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Radio Area Locator</string>
+    <string name="action_refresh">刷新定位</string>
+    <string name="location_permission_required">需要定位权限才能获取当前位置</string>
+    <string name="grant_permission">授予权限</string>
+    <string name="cq_zone">CQ 分区</string>
+    <string name="itu_zone">ITU 分区</string>
+    <string name="maidenhead">梅登兰德定位</string>
+    <string name="latitude">纬度</string>
+    <string name="longitude">经度</string>
+    <string name="history">历史记录</string>
+    <string name="empty_history">暂无历史记录</string>
+    <string name="clear_history">清空历史</string>
+    <string name="locating">定位中…</string>
+    <string name="location_failed">定位失败，请检查 GPS 与网络</string>
+    <string name="open_settings">去设置</string>
+    <string name="tap_to_locate">点击刷新获取当前位置</string>
+</resources>
