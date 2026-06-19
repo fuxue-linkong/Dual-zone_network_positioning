@@ -70,6 +70,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
+    // Fragment (required for ActivityResultContracts on some dependency configurations)
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
