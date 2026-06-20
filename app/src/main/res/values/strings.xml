@@ -10,7 +10,7 @@
     <string name="longitude">经度</string>
     <string name="history">历史记录</string>
     <string name="empty_history">暂无历史记录</string>
-    <string name="clear_history">清空历史</string>
+    <string name="clear_history">删除全部历史</string>
     <string name="delete">删除</string>
     <string name="locating">定位中…</string>
     <string name="location_failed">定位失败，请检查 GPS 与网络</string>
