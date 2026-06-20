@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -151,11 +150,10 @@ private fun HistoryItem(record: HistoryRecord, onDelete: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = MaterialTheme.colorScheme.error
+            TextButton(onClick = onDelete) {
+                Text(
+                    text = stringResource(R.string.delete),
+                    color = MaterialTheme.colorScheme.error
                 )
             }
         }
