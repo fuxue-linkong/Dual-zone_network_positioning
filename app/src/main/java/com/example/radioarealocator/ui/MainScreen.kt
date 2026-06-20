@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -281,7 +280,7 @@ private fun SatelliteCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Public,
+                        imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
