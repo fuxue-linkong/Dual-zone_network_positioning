@@ -1,16 +1,15 @@
 package com.example.radioarealocator.logging
 
 import android.util.Log
-import org.apache.commons.logging.Log
 
 /**
- * 基于 Android [android.util.Log] 的 commons-logging [Log] 实现。
+ * 基于 Android [android.util.Log] 的 commons-logging [org.apache.commons.logging.Log] 实现。
  *
  * predict4java 依赖 commons-logging，但其默认的 LogFactoryImpl 在 Android 上
  * 发现日志实现时会抛 NullPointerException。本类提供一个直接可用的 Log 实现，
  * 通过 SPI 注册的 [AndroidLogFactory] 返回，绕过 LogFactoryImpl 的发现流程。
  */
-class AndroidLog(private val tag: String) : Log {
+class AndroidLog(private val tag: String) : org.apache.commons.logging.Log {
 
     override fun isFatalEnabled(): Boolean = true
     override fun isErrorEnabled(): Boolean = true
