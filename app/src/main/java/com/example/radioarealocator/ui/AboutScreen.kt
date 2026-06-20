@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -84,6 +83,14 @@ fun AboutScreen(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
+            Text(
+                text = "作者",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Image(
                 painter = painterResource(R.drawable.head_portrait),
                 contentDescription = null,
@@ -95,18 +102,25 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.app_name),
+                text = "凌空",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = stringResource(R.string.version_info, versionName),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = stringResource(R.string.version_info, versionName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -151,24 +165,6 @@ fun AboutScreen(
                     val intent = Intent(
                         Intent.ACTION_VIEW,
                         Uri.parse("https://github.com/fuxue-linkong/Dual-zone_network_positioning")
-                    )
-                    context.startActivity(intent)
-                }
-            )
-
-            AboutLinkItem(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = null
-                    )
-                },
-                title = "Telegram 频道",
-                onClick = {
-                    // 如需添加 Telegram 链接，请替换下方 URL
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://t.me/")
                     )
                     context.startActivity(intent)
                 }
