@@ -42,6 +42,11 @@ class SatellitePredictor {
                 if (modes.isEmpty()) continue
 
                 val predictor = PassPredictor(tle, groundStation)
+
+                // 判断当前是否在境内（仰角 > 0）
+                val currentPos = predictor.getSatPos(now)
+                val isCurrentlyVisible = currentPos != null && currentPos.elevation > 0
+
                 val nextPass = predictor.nextSatPass(now, false)
                 if (nextPass == null || nextPass.startTime == null || nextPass.endTime == null) continue
 
@@ -57,7 +62,8 @@ class SatellitePredictor {
                         losTime = nextPass.endTime.toInstant(),
                         maxElevation = nextPass.maxEl,
                         aosAzimuth = nextPass.aosAzimuth,
-                        losAzimuth = nextPass.losAzimuth
+                        losAzimuth = nextPass.losAzimuth,
+                        isCurrentlyVisible = isCurrentlyVisible
                     )
                 )
             } catch (_: SatNotFoundException) {
@@ -67,8 +73,12 @@ class SatellitePredictor {
             }
         }
 
+        // 当前在境内的优先显示，其次按 AOS 时间排序
         return passes
-            .sortedBy { it.aosTime }
+            .sortedWith(
+                compareByDescending<SatelliteInfo> { it.isCurrentlyVisible }
+                    .thenBy { it.aosTime }
+            )
             .take(limit)
     }
 

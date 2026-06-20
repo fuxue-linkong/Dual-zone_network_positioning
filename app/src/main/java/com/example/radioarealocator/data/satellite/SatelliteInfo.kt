@@ -13,5 +13,7 @@ data class SatelliteInfo(
     val losTime: Instant,
     val maxElevation: Double,
     val aosAzimuth: Int,
-    val losAzimuth: Int
+    val losAzimuth: Int,
+    /** 当前是否正在境内（仰角 > 0） */
+    val isCurrentlyVisible: Boolean = false
 )
