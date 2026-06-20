@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +44,7 @@ import java.util.Locale
 fun HistoryScreen(
     history: List<HistoryRecord>,
     onClearHistory: () -> Unit,
+    onDeleteRecord: (Long) -> Unit,
     onBackClick: () -> Unit
 ) {
     Scaffold(
@@ -94,7 +97,10 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(history, key = { it.id }) { record ->
-                    HistoryItem(record = record)
+                    HistoryItem(
+                        record = record,
+                        onDelete = { onDeleteRecord(record.id) }
+                    )
                 }
             }
         }
@@ -106,38 +112,52 @@ private val timeFormatter = DateTimeFormatter
     .withZone(ZoneId.systemDefault())
 
 @Composable
-private fun HistoryItem(record: HistoryRecord) {
+private fun HistoryItem(record: HistoryRecord, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = timeFormatter.format(record.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "CQ ${record.cqZone ?: "-"} / ITU ${record.ituZone ?: "-"}",
-                    fontWeight = FontWeight.Bold
+                    text = timeFormatter.format(record.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "CQ ${record.cqZone ?: "-"} / ITU ${record.ituZone ?: "-"}",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = record.maidenhead.uppercase(),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
-                    text = record.maidenhead.uppercase(),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "%.5f°, %.5f°".format(record.latitude, record.longitude),
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-            Text(
-                text = "%.5f°, %.5f°".format(record.latitude, record.longitude),
-                style = MaterialTheme.typography.bodySmall
-            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }

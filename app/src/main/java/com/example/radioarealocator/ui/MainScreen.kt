@@ -80,6 +80,7 @@ fun MainScreen(
             HistoryScreen(
                 history = history,
                 onClearHistory = { viewModel.clearHistory() },
+                onDeleteRecord = { viewModel.deleteHistoryRecord(it) },
                 onBackClick = { showHistory = false }
             )
             return

@@ -25,4 +25,8 @@ class HistoryRepository(private val dao: HistoryDao) {
     suspend fun clearAll() {
         dao.clearAll()
     }
+
+    suspend fun deleteById(id: Long) {
+        dao.deleteById(id)
+    }
 }

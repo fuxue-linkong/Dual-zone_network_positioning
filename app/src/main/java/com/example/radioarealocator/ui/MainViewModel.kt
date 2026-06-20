@@ -104,6 +104,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteHistoryRecord(id: Long) {
+        viewModelScope.launch {
+            repository.deleteById(id)
+        }
+    }
+
     fun dismissError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
