@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
@@ -49,6 +50,13 @@ fun MainScreen(
     val history by viewModel.history.collectAsState()
     var showAbout by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = showAbout || showHistory) {
+        when {
+            showAbout -> showAbout = false
+            showHistory -> showHistory = false
+        }
+    }
 
     when {
         showAbout -> {
