@@ -12,7 +12,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
- * 卫星 TLE 数据源，支持 CelesTrak 和 SatNOGS 双源获取并去重。
+ * 卫星 TLE 数据源，同时从 CelesTrak 和 SatNOGS 获取并合并去重。
  */
 class SatelliteDataSource {
 
@@ -23,7 +23,7 @@ class SatelliteDataSource {
 
     /**
      * 获取业余卫星 TLE 列表。
-     * 并行从 CelesTrak 和 SatNOGS 拉取，合并去重（按 NORAD 编号）。
+     * 同时从 CelesTrak 和 SatNOGS 拉取，合并去重（按 NORAD 编号）。
      * 任一源失败时使用另一个源的结果。
      */
     suspend fun fetchAmateurTLEs(): List<TLE> = withContext(Dispatchers.IO) {
@@ -72,11 +72,36 @@ class SatelliteDataSource {
     }
 
     /**
-     * 从 SatNOGS 获取业余卫星 TLE（JSON 格式）。
+     * 从 SatNOGS 获取我们关心的卫星 TLE（JSON 格式）。
+     * 只查询 SatelliteCatalog 中的卫星，避免下载全部数据。
      */
-    private fun fetchSatnogsTLEs(): List<TLE> {
+    private suspend fun fetchSatnogsTLEs(): List<TLE> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            // 并行查询每颗卫星
+            val deferreds = SatelliteCatalog.catalogNumbers.map { noradId ->
+                async { runCatching { fetchSingleSatnogsTLE(noradId) } }
+            }
+            val results = deferreds.map { it.await() }
+
+            val tles = mutableListOf<TLE>()
+            for (result in results) {
+                result.getOrNull()?.let { tles.add(it) }
+            }
+
+            if (tles.isEmpty()) {
+                val firstError = results.firstOrNull { it.isFailure }?.exceptionOrNull()
+                throw IOException("SatNOGS 查询失败：${firstError?.message ?: "无数据"}")
+            }
+            tles
+        }
+    }
+
+    /**
+     * 从 SatNOGS 查询单颗卫星的 TLE。
+     */
+    private fun fetchSingleSatnogsTLE(noradCatId: Int): TLE {
         val request = Request.Builder()
-            .url(SATNOGS_URL)
+            .url("$SATNOGS_URL?norad_cat_id=$noradCatId&format=json")
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -84,7 +109,20 @@ class SatelliteDataSource {
                 throw IOException("SatNOGS 请求失败：${response.code}")
             }
             val body = response.body?.string() ?: throw IOException("SatNOGS 响应为空")
-            return parseJsonTLEs(body)
+            val array = JSONArray(body)
+            if (array.length() == 0) {
+                throw IOException("SatNOGS 无 NORAD $noradCatId 的数据")
+            }
+            val obj = array.optJSONObject(0)
+                ?: throw IOException("SatNOGS 响应格式异常")
+
+            val tle0 = obj.optString("tle0", "")
+            val tle1 = obj.optString("tle1", "")
+            val tle2 = obj.optString("tle2", "")
+            if (tle1.isBlank() || tle2.isBlank()) {
+                throw IOException("SatNOGS TLE 数据不完整")
+            }
+            return TLE(arrayOf(tle0, tle1, tle2))
         }
     }
 
@@ -118,32 +156,6 @@ class SatelliteDataSource {
             }
 
             i = line2Index + 1
-        }
-        return result
-    }
-
-    /**
-     * 解析 SatNOGS JSON 格式 TLE。
-     * JSON 数组，每个元素包含 tle0（名称）、tle1（Line1）、tle2（Line2）。
-     */
-    private fun parseJsonTLEs(json: String): List<TLE> {
-        val result = mutableListOf<TLE>()
-        try {
-            val array = JSONArray(json)
-            for (i in 0 until array.length()) {
-                val obj = array.optJSONObject(i) ?: continue
-                val tle0 = obj.optString("tle0", "")
-                val tle1 = obj.optString("tle1", "")
-                val tle2 = obj.optString("tle2", "")
-                if (tle1.isBlank() || tle2.isBlank()) continue
-                try {
-                    result.add(TLE(arrayOf(tle0, tle1, tle2)))
-                } catch (_: IllegalArgumentException) {
-                    // 跳过解析失败的 TLE
-                }
-            }
-        } catch (e: Exception) {
-            throw IOException("SatNOGS JSON 解析失败：${e.message}")
         }
         return result
     }
