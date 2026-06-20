@@ -60,7 +60,10 @@ fun HistoryScreen(
                 actions = {
                     if (history.isNotEmpty()) {
                         TextButton(onClick = onClearHistory) {
-                            Text(stringResource(R.string.clear_history))
+                            Text(
+                                text = stringResource(R.string.clear_history),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     }
                 },
