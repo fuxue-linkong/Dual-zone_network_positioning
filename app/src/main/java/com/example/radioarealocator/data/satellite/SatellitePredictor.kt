@@ -15,7 +15,7 @@ class SatellitePredictor {
     /**
      * 计算指定地面站位置未来一段时间内的卫星过境信息。
      *
-     * @param tles 卫星 TLE 列表
+     * @param sourcedTles 带来源标记的卫星 TLE 列表
      * @param latitude 地面站纬度（度）
      * @param longitude 地面站经度（度）
      * @param altitude 地面站海拔（米）
@@ -23,11 +23,11 @@ class SatellitePredictor {
      * @param hoursAhead 预测未来小时数
      */
     fun predictUpcomingPasses(
-        tles: List<TLE>,
+        sourcedTles: List<SourcedTLE>,
         latitude: Double,
         longitude: Double,
         altitude: Double = 0.0,
-        limit: Int = 10,
+        limit: Int = 25,
         hoursAhead: Int = 48
     ): List<SatelliteInfo> {
         val groundStation = GroundStationPosition(latitude, longitude, altitude)
@@ -36,8 +36,9 @@ class SatellitePredictor {
 
         val passes = mutableListOf<SatelliteInfo>()
 
-        for (tle in tles) {
+        for (sourcedTle in sourcedTles) {
             try {
+                val tle = sourcedTle.tle
                 val modes = SatelliteCatalog.MODES_BY_CATALOG_NUMBER[tle.catnum].orEmpty()
                 if (modes.isEmpty()) continue
 
@@ -68,7 +69,8 @@ class SatellitePredictor {
                         maxElevation = nextPass.maxEl,
                         aosAzimuth = nextPass.aosAzimuth,
                         losAzimuth = nextPass.losAzimuth,
-                        isCurrentlyVisible = isCurrentlyVisible
+                        isCurrentlyVisible = isCurrentlyVisible,
+                        source = sourcedTle.source
                     )
                 )
             } catch (_: SatNotFoundException) {

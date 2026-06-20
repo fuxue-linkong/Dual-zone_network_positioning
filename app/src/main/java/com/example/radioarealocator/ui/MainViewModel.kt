@@ -88,10 +88,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             val tles = satelliteDataSource.fetchAmateurTLEs()
             satellitePredictor.predictUpcomingPasses(
-                tles = tles,
+                sourcedTles = tles,
                 latitude = latitude,
-                longitude = longitude,
-                limit = 25
+                longitude = longitude
             )
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(satelliteError = e.message)

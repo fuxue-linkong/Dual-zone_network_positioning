@@ -12,6 +12,14 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
+ * 带 TLE 数据来源标记的包装类。
+ */
+data class SourcedTLE(
+    val tle: TLE,
+    val source: String // "CT" 或 "SNOGS"
+)
+
+/**
  * 卫星 TLE 数据源，同时从 CelesTrak 和 SatNOGS 获取并合并去重。
  */
 class SatelliteDataSource {
@@ -24,9 +32,10 @@ class SatelliteDataSource {
     /**
      * 获取业余卫星 TLE 列表。
      * 同时从 CelesTrak 和 SatNOGS 拉取，合并去重（按 NORAD 编号）。
+     * 同时出现在两个源的卫星标记为 ALL。
      * 任一源失败时使用另一个源的结果。
      */
-    suspend fun fetchAmateurTLEs(): List<TLE> = withContext(Dispatchers.IO) {
+    suspend fun fetchAmateurTLEs(): List<SourcedTLE> = withContext(Dispatchers.IO) {
         coroutineScope {
             val celestrakDeferred = async { runCatching { fetchCelestrakTLEs() } }
             val satnogsDeferred = async { runCatching { fetchSatnogsTLEs() } }
@@ -41,13 +50,19 @@ class SatelliteDataSource {
                 )
             }
 
-            // 合并去重，按 NORAD 编号保留第一个出现的
-            val merged = LinkedHashMap<Int, TLE>()
-            celestrakResult.getOrNull()?.forEach { tle ->
-                merged.putIfAbsent(tle.catnum, tle)
+            // 按 NORAD 编号合并，记录来源
+            val merged = LinkedHashMap<Int, SourcedTLE>()
+            celestrakResult.getOrNull()?.forEach { (tle) ->
+                merged[tle.catnum] = SourcedTLE(tle, "CT")
             }
-            satnogsResult.getOrNull()?.forEach { tle ->
-                merged.putIfAbsent(tle.catnum, tle)
+            satnogsResult.getOrNull()?.forEach { (tle) ->
+                val existing = merged[tle.catnum]
+                if (existing == null) {
+                    merged[tle.catnum] = SourcedTLE(tle, "SNOGS")
+                } else {
+                    // 两个源都有，标记为 ALL
+                    merged[tle.catnum] = SourcedTLE(existing.tle, "ALL")
+                }
             }
 
             merged.values.toList()
@@ -57,7 +72,7 @@ class SatelliteDataSource {
     /**
      * 从 CelesTrak 获取业余卫星 TLE（标准三行文本格式）。
      */
-    private fun fetchCelestrakTLEs(): List<TLE> {
+    private fun fetchCelestrakTLEs(): List<SourcedTLE> {
         val request = Request.Builder()
             .url(CELESTRAK_URL)
             .build()
@@ -67,7 +82,7 @@ class SatelliteDataSource {
                 throw IOException("CelesTrak 请求失败：${response.code}")
             }
             val body = response.body?.string() ?: throw IOException("CelesTrak 响应为空")
-            return parseTextTLEs(body)
+            return parseTextTLEs(body).map { SourcedTLE(it, "CT") }
         }
     }
 
@@ -75,7 +90,7 @@ class SatelliteDataSource {
      * 从 SatNOGS 获取我们关心的卫星 TLE（JSON 格式）。
      * 只查询 SatelliteCatalog 中的卫星，避免下载全部数据。
      */
-    private suspend fun fetchSatnogsTLEs(): List<TLE> = withContext(Dispatchers.IO) {
+    private suspend fun fetchSatnogsTLEs(): List<SourcedTLE> = withContext(Dispatchers.IO) {
         coroutineScope {
             // 并行查询每颗卫星
             val deferreds = SatelliteCatalog.catalogNumbers.map { noradId ->
@@ -83,9 +98,9 @@ class SatelliteDataSource {
             }
             val results = deferreds.map { it.await() }
 
-            val tles = mutableListOf<TLE>()
+            val tles = mutableListOf<SourcedTLE>()
             for (result in results) {
-                result.getOrNull()?.let { tles.add(it) }
+                result.getOrNull()?.let { tles.add(SourcedTLE(it, "SNOGS")) }
             }
 
             if (tles.isEmpty()) {

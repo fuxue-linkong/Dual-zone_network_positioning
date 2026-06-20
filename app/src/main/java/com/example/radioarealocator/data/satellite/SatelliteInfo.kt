@@ -15,5 +15,7 @@ data class SatelliteInfo(
     val aosAzimuth: Int,
     val losAzimuth: Int,
     /** 当前是否正在境内（仰角 > 0） */
-    val isCurrentlyVisible: Boolean = false
+    val isCurrentlyVisible: Boolean = false,
+    /** 数据来源标签：CT / SNOGS / ALL */
+    val source: String = ""
 )

@@ -400,6 +400,10 @@ private fun SatelliteRow(satellite: SatelliteInfo) {
                         MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )
+                if (satellite.source.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    SourceChip(source = satellite.source)
+                }
             }
             Text(
                 text = "${stringResource(R.string.max_elevation)} ${satellite.maxElevation.toInt()}°",
@@ -476,6 +480,28 @@ private fun formatRemainingTime(seconds: Long): String {
         "${minutes}分${remainingSeconds}秒"
     } else {
         "${remainingSeconds}秒"
+    }
+}
+
+@Composable
+private fun SourceChip(source: String) {
+    val (bgColor, contentColor) = when (source) {
+        "CT" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        "SNOGS" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        "ALL" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .background(color = bgColor, shape = MaterialTheme.shapes.small)
+    ) {
+        Text(
+            text = source,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+        )
     }
 }
 
