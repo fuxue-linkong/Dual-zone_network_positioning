@@ -13,8 +13,15 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import java.util.Collections
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -53,41 +60,109 @@ class LocationHelper(private val context: Context) {
             throw SecurityException("缺少定位权限")
         }
 
-        val errors = mutableListOf<String>()
+        val errors = Collections.synchronizedList(mutableListOf<String>())
 
-        // 1. 优先尝试 Fused getCurrentLocation，低精度优先（兼容部分厂商魔改系统）
-        runCatching {
-            withTimeout(8_000) { requestFusedCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY) }
-        }.onSuccess { return it }
-            .onFailure { errors.add("Fused低精度: ${it.message ?: "失败"}") }
+        return try {
+            withTimeout(10_000) {
+                coroutineScope {
+                    // 并行启动所有定位策略，取最快成功的一个
+                    val strategies = listOf(
+                        async { fetchFusedLastLocation(errors) },
+                        async {
+                            fetchFusedCurrentLocation(
+                                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                                5_000,
+                                "Fused低精度",
+                                errors
+                            )
+                        },
+                        async {
+                            fetchFusedCurrentLocation(
+                                Priority.PRIORITY_HIGH_ACCURACY,
+                                4_000,
+                                "Fused高精度",
+                                errors
+                            )
+                        },
+                        async { fetchLocationManagerLocation(6_000, errors) },
+                        async { fetchSingleFusedUpdate(4_000, errors) }
+                    )
 
-        runCatching {
-            withTimeout(8_000) { requestFusedCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY) }
-        }.onSuccess { return it }
-            .onFailure { errors.add("Fused高精度: ${it.message ?: "失败"}") }
+                    val pending = strategies.toMutableList()
+                    while (pending.isNotEmpty()) {
+                        val done = select<Deferred<Location?>> {
+                            pending.forEach { deferred ->
+                                deferred.onAwait { deferred }
+                            }
+                        }
+                        val location = done.await()
+                        if (location != null) {
+                            pending.forEach { it.cancel() }
+                            return@coroutineScope location
+                        }
+                        pending.remove(done)
+                    }
 
-        // 2. 尝试 Fused lastLocation
-        runCatching {
-            withTimeout(5_000) { requestFusedLastLocation() }
-        }.onSuccess { return it }
-            .onFailure { errors.add("Fused最近位置: ${it.message ?: "失败"}") }
+                    throw Exception("所有定位方式均失败")
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            throw Exception("定位超时，请检查手机是否开启 GPS/网络定位")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val detail = errors.joinToString("; ")
+            throw Exception(
+                "无法获取定位，请检查手机是否开启 GPS/网络定位，或检查是否禁止了本应用定位权限。详情: $detail"
+            )
+        }
+    }
 
-        // 3. 尝试原生 LocationManager（很多国产厂商魔改后此接口更稳定）
-        runCatching {
-            withTimeout(12_000) { requestLocationManagerLocation() }
-        }.onSuccess { return it }
-            .onFailure { errors.add("系统定位: ${it.message ?: "失败"}") }
+    private suspend fun fetchFusedLastLocation(errors: MutableList<String>): Location? {
+        return try {
+            withTimeout(1_500) { requestFusedLastLocation() }
+        } catch (e: Exception) {
+            errors.add("Fused最近位置: ${e.message ?: "失败"}")
+            null
+        }
+    }
 
-        // 4. 最后再试一次 Fused requestLocationUpdates（持续监听一次）
-        runCatching {
-            withTimeout(10_000) { requestSingleFusedUpdate() }
-        }.onSuccess { return it }
-            .onFailure { errors.add("Fused单次更新: ${it.message ?: "失败"}") }
+    private suspend fun fetchFusedCurrentLocation(
+        priority: Int,
+        timeoutMs: Long,
+        name: String,
+        errors: MutableList<String>
+    ): Location? {
+        return try {
+            withTimeout(timeoutMs) { requestFusedCurrentLocation(priority) }
+        } catch (e: Exception) {
+            errors.add("$name: ${e.message ?: "失败"}")
+            null
+        }
+    }
 
-        val detail = errors.joinToString("; ")
-        throw Exception(
-            "无法获取定位，请检查手机是否开启 GPS/网络定位，或检查是否禁止了本应用定位权限。详情: $detail"
-        )
+    private suspend fun fetchSingleFusedUpdate(
+        timeoutMs: Long,
+        errors: MutableList<String>
+    ): Location? {
+        return try {
+            withTimeout(timeoutMs) { requestSingleFusedUpdate() }
+        } catch (e: Exception) {
+            errors.add("Fused单次更新: ${e.message ?: "失败"}")
+            null
+        }
+    }
+
+    private suspend fun fetchLocationManagerLocation(
+        timeoutMs: Long,
+        errors: MutableList<String>
+    ): Location? {
+        return try {
+            withTimeout(timeoutMs) { requestLocationManagerLocation() }
+        } catch (e: Exception) {
+            errors.add("系统定位: ${e.message ?: "失败"}")
+            null
+        }
     }
 
     private suspend fun requestFusedCurrentLocation(priority: Int): Location =
