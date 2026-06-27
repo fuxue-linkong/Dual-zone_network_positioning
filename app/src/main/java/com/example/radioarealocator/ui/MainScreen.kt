@@ -431,6 +431,10 @@ private fun SatelliteRow(satellite: SatelliteInfo) {
                     Spacer(modifier = Modifier.width(6.dp))
                     SourceChip(source = satellite.source)
                 }
+                if (satellite.status.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    StatusChip(status = satellite.status)
+                }
             }
             Text(
                 text = "${stringResource(R.string.max_elevation)} ${satellite.maxElevation.toInt()}°",
@@ -524,6 +528,36 @@ private fun SourceChip(source: String) {
     ) {
         Text(
             text = source,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+        )
+    }
+}
+
+@Composable
+private fun StatusChip(status: String) {
+    val displayText = when (status) {
+        "Heard" -> stringResource(R.string.status_heard)
+        "Telemetry Only" -> stringResource(R.string.status_telemetry_only)
+        "Not Heard" -> stringResource(R.string.status_not_heard)
+        "Crew Active" -> stringResource(R.string.status_crew_active)
+        else -> status
+    }
+    val (bgColor, contentColor) = when (status) {
+        "Heard" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .background(color = bgColor, shape = MaterialTheme.shapes.small)
+    ) {
+        Text(
+            text = displayText,
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
             modifier = Modifier

@@ -17,5 +17,7 @@ data class SatelliteInfo(
     /** 当前是否正在境内（仰角 > 0） */
     val isCurrentlyVisible: Boolean = false,
     /** 数据来源标签：CT / SNOGS / ALL */
-    val source: String = ""
+    val source: String = "",
+    /** AMSAT 状态报告：Heard / Telemetry Only / Not Heard / Crew Active */
+    val status: String = ""
 )

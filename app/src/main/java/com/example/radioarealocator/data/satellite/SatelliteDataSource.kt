@@ -16,7 +16,8 @@ import java.util.concurrent.TimeUnit
  */
 data class SourcedTLE(
     val tle: TLE,
-    val source: String // "CT" 或 "SNOGS"
+    val source: String, // "CT" / "SNOGS" / "ALL"
+    val status: String = "" // AMSAT 状态：Heard / Telemetry Only / Not Heard / Crew Active
 )
 
 /**
@@ -29,11 +30,15 @@ class SatelliteDataSource {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    private val amsatStatusApi = AmsatStatusApiService()
+
     /**
      * 获取业余卫星 TLE 列表。
      * 同时从 CelesTrak 和 SatNOGS 拉取，合并去重（按 NORAD 编号）。
      * 同时出现在两个源的卫星标记为 ALL。
      * 任一源失败时使用另一个源的结果。
+     *
+     * 还会从 AMSAT Satellite Status API 获取每颗卫星的当前状态并附加到结果中。
      *
      * @param source 数据来源过滤："ALL" 全部, "CT" 仅 CelesTrak, "SNOGS" 仅 SatNOGS
      */
@@ -41,9 +46,11 @@ class SatelliteDataSource {
         coroutineScope {
             val celestrakDeferred = async { runCatching { fetchCelestrakTLEs() } }
             val satnogsDeferred = async { runCatching { fetchSatnogsTLEs() } }
+            val amsatStatusDeferred = async { runCatching { amsatStatusApi.fetchStatusSummaries() } }
 
             val celestrakResult = celestrakDeferred.await()
             val satnogsResult = satnogsDeferred.await()
+            val amsatStatusResult = amsatStatusDeferred.await()
 
             if (celestrakResult.isFailure && satnogsResult.isFailure) {
                 throw IOException(
@@ -75,7 +82,14 @@ class SatelliteDataSource {
                     .map { SourcedTLE(it.tle, "SNOGS") }
                 else -> merged.values.toList()
             }
-            filtered
+
+            // 附加 AMSAT 状态（失败时不影响 TLE 结果）
+            val statusMap = amsatStatusResult.getOrNull() ?: emptyMap()
+            filtered.map { sourcedTle ->
+                val amsatName = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER[sourcedTle.tle.catnum]
+                val status = if (amsatName != null) statusMap[amsatName] ?: "" else ""
+                sourcedTle.copy(status = status)
+            }
         }
     }
 

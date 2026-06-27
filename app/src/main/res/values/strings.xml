@@ -33,4 +33,8 @@
     <string name="satellite_need_location">获取定位后将显示近期过境卫星</string>
     <string name="no_satellites">暂无近期过境卫星</string>
     <string name="satellite_load_failed">卫星信息加载失败：%s</string>
+    <string name="status_heard">活跃</string>
+    <string name="status_telemetry_only">仅遥测</string>
+    <string name="status_not_heard">无信号</string>
+    <string name="status_crew_active">机组活跃</string>
 </resources>

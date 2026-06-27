@@ -39,4 +39,31 @@ object SatelliteCatalog {
 
     /** 我们关心的所有 NORAD 编号集合 */
     val catalogNumbers: Set<Int> get() = MODES_BY_CATALOG_NUMBER.keys
+
+    /**
+     * TLE 名称到 AMSAT 状态 API 名称的映射。
+     * AMSAT API 使用带模式的名称（如 "AO-91_[FM]"），而 TLE 名称可能不同。
+     */
+    val AMSAT_STATUS_NAME_BY_CATALOG_NUMBER: Map<Int, String> = mapOf(
+        25544 to "ISS_[FM]",
+        43017 to "AO-91_[FM]",
+        43137 to "AO-92_[FM]",
+        27607 to "SO-50_[FM]",
+        22825 to "AO-27_[FM]",
+        43678 to "PO-101_[FM]",
+        40908 to "LilacSat-2_[FM]",
+        7530 to "AO-7_[U/v]",
+        24278 to "FO-29_[V/u]",
+        39417 to "AO-73_[U/v]",
+        42017 to "EO-88_[U/v]",
+        43854 to "JO-97_[U/v]",
+        42761 to "CAS-4A_[U/v]",
+        42759 to "CAS-4B_[U/v]",
+        40903 to "XW-2A_[U/v]",
+        40911 to "XW-2B_[U/v]",
+        40906 to "XW-2C_[U/v]",
+        40907 to "XW-2D_[U/v]",
+        40910 to "XW-2F_[U/v]",
+        43879 to "D-Star_ONE_[DStar]"
+    )
 }

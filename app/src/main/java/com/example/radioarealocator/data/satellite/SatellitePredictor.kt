@@ -70,7 +70,8 @@ class SatellitePredictor {
                         aosAzimuth = nextPass.aosAzimuth,
                         losAzimuth = nextPass.losAzimuth,
                         isCurrentlyVisible = isCurrentlyVisible,
-                        source = sourcedTle.source
+                        source = sourcedTle.source,
+                        status = sourcedTle.status
                     )
                 )
             } catch (_: SatNotFoundException) {
