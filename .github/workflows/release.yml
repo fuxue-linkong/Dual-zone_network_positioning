@@ -7,19 +7,6 @@ on:
         description: 'Release tag（例如 v1.0.0）'
         required: true
         type: string
-      version_name:
-        description: '版本名称（例如 1.0.0），留空则自动从 tag 推断'
-        required: false
-        type: string
-      version_code:
-        description: '版本代号（整数），留空则自动在现有基础上 +1'
-        required: false
-        type: string
-      commit_version:
-        description: '是否将版本更新提交回仓库'
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   build:
@@ -50,31 +37,6 @@ jobs:
       - name: Set JAVA_HOME for Gradle
         run: |
           echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
-
-      - name: Update version
-        id: version
-        run: |
-          TAG="${{ github.event.inputs.tag }}"
-          VERSION_NAME="${{ github.event.inputs.version_name }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
-
-          # 推断 version_name
-          if [ -z "$VERSION_NAME" ]; then
-            VERSION_NAME="${TAG#v}"
-          fi
-
-          # 推断 version_code
-          if [ -z "$VERSION_CODE" ]; then
-            CURRENT_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts)
-            VERSION_CODE=$((CURRENT_CODE + 1))
-          fi
-
-          sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
-          sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
-
-          echo "Updated versionCode=$VERSION_CODE, versionName=$VERSION_NAME"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Decode keystore
         env:
@@ -114,15 +76,6 @@ jobs:
       - name: Rename APK
         run: |
           cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ github.event.inputs.tag }}.apk
-
-      - name: Commit version bump
-        if: ${{ github.event.inputs.commit_version == 'true' }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/build.gradle.kts
-          git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }})"
-          git push origin HEAD:main
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
