@@ -71,6 +71,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
 
     // Fragment (required for ActivityResultContracts on some dependency configurations)
     implementation("androidx.fragment:fragment-ktx:1.8.6")
