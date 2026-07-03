@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -30,15 +30,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
@@ -52,6 +51,8 @@ import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -67,89 +68,107 @@ fun MainScreen(
     onRequestPermission: () -> Unit
 ) {
     val uiState by viewModel.uiState
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showAbout by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showAbout || showSettings) {
-        when {
-            showAbout -> showAbout = false
-            showSettings -> showSettings = false
-        }
+    BackHandler(enabled = showAbout) {
+        showAbout = false
     }
 
-    when {
-        showAbout -> {
-            AboutScreen(onBackClick = { showAbout = false })
-            return
-        }
-
-        showSettings -> {
-            SettingsScreen(
-                satelliteSource = viewModel.satelliteSource.value,
-                onSourceSelected = { viewModel.setSatelliteSource(it) },
-                onBackClick = { showSettings = false }
-            )
-            return
-        }
+    if (showAbout) {
+        AboutScreen(onBackClick = { showAbout = false })
+        return
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(R.string.app_name),
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings)
-                        )
-                    }
-                    IconButton(onClick = { showAbout = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = stringResource(R.string.about)
-                        )
-                    }
-                }
+                title = stringResource(
+                    if (selectedTab == 0) R.string.app_name else R.string.settings
+                )
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = Icons.Default.Home,
+                    label = stringResource(R.string.home)
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = Icons.Default.Settings,
+                    label = stringResource(R.string.settings)
+                )
+            }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
-        ) {
-            item {
-                LocationStatusCard(
-                    isLoading = uiState.isLoading,
-                    result = uiState.result,
-                    hasPermission = viewModel.hasLocationPermission,
-                    onRequestPermission = onRequestPermission,
-                    onRefresh = { viewModel.refreshLocation() }
-                )
-            }
+        if (selectedTab == 0) {
+            HomeContent(
+                uiState = uiState,
+                hasLocationPermission = viewModel.hasLocationPermission,
+                onRequestPermission = onRequestPermission,
+                onRefresh = { viewModel.refreshLocation() },
+                onDismissError = { viewModel.dismissError() },
+                contentPadding = padding
+            )
+        } else {
+            SettingsScreen(
+                satelliteSource = viewModel.satelliteSource.value,
+                onSourceSelected = { viewModel.setSatelliteSource(it) },
+                onAboutClick = { showAbout = true },
+                contentPadding = padding
+            )
+        }
+    }
+}
 
-            if (uiState.result != null) {
-                item {
-                    ZoneInfoCard(result = uiState.result!!)
-                }
-            }
+@Composable
+private fun HomeContent(
+    uiState: MainUiState,
+    hasLocationPermission: Boolean,
+    onRequestPermission: () -> Unit,
+    onRefresh: () -> Unit,
+    onDismissError: () -> Unit,
+    contentPadding: PaddingValues
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+    ) {
+        item {
+            LocationStatusCard(
+                isLoading = uiState.isLoading,
+                result = uiState.result,
+                hasPermission = hasLocationPermission,
+                onRequestPermission = onRequestPermission,
+                onRefresh = onRefresh
+            )
+        }
 
+        if (uiState.result != null) {
             item {
-                SatelliteSection(
-                    isLoading = uiState.isSatelliteLoading,
-                    satellites = uiState.satellites,
-                    satelliteError = uiState.satelliteError,
-                    hasLocation = uiState.result != null
-                )
+                ZoneInfoCard(result = uiState.result!!)
             }
         }
 
-        uiState.error?.let { message ->
-            ErrorDialog(message = message, onDismiss = { viewModel.dismissError() })
+        item {
+            SatelliteSection(
+                isLoading = uiState.isSatelliteLoading,
+                satellites = uiState.satellites,
+                satelliteError = uiState.satelliteError,
+                hasLocation = uiState.result != null
+            )
         }
+    }
+
+    uiState.error?.let { message ->
+        ErrorDialog(message = message, onDismiss = onDismissError)
     }
 }
 
