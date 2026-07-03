@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]' }}
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,9 +38,14 @@ jobs:
         run: |
           echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
 
+      - name: Clean old CI logs
+        run: |
+          mkdir -p log/ci
+          rm -f log/ci/*
+
       - name: Build Debug APK
         run: |
-          gradle assembleDebug --no-daemon --stacktrace
+          gradle assembleDebug --no-daemon --stacktrace --info 2>&1 | tee log/ci/build.log
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -56,3 +61,18 @@ jobs:
           path: |
             app/build/reports
             app/build/outputs
+
+      - name: Commit and push CI log
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add log/ci/
+          if git diff --cached --quiet; then
+            echo "No log changes to commit"
+          else
+            git commit -m "ci: upload latest build log"
+            git push
+          fi
