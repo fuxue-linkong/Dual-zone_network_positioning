@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -17,11 +17,10 @@ import com.example.radioarealocator.R
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.preference.DropdownPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -30,6 +29,14 @@ fun SettingsScreen(
     onSourceSelected: (String) -> Unit,
     onBackClick: () -> Unit
 ) {
+    val options = listOf("ALL", "CT", "SNOGS")
+    val labels = listOf(
+        stringResource(R.string.source_all),
+        stringResource(R.string.source_celestrak),
+        stringResource(R.string.source_satnogs)
+    )
+    val selectedIndex = options.indexOf(satelliteSource).coerceAtLeast(0)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -72,22 +79,12 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                 ) {
-                    DropdownPreference(
+                    WindowDropdownPreference(
                         title = stringResource(R.string.satellite_source),
                         summary = "选择卫星 TLE 数据的来源",
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Cloud,
-                                contentDescription = null
-                            )
-                        },
-                        value = satelliteSource,
-                        items = listOf(
-                            "ALL" to stringResource(R.string.source_all),
-                            "CT" to stringResource(R.string.source_celestrak),
-                            "SNOGS" to stringResource(R.string.source_satnogs)
-                        ),
-                        onValueChange = { onSourceSelected(it) }
+                        items = labels,
+                        selectedIndex = selectedIndex,
+                        onSelectedIndexChange = { onSourceSelected(options[it]) }
                     )
                 }
             }

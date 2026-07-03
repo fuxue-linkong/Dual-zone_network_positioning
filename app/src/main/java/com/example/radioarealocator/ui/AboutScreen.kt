@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -76,7 +77,10 @@ fun AboutScreen(
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                color = MiuixTheme.colorScheme.primaryContainer
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.primaryContainer,
+                    contentColor = MiuixTheme.colorScheme.onPrimaryContainer
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -112,7 +116,7 @@ fun AboutScreen(
 
                     Text(
                         text = stringResource(R.string.version_info, versionName),
-                        style = MiuixTheme.textStyles.body,
+                        style = MiuixTheme.textStyles.body1,
                         color = MiuixTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                 }
@@ -124,7 +128,7 @@ fun AboutScreen(
                 ArrowPreference(
                     title = stringResource(R.string.about),
                     summary = stringResource(R.string.about_description),
-                    icon = {
+                    startAction = {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null
@@ -140,7 +144,7 @@ fun AboutScreen(
                 ArrowPreference(
                     title = "GitHub",
                     summary = "fuxue-linkong / Dual-zone_network_positioning",
-                    icon = {
+                    startAction = {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = null
