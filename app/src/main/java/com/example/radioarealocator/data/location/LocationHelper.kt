@@ -124,6 +124,8 @@ class LocationHelper(private val context: Context) {
     private suspend fun fetchFusedLastLocation(errors: MutableList<String>): Location? {
         return try {
             withTimeout(1_500) { requestFusedLastLocation() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             errors.add("Fused最近位置: ${e.message ?: "失败"}")
             null
@@ -138,6 +140,8 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestFusedCurrentLocation(priority) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             errors.add("$name: ${e.message ?: "失败"}")
             null
@@ -150,6 +154,8 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestSingleFusedUpdate() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             errors.add("Fused单次更新: ${e.message ?: "失败"}")
             null
@@ -162,6 +168,8 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestLocationManagerLocation() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             errors.add("系统定位: ${e.message ?: "失败"}")
             null
@@ -377,6 +385,8 @@ class LocationHelper(private val context: Context) {
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             ""
         }

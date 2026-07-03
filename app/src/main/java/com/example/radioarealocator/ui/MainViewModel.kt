@@ -11,8 +11,11 @@ import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatellitePredictor
 import com.example.radioarealocator.data.zone.ZoneResolver
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -87,6 +90,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     satelliteError = satellitesResult.exceptionOrNull()?.message,
                     isSatelliteLoading = false
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -98,16 +103,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun refreshSatellites(latitude: Double, longitude: Double): List<SatelliteInfo> {
-        return try {
-            val tles = satelliteDataSource.fetchAmateurTLEs(source = _satelliteSource.value)
+        val tles = satelliteDataSource.fetchAmateurTLEs(source = _satelliteSource.value)
+        // 卫星过境预测为 CPU 密集计算，切到 Default 调度器避免阻塞主线程
+        return withContext(Dispatchers.Default) {
             satellitePredictor.predictUpcomingPasses(
                 sourcedTles = tles,
                 latitude = latitude,
                 longitude = longitude
             )
-        } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(satelliteError = e.message)
-            emptyList()
         }
     }
 
