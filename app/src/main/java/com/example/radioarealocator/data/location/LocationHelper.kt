@@ -18,11 +18,13 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import kotlin.coroutines.resume
@@ -220,6 +222,10 @@ class LocationHelper(private val context: Context) {
             } catch (e: SecurityException) {
                 continuation.resumeWithException(e)
             }
+
+            // lastLocation 的 Task 没有显式取消 API，但注册取消回调明确意图：
+            // 取消后迟到的 resume 会被 CancellableContinuation 静默忽略
+            continuation.invokeOnCancellation { /* Task 无法取消，迟到回调由框架忽略 */ }
         }
 
     private suspend fun requestSingleFusedUpdate(): Location =
@@ -356,14 +362,13 @@ class LocationHelper(private val context: Context) {
     suspend fun getAddress(latitude: Double, longitude: Double): String {
         return try {
             withTimeout(3_000) {
-                suspendCancellableCoroutine { continuation ->
-                    if (!Geocoder.isPresent()) {
-                        continuation.resume("")
-                        return@suspendCancellableCoroutine
-                    }
+                if (!Geocoder.isPresent()) {
+                    return@withTimeout ""
+                }
 
-                    val geocoder = Geocoder(context)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val geocoder = Geocoder(context)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    suspendCancellableCoroutine { continuation ->
                         geocoder.getFromLocation(
                             latitude,
                             longitude,
@@ -378,10 +383,15 @@ class LocationHelper(private val context: Context) {
                                 }
                             }
                         )
-                    } else {
+                        // Geocoder 异步回调无显式取消 API，注册取消回调明确意图
+                        continuation.invokeOnCancellation { /* 迟到回调由 CancellableContinuation 静默忽略 */ }
+                    }
+                } else {
+                    // pre-TIRAMISU 的同步阻塞调用，切到 IO 调度器避免阻塞主线程
+                    withContext(Dispatchers.IO) {
                         @Suppress("DEPRECATION")
                         val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-                        continuation.resume(formatAddress(addresses?.firstOrNull()))
+                        formatAddress(addresses?.firstOrNull())
                     }
                 }
             }

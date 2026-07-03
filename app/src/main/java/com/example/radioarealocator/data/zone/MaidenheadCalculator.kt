@@ -14,8 +14,12 @@ object MaidenheadCalculator {
         require(latitude in -90.0..90.0) { "纬度必须在 -90 到 90 之间" }
         require(longitude in -180.0..180.0) { "经度必须在 -180 到 180 之间" }
 
-        val adjustedLon = longitude + 180.0
-        val adjustedLat = latitude + 90.0
+        // 处理边界：180.0 / 90.0 应落入最后一个 subsquare，否则会被错误地映射为起始边界
+        val safeLon = if (longitude >= 180.0) 180.0 - 1e-9 else longitude
+        val safeLat = if (latitude >= 90.0) 90.0 - 1e-9 else latitude
+
+        val adjustedLon = safeLon + 180.0
+        val adjustedLat = safeLat + 90.0
 
         val fieldLon = floor(adjustedLon / (LON_RANGE / 18)).toInt().coerceAtMost(17)
         val fieldLat = floor(adjustedLat / (LAT_RANGE / 18)).toInt().coerceAtMost(17)
@@ -45,10 +49,19 @@ object MaidenheadCalculator {
 
         val fieldLon = upper[0] - 'A'
         val fieldLat = upper[1] - 'A'
-        val squareLon = upper[2].digitToInt()
-        val squareLat = upper[3].digitToInt()
+        require(fieldLon in 0..17) { "经度场字符非法: ${upper[0]}（应为 A-R）" }
+        require(fieldLat in 0..17) { "纬度场字符非法: ${upper[1]}（应为 A-R）" }
+
+        val squareLon = upper[2].digitToIntOrNull()
+            ?: throw IllegalArgumentException("经度方格字符非法: ${upper[2]}（应为 0-9）")
+        val squareLat = upper[3].digitToIntOrNull()
+            ?: throw IllegalArgumentException("纬度方格字符非法: ${upper[3]}（应为 0-9）")
+        require(squareLon in 0..9 && squareLat in 0..9) { "方格字符超出范围 0-9" }
+
         val subLon = upper[4].lowercaseChar() - 'a'
         val subLat = upper[5].lowercaseChar() - 'a'
+        require(subLon in 0..23) { "经度子方格字符非法: ${upper[4]}（应为 a-x）" }
+        require(subLat in 0..23) { "纬度子方格字符非法: ${upper[5]}（应为 a-x）" }
 
         val lon = -180.0 +
                 fieldLon * (LON_RANGE / 18) +

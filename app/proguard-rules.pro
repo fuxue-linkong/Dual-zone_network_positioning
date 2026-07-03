@@ -12,13 +12,17 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 保留行号信息，便于 release 崩溃堆栈调试
+-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# 隐藏原始源文件名
+-renamesourcefileattribute SourceFile
+
+# 在 release 构建中剥离 debug 和 trace 日志调用，避免泄漏内部实现
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}
 
 # predict4java and dependencies
 -keep class com.github.amsacode.predict4java.** { *; }

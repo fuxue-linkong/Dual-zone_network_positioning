@@ -119,7 +119,7 @@ jobs:
         if: ${{ github.event.inputs.commit_version == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/build.gradle.kts
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }})"
           git push origin HEAD:main

@@ -1,6 +1,7 @@
 package com.example.radioarealocator.data.satellite
 
 import com.github.amsacode.predict4java.TLE
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -12,6 +13,20 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
+/**
+ * 协程安全的 [runCatching]：捕获异常时重新抛出 [CancellationException]，
+ * 避免破坏 Kotlin 协程的结构化并发语义。
+ */
+private suspend inline fun <R> runCatchingCancellable(block: suspend () -> R): Result<R> {
+    return try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+}
 
 /**
  * 带 TLE 数据来源标记的包装类。
@@ -50,8 +65,8 @@ class SatelliteDataSource {
     suspend fun fetchAmateurTLEs(source: String = "ALL"): List<SourcedTLE> = withContext(Dispatchers.IO) {
         coroutineScope {
             val celestrakDeferred = async { runCatching { fetchCelestrakTLEs() } }
-            val satnogsDeferred = async { runCatching { fetchSatnogsTLEs() } }
-            val amsatStatusDeferred = async { runCatching { amsatStatusApi.fetchStatusSummaries() } }
+            val satnogsDeferred = async { runCatchingCancellable { fetchSatnogsTLEs() } }
+            val amsatStatusDeferred = async { runCatchingCancellable { amsatStatusApi.fetchStatusSummaries() } }
 
             val celestrakResult = celestrakDeferred.await()
             val satnogsResult = satnogsDeferred.await()
@@ -125,7 +140,7 @@ class SatelliteDataSource {
             // 并行查询每颗卫星，但限制并发数
             val deferreds = SatelliteCatalog.catalogNumbers.map { noradId ->
                 async {
-                    runCatching {
+                    runCatchingCancellable {
                         satnogsSemaphore.withPermit {
                             fetchSingleSatnogsTLE(noradId)
                         }

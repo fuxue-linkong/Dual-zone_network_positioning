@@ -90,9 +90,13 @@ fun RadioAreaLocatorTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = materialColorScheme.surface.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            // 安全转换：仅在 Context 为 Activity 时设置状态栏，避免在非 Activity 场景抛出 ClassCastException
+            val context = view.context
+            if (context is Activity) {
+                val window = context.window
+                window.statusBarColor = materialColorScheme.surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 

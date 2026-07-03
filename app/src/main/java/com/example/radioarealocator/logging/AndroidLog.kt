@@ -51,18 +51,27 @@ class AndroidLog(private val tag: String) : org.apache.commons.logging.Log {
     }
 
     override fun debug(message: Any?) {
-        Log.d(tag, message?.toString() ?: "null")
+        // 尊重 isDebugEnabled 标志，避免在禁用时泄漏日志
+        if (isDebugEnabled()) {
+            Log.d(tag, message?.toString() ?: "null")
+        }
     }
 
     override fun debug(message: Any?, t: Throwable?) {
-        Log.d(tag, message?.toString() ?: "null", t)
+        if (isDebugEnabled()) {
+            Log.d(tag, message?.toString() ?: "null", t)
+        }
     }
 
     override fun trace(message: Any?) {
-        Log.v(tag, message?.toString() ?: "null")
+        if (isTraceEnabled()) {
+            Log.v(tag, message?.toString() ?: "null")
+        }
     }
 
     override fun trace(message: Any?, t: Throwable?) {
-        Log.v(tag, message?.toString() ?: "null", t)
+        if (isTraceEnabled()) {
+            Log.v(tag, message?.toString() ?: "null", t)
+        }
     }
 }

@@ -1,7 +1,9 @@
 package com.example.radioarealocator.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -189,7 +191,11 @@ fun AboutScreen(
                         Intent.ACTION_VIEW,
                         Uri.parse("https://github.com/fuxue-linkong/Dual-zone_network_positioning")
                     )
-                    context.startActivity(intent)
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: ActivityNotFoundException) {
+                        Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
         }

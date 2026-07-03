@@ -13,6 +13,7 @@ import com.example.radioarealocator.data.satellite.SatellitePredictor
 import com.example.radioarealocator.data.zone.ZoneResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,6 +23,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val locationHelper = LocationHelper(application)
     private val satelliteDataSource = SatelliteDataSource()
     private val satellitePredictor = SatellitePredictor()
+
+    // 跟踪上一次刷新的 Job，避免用户快速多次点击导致并发竞态
+    private var refreshJob: Job? = null
 
     private val _uiState = mutableStateOf(MainUiState())
     val uiState: State<MainUiState> = _uiState
@@ -46,6 +50,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        // 取消上一次刷新任务，避免并发竞态导致 UI 闪烁和数据不一致
+        refreshJob?.cancel()
+
         _uiState.value = _uiState.value.copy(
             isLoading = true,
             isSatelliteLoading = true,
@@ -54,7 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             result = null,
             satellites = emptyList()
         )
-        viewModelScope.launch {
+        refreshJob = viewModelScope.launch {
             try {
                 val location = locationHelper.getCurrentLocation()
                 val zoneInfo = ZoneResolver.resolve(location.latitude, location.longitude)
@@ -78,7 +85,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     locationHelper.getAddress(location.latitude, location.longitude)
                 }
                 val satellitesDeferred = async {
-                    runCatching { refreshSatellites(location.latitude, location.longitude) }
+                    // 显式 try-catch 替代 runCatching，避免吞掉 CancellationException
+                    try {
+                        Result.success(refreshSatellites(location.latitude, location.longitude))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
                 }
 
                 val address = addressDeferred.await()

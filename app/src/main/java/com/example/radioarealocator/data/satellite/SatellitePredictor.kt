@@ -78,6 +78,9 @@ class SatellitePredictor {
                 // 卫星在当前位置不可见或计算失败，跳过
             } catch (_: IllegalArgumentException) {
                 // TLE 或地面站参数异常，跳过
+            } catch (_: Exception) {
+                // predict4java 内部的其他异常（如 NPE、数组越界、轨道计算溢出），
+                // 跳过单颗卫星，避免整体崩溃。本函数非 suspend，不会吞掉 CancellationException。
             }
         }
 
