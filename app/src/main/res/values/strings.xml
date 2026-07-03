@@ -9,6 +9,9 @@
     <string name="address">地址</string>
     <string name="latitude">纬度</string>
     <string name="longitude">经度</string>
+    <string name="location_status">定位状态</string>
+    <string name="location_success">定位成功</string>
+    <string name="zone_info">分区信息</string>
     <string name="delete">删除</string>
     <string name="locating">定位中…</string>
     <string name="location_failed">定位失败，请检查 GPS 与网络</string>

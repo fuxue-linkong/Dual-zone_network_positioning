@@ -1,12 +1,12 @@
 package com.example.radioarealocator.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,41 +17,37 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,8 +68,6 @@ fun MainScreen(
     val uiState by viewModel.uiState
     var showAbout by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
     BackHandler(enabled = showAbout || showSettings) {
         when {
@@ -98,148 +92,201 @@ fun MainScreen(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
                         text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                HorizontalDivider()
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    label = { Text(stringResource(R.string.about)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showAbout = true
+                },
+                actions = {
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
+                    IconButton(onClick = { showAbout = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = stringResource(R.string.about),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.settings)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showSettings = true
-                    }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            item {
+                LocationStatusCard(
+                    isLoading = uiState.isLoading,
+                    result = uiState.result,
+                    hasPermission = viewModel.hasLocationPermission,
+                    onRequestPermission = onRequestPermission,
+                    onRefresh = { viewModel.refreshLocation() }
+                )
+            }
+
+            if (uiState.result != null) {
+                item {
+                    ZoneInfoCard(result = uiState.result!!)
+                }
+            }
+
+            item {
+                SatelliteSection(
+                    isLoading = uiState.isSatelliteLoading,
+                    satellites = uiState.satellites,
+                    satelliteError = uiState.satelliteError,
+                    hasLocation = uiState.result != null
                 )
             }
         }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.app_name)) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.settings),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                )
-            }
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    LocationCard(
-                        isLoading = uiState.isLoading,
-                        result = uiState.result,
-                        hasPermission = viewModel.hasLocationPermission,
-                        onRequestPermission = onRequestPermission,
-                        onRefresh = { viewModel.refreshLocation() }
-                    )
-                }
 
-                item {
-                    SatelliteCard(
-                        isLoading = uiState.isSatelliteLoading,
-                        satellites = uiState.satellites,
-                        satelliteError = uiState.satelliteError,
-                        hasLocation = uiState.result != null
-                    )
-                }
-            }
-
-            uiState.error?.let { message ->
-                ErrorDialog(message = message, onDismiss = { viewModel.dismissError() })
-            }
+        uiState.error?.let { message ->
+            ErrorDialog(message = message, onDismiss = { viewModel.dismissError() })
         }
     }
 }
 
 @Composable
-private fun LocationCard(
+private fun LocationStatusCard(
     isLoading: Boolean,
     result: LocationResult?,
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     onRefresh: () -> Unit
 ) {
+    val isSuccess = result != null
+    val containerColor = when {
+        isSuccess -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor = when {
+        isSuccess -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSuccess) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline
+                        )
+                )
+                Text(
+                    text = if (isSuccess) stringResource(R.string.location_success) else stringResource(R.string.location_status),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             when {
                 isLoading -> {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.locating))
+                    CircularProgressIndicator(color = contentColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.locating),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor
+                    )
                 }
 
                 result != null -> {
-                    ResultContent(result = result)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = onRefresh) {
+                    Text(
+                        text = "%.5f".format(result.latitude),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
+                    )
+                    Text(
+                        text = "%.5f".format(result.longitude),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onRefresh,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.action_refresh))
                     }
                 }
 
                 else -> {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = contentColor
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = if (hasPermission) {
                             stringResource(R.string.tap_to_locate)
                         } else {
                             stringResource(R.string.location_permission_required)
                         },
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = if (hasPermission) onRefresh else onRequestPermission) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = if (hasPermission) onRefresh else onRequestPermission,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
                         Text(
                             if (hasPermission) {
                                 stringResource(R.string.action_refresh)
@@ -255,146 +302,181 @@ private fun LocationCard(
 }
 
 @Composable
-private fun ResultContent(result: LocationResult) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        InfoRow(label = stringResource(R.string.latitude), value = "%.5f".format(result.latitude))
-        InfoRow(label = stringResource(R.string.longitude), value = "%.5f".format(result.longitude))
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(8.dp))
-        InfoRow(
-            label = stringResource(R.string.cq_zone),
-            value = result.cqZone?.toString() ?: "-"
-        )
-        InfoRow(
-            label = stringResource(R.string.itu_zone),
-            value = result.ituZone?.toString() ?: "-"
-        )
-        InfoRow(
-            label = stringResource(R.string.maidenhead),
-            value = result.maidenhead.uppercase()
-        )
-        if (result.address.isNotBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(8.dp))
-            InfoRow(
-                label = stringResource(R.string.address),
-                value = result.address
+private fun ZoneInfoCard(result: LocationResult) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.zone_info),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ZoneItem(
+                    label = stringResource(R.string.cq_zone),
+                    value = result.cqZone?.toString() ?: "-"
+                )
+                ZoneItem(
+                    label = stringResource(R.string.itu_zone),
+                    value = result.ituZone?.toString() ?: "-"
+                )
+                ZoneItem(
+                    label = stringResource(R.string.maidenhead),
+                    value = result.maidenhead.uppercase()
+                )
+            }
+
+            if (result.address.isNotBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = "${stringResource(R.string.address)}：",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = result.address,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "$label:",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun ZoneItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-private fun SatelliteCard(
+private fun SatelliteSection(
     isLoading: Boolean,
     satellites: List<SatelliteInfo>,
     satelliteError: String?,
     hasLocation: Boolean
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.nearby_satellites),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                if (satellites.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.satellite_count, satellites.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            Text(
+                text = stringResource(R.string.nearby_satellites),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (satellites.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.satellite_count, satellites.size),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        when {
+            isLoading && satellites.isEmpty() -> {
+                SatellitePlaceholderCard {
+                    CircularProgressIndicator()
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            when {
-                isLoading && satellites.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                satelliteError != null -> {
+            satelliteError != null -> {
+                SatellitePlaceholderCard {
                     Text(
                         text = stringResource(R.string.satellite_load_failed, satelliteError),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+            }
 
-                !hasLocation -> {
+            !hasLocation -> {
+                SatellitePlaceholderCard {
                     Text(
                         text = stringResource(R.string.satellite_need_location),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
 
-                satellites.isEmpty() -> {
+            satellites.isEmpty() -> {
+                SatellitePlaceholderCard {
                     Text(
                         text = stringResource(R.string.no_satellites),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
 
-                else -> {
-                    satellites.forEachIndexed { index, sat ->
-                        SatelliteRow(satellite = sat)
-                        if (index < satellites.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
-                        }
-                    }
+            else -> {
+                satellites.forEach { sat ->
+                    SatelliteItem(satellite = sat)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SatellitePlaceholderCard(content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            content()
         }
     }
 }
@@ -403,8 +485,7 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SatelliteRow(satellite: SatelliteInfo) {
-    // 缓存格式化后的时间文本，避免每次重组都重新计算
+private fun SatelliteItem(satellite: SatelliteInfo) {
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible) {
         val formatter = satelliteTimeFormatter
         val zone = ZoneId.systemDefault()
@@ -419,54 +500,76 @@ private fun SatelliteRow(satellite: SatelliteInfo) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 第一行：状态点 + 卫星名称
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+    val cardContainerColor = if (satellite.isCurrentlyVisible) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            // 状态指示点：在境为实心圆，即将入境为空心圆
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .then(
-                        if (satellite.isCurrentlyVisible) {
-                            Modifier.background(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape
+            // 第一行：状态点 + 卫星名称 + 最大仰角
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (satellite.isCurrentlyVisible) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outline
+                                }
                             )
+                    )
+                    Text(
+                        text = satellite.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (satellite.isCurrentlyVisible) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
-                            Modifier.border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape
-                            )
+                            MaterialTheme.colorScheme.onSurface
                         }
                     )
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = satellite.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (satellite.isCurrentlyVisible)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface
-            )
-        }
+                }
 
-        Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${satellite.maxElevation.toInt()}°",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (satellite.isCurrentlyVisible) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
 
-        // 第二行：来源标签、状态标签、最大仰角
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 第二行：来源/状态/模式标签
             FlowRow(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (satellite.source.isNotEmpty()) {
                     SourceChip(source = satellite.source)
@@ -474,55 +577,77 @@ private fun SatelliteRow(satellite: SatelliteInfo) {
                 if (satellite.status.isNotEmpty()) {
                     StatusChip(status = satellite.status)
                 }
-            }
-            Text(
-                text = "${stringResource(R.string.max_elevation)} ${satellite.maxElevation.toInt()}°",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // 第三行：卫星类型（模式）与时间信息
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FlowRow(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
                 satellite.modes.forEach { mode ->
                     ModeChip(mode = mode)
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 第三行：时间信息
             when (timeInfo) {
                 is SatelliteTimeInfo.InPass -> {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "${stringResource(R.string.los_time)} ${timeInfo.losTime}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TimeBadge(
+                            label = stringResource(R.string.los_time),
+                            value = timeInfo.losTime,
+                            isActive = true
                         )
-                        Text(
-                            text = "${stringResource(R.string.time_remaining)} ${timeInfo.remainingText}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                        TimeBadge(
+                            label = stringResource(R.string.time_remaining),
+                            value = timeInfo.remainingText,
+                            isActive = true
                         )
                     }
                 }
+
                 is SatelliteTimeInfo.Upcoming -> {
-                    Text(
-                        text = "${stringResource(R.string.aos_time)} ${timeInfo.aosTime}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    TimeBadge(
+                        label = stringResource(R.string.aos_time),
+                        value = timeInfo.aosTime,
+                        isActive = false
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TimeBadge(label: String, value: String, isActive: Boolean) {
+    val containerColor = if (isActive) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor = if (isActive) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(containerColor)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "$label：",
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = contentColor
+        )
     }
 }
 
@@ -531,9 +656,6 @@ private sealed class SatelliteTimeInfo {
     data class Upcoming(val aosTime: String) : SatelliteTimeInfo()
 }
 
-/**
- * 格式化剩余时间，如 "3分20秒" 或 "45秒"。
- */
 private fun formatRemainingTime(seconds: Long): String {
     if (seconds <= 0) return "0秒"
     val minutes = seconds / 60
@@ -553,18 +675,7 @@ private fun SourceChip(source: String) {
         "ALL" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Box(
-        modifier = Modifier
-            .background(color = bgColor, shape = MaterialTheme.shapes.small)
-    ) {
-        Text(
-            text = source,
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            modifier = Modifier
-                .padding(horizontal = 4.dp, vertical = 1.dp)
-        )
-    }
+    Chip(text = source, bgColor = bgColor, contentColor = contentColor)
 }
 
 @Composable
@@ -583,18 +694,7 @@ private fun StatusChip(status: String) {
         "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Box(
-        modifier = Modifier
-            .background(color = bgColor, shape = MaterialTheme.shapes.small)
-    ) {
-        Text(
-            text = displayText,
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            modifier = Modifier
-                .padding(horizontal = 4.dp, vertical = 1.dp)
-        )
-    }
+    Chip(text = displayText, bgColor = bgColor, contentColor = contentColor)
 }
 
 @Composable
@@ -615,18 +715,26 @@ private fun ModeChip(mode: String) {
         "USB", "LSB" -> MaterialTheme.colorScheme.onSurfaceVariant
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
+    Chip(text = mode, bgColor = color, contentColor = contentColor)
+}
 
+@Composable
+private fun Chip(
+    text: String,
+    bgColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color
+) {
     Box(
         modifier = Modifier
-            .padding(end = 4.dp)
-            .background(color = color, shape = MaterialTheme.shapes.small)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Text(
-            text = mode,
+            text = text,
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
-            modifier = Modifier
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+            fontWeight = FontWeight.Medium
         )
     }
 }
