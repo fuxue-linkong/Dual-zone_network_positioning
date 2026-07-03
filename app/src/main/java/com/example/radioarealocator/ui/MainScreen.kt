@@ -41,10 +41,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -486,7 +489,18 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SatelliteItem(satellite: SatelliteInfo) {
-    val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible) {
+    // 在境卫星需要每秒刷新剩余时间
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    if (satellite.isCurrentlyVisible) {
+        LaunchedEffect(satellite.losTime) {
+            while (true) {
+                nowMillis = System.currentTimeMillis()
+                delay(1000)
+            }
+        }
+    }
+
+    val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
         val formatter = satelliteTimeFormatter
         val zone = ZoneId.systemDefault()
         if (satellite.isCurrentlyVisible) {
