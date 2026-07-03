@@ -45,6 +45,7 @@ jobs:
 
       - name: Build Debug APK
         run: |
+          set -o pipefail
           gradle assembleDebug --console=plain --stacktrace --info 2>&1 | tee log/ci/build.log
 
       - name: Upload Debug APK
