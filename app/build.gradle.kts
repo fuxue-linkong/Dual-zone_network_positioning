@@ -95,7 +95,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Miuix UI library
-    implementation("top.yukonga.miuix.kmp:miuix-android:0.9.2")
+    implementation("top.yukonga.miuix.kmp:miuix-ui-android:0.9.2")
     implementation("top.yukonga.miuix.kmp:miuix-preference-android:0.9.2")
 
     testImplementation("junit:junit:4.13.2")
