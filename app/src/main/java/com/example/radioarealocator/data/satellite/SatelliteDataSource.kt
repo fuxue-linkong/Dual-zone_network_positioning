@@ -5,8 +5,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -49,9 +47,6 @@ class SatelliteDataSource {
 
     private val amsatStatusApi = AmsatStatusApiService()
 
-    // 限制 SatNOGS 并发请求数，避免同时打开过多连接导致网络阻塞
-    private val satnogsSemaphore = Semaphore(8)
-
     /**
      * 获取业余卫星 TLE 列表。
      * 同时从 CelesTrak 和 SatNOGS 拉取，合并去重（按 NORAD 编号）。
@@ -64,15 +59,19 @@ class SatelliteDataSource {
      */
     suspend fun fetchAmateurTLEs(source: String = "ALL"): List<SourcedTLE> = withContext(Dispatchers.IO) {
         coroutineScope {
-            val celestrakDeferred = async { runCatching { fetchCelestrakTLEs() } }
-            val satnogsDeferred = async { runCatchingCancellable { fetchSatnogsTLEs() } }
+            // 根据用户设置跳过不需要的数据源，减少等待时间
+            val needCelestrak = source != "SNOGS"
+            val needSatnogs = source != "CT"
+
+            val celestrakDeferred = if (needCelestrak) async { runCatchingCancellable { fetchCelestrakTLEs() } } else null
+            val satnogsDeferred = if (needSatnogs) async { runCatchingCancellable { fetchSatnogsTLEs() } } else null
             val amsatStatusDeferred = async { runCatchingCancellable { amsatStatusApi.fetchStatusSummaries() } }
 
-            val celestrakResult = celestrakDeferred.await()
-            val satnogsResult = satnogsDeferred.await()
+            val celestrakResult = celestrakDeferred?.await()
+            val satnogsResult = satnogsDeferred?.await()
             val amsatStatusResult = amsatStatusDeferred.await()
 
-            if (celestrakResult.isFailure && satnogsResult.isFailure) {
+            if (celestrakResult?.isFailure == true && satnogsResult?.isFailure == true) {
                 throw IOException(
                     "TLE 下载失败：CelesTrak=${celestrakResult.exceptionOrNull()?.message}, " +
                         "SatNOGS=${satnogsResult.exceptionOrNull()?.message}"
@@ -81,10 +80,10 @@ class SatelliteDataSource {
 
             // 按 NORAD 编号合并，记录来源
             val merged = LinkedHashMap<Int, SourcedTLE>()
-            celestrakResult.getOrNull()?.forEach { (tle) ->
+            celestrakResult?.getOrNull()?.forEach { (tle) ->
                 merged[tle.catnum] = SourcedTLE(tle, "CT")
             }
-            satnogsResult.getOrNull()?.forEach { (tle) ->
+            satnogsResult?.getOrNull()?.forEach { (tle) ->
                 val existing = merged[tle.catnum]
                 if (existing == null) {
                     merged[tle.catnum] = SourcedTLE(tle, "SNOGS")
@@ -131,43 +130,12 @@ class SatelliteDataSource {
     }
 
     /**
-     * 从 SatNOGS 获取我们关心的卫星 TLE（JSON 格式）。
-     * 只查询 SatelliteCatalog 中的卫星，避免下载全部数据。
-     * 使用信号量限制并发数，防止同时发起过多请求导致卡顿或失败。
+     * 从 SatNOGS 批量获取 TLE，然后过滤出 SatelliteCatalog 中关心的卫星。
+     * 单次请求可拿到全部 TLE，避免逐颗查询的大量网络往返。
      */
-    private suspend fun fetchSatnogsTLEs(): List<SourcedTLE> = withContext(Dispatchers.IO) {
-        coroutineScope {
-            // 并行查询每颗卫星，但限制并发数
-            val deferreds = SatelliteCatalog.catalogNumbers.map { noradId ->
-                async {
-                    runCatchingCancellable {
-                        satnogsSemaphore.withPermit {
-                            fetchSingleSatnogsTLE(noradId)
-                        }
-                    }
-                }
-            }
-            val results = deferreds.map { it.await() }
-
-            val tles = mutableListOf<SourcedTLE>()
-            for (result in results) {
-                result.getOrNull()?.let { tles.add(SourcedTLE(it, "SNOGS")) }
-            }
-
-            if (tles.isEmpty()) {
-                val firstError = results.firstOrNull { it.isFailure }?.exceptionOrNull()
-                throw IOException("SatNOGS 查询失败：${firstError?.message ?: "无数据"}")
-            }
-            tles
-        }
-    }
-
-    /**
-     * 从 SatNOGS 查询单颗卫星的 TLE。
-     */
-    private fun fetchSingleSatnogsTLE(noradCatId: Int): TLE {
+    private fun fetchSatnogsTLEs(): List<SourcedTLE> {
         val request = Request.Builder()
-            .url("$SATNOGS_URL?norad_cat_id=$noradCatId&format=json")
+            .url(SATNOGS_URL)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -176,19 +144,28 @@ class SatelliteDataSource {
             }
             val body = response.body?.string() ?: throw IOException("SatNOGS 响应为空")
             val array = JSONArray(body)
-            if (array.length() == 0) {
-                throw IOException("SatNOGS 无 NORAD $noradCatId 的数据")
-            }
-            val obj = array.optJSONObject(0)
-                ?: throw IOException("SatNOGS 响应格式异常")
+            val catalogNumbers = SatelliteCatalog.catalogNumbers
+            val tles = mutableListOf<SourcedTLE>()
+            for (i in 0 until array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                val noradCatId = obj.optInt("norad_cat_id", -1)
+                if (!catalogNumbers.contains(noradCatId)) continue
 
-            val tle0 = obj.optString("tle0", "")
-            val tle1 = obj.optString("tle1", "")
-            val tle2 = obj.optString("tle2", "")
-            if (tle1.isBlank() || tle2.isBlank()) {
-                throw IOException("SatNOGS TLE 数据不完整")
+                val tle0 = obj.optString("tle0", "")
+                val tle1 = obj.optString("tle1", "")
+                val tle2 = obj.optString("tle2", "")
+                if (tle1.isBlank() || tle2.isBlank()) continue
+
+                try {
+                    tles.add(SourcedTLE(TLE(arrayOf(tle0, tle1, tle2)), "SNOGS"))
+                } catch (_: IllegalArgumentException) {
+                    // 跳过解析失败的 TLE
+                }
             }
-            return TLE(arrayOf(tle0, tle1, tle2))
+            if (tles.isEmpty()) {
+                throw IOException("SatNOGS 无我们关心的卫星数据")
+            }
+            return tles
         }
     }
 

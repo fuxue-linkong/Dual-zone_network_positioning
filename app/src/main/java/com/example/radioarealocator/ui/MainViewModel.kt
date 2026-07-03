@@ -118,14 +118,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun refreshSatellites(latitude: Double, longitude: Double): List<SatelliteInfo> {
         val tles = satelliteDataSource.fetchAmateurTLEs(source = _satelliteSource.value)
-        // 卫星过境预测为 CPU 密集计算，切到 Default 调度器避免阻塞主线程
-        return withContext(Dispatchers.Default) {
-            satellitePredictor.predictUpcomingPasses(
-                sourcedTles = tles,
-                latitude = latitude,
-                longitude = longitude
-            )
-        }
+        return satellitePredictor.predictUpcomingPasses(
+            sourcedTles = tles,
+            latitude = latitude,
+            longitude = longitude
+        )
     }
 
     fun dismissError() {
