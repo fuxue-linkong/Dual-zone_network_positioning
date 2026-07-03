@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.darkColorScheme as miuixDarkColorScheme
+import top.yukonga.miuix.kmp.theme.lightColorScheme as miuixLightColorScheme
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -33,7 +36,7 @@ fun RadioAreaLocatorTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
+    val materialColorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -42,18 +45,25 @@ fun RadioAreaLocatorTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    val miuixColors = if (darkTheme) miuixDarkColorScheme() else miuixLightColorScheme()
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = materialColorScheme.primary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = materialColorScheme,
         typography = Typography,
-        content = content
+        content = {
+            MiuixTheme(
+                colors = miuixColors,
+                content = content
+            )
+        }
     )
 }
