@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.example.radioarealocator"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.radioarealocator"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 9
         versionName = "1.1.0"
 
