@@ -244,7 +244,7 @@ private fun HomeHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(top = appNameSize)
+            .padding(top = APP_NAME_FONT_SIZE.dp)
             .padding(vertical = 12.dp)
     ) {
         Text(
