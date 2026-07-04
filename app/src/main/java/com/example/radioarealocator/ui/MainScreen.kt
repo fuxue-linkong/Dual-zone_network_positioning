@@ -243,7 +243,9 @@ private fun HomeHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = appNameSize)
+            .padding(vertical = 12.dp)
     ) {
         Text(
             text = stringResource(R.string.app_name),
