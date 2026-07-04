@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,16 +40,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
     onBackClick: () -> Unit
@@ -55,7 +58,7 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(R.string.about),
+                title = { Text(stringResource(R.string.about)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -77,9 +80,9 @@ fun AboutScreen(
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.primaryContainer,
-                    contentColor = MiuixTheme.colorScheme.onPrimaryContainer
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
                 Column(
@@ -100,57 +103,64 @@ fun AboutScreen(
 
                     Text(
                         text = "凌空",
-                        style = MiuixTheme.textStyles.title1,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MiuixTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = stringResource(R.string.app_name),
-                        style = MiuixTheme.textStyles.title3,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = MiuixTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
                     Text(
                         text = stringResource(R.string.version_info, versionName),
-                        style = MiuixTheme.textStyles.body1,
-                        color = MiuixTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                 }
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
             ) {
-                ArrowPreference(
-                    title = stringResource(R.string.about),
-                    summary = stringResource(R.string.about_description),
-                    startAction = {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.about)) },
+                    supportingContent = { Text(stringResource(R.string.about_description)) },
+                    leadingContent = {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null
                         )
-                    },
-                    onClick = { }
+                    }
                 )
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
             ) {
-                ArrowPreference(
-                    title = "GitHub",
-                    summary = "fuxue-linkong / Dual-zone_network_positioning",
-                    startAction = {
+                ListItem(
+                    headlineContent = { Text("GitHub") },
+                    supportingContent = { Text("fuxue-linkong / Dual-zone_network_positioning") },
+                    leadingContent = {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = null
                         )
                     },
-                    onClick = {
+                    modifier = Modifier.clickable {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
                             Uri.parse("https://github.com/fuxue-linkong/Dual-zone_network_positioning")

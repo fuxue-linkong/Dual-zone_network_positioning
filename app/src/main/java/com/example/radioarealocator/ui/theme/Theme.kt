@@ -15,9 +15,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.darkColorScheme as miuixDarkColorScheme
-import top.yukonga.miuix.kmp.theme.lightColorScheme as miuixLightColorScheme
 
 private val LightColorScheme = lightColorScheme(
     primary = md_theme_light_primary,
@@ -86,7 +83,6 @@ fun RadioAreaLocatorTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    val miuixColors = if (darkTheme) miuixDarkColorScheme() else miuixLightColorScheme()
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -106,11 +102,6 @@ fun RadioAreaLocatorTheme(
         typography = Typography,
         shapes = Shapes,
         motionScheme = MotionScheme.expressive(),
-        content = {
-            MiuixTheme(
-                colors = miuixColors,
-                content = content
-            )
-        }
+        content = content
     )
 }
