@@ -221,7 +221,7 @@ fun MainScreen(
 }
 
 /**
- * 主页头部：应用名位于左上（类似应用标题），下方居中显示本地时间 + UTC。
+ * 主页头部：上方居中显示本地时间 + UTC，下方左对齐显示应用名（标题）。
  */
 @Composable
 private fun HomeHeader(
@@ -246,25 +246,13 @@ private fun HomeHeader(
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
-            text = stringResource(R.string.app_name),
-            style = TextStyle(
-                fontSize = appNameSize,
-                fontWeight = FontWeight.Normal
-            ),
-            color = stateColor,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Start
-        )
-        Text(
             text = localTime,
             style = TextStyle(
                 fontSize = localTimeSize,
                 fontWeight = FontWeight.Normal
             ),
             color = stateColor,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
         Text(
@@ -275,6 +263,18 @@ private fun HomeHeader(
                 .fillMaxWidth()
                 .padding(top = 2.dp),
             textAlign = TextAlign.Center
+        )
+        Text(
+            text = stringResource(R.string.app_name),
+            style = TextStyle(
+                fontSize = appNameSize,
+                fontWeight = FontWeight.Normal
+            ),
+            color = stateColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            textAlign = TextAlign.Start
         )
     }
 }
