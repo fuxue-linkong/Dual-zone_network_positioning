@@ -1,35 +1,25 @@
 package com.example.radioarealocator.ui
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.menu.WindowDropdownMenu
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -90,10 +80,18 @@ fun SettingsScreen(
                         color = MiuixTheme.colorScheme.onSurfaceSecondary,
                         modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
                     )
-                    SourceDropdown(
-                        labels = labels,
-                        selectedIndex = selectedIndex,
-                        onSelected = { onSourceSelected(options[it]) }
+                    WindowDropdownMenu(
+                        title = labels.getOrNull(selectedIndex) ?: "",
+                        summary = "点击选择数据源",
+                        entry = DropdownEntry(
+                            items = labels.mapIndexed { index, text ->
+                                DropdownItem(
+                                    text = text,
+                                    selected = selectedIndex == index,
+                                    onClick = { onSourceSelected(options[index]) }
+                                )
+                            }
+                        )
                     )
                 }
             }
@@ -119,54 +117,3 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun SourceDropdown(
-    labels: List<String>,
-    selectedIndex: Int,
-    onSelected: (Int) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val currentLabel = labels.getOrNull(selectedIndex) ?: ""
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(
-                    width = 1.dp,
-                    color = MiuixTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = currentLabel,
-                style = MiuixTheme.textStyles.body1,
-                color = MiuixTheme.colorScheme.onSurface
-            )
-            Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onSurfaceSecondary
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            labels.forEachIndexed { index, label ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        onSelected(index)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
