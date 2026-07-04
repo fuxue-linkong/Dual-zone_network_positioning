@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     id("com.android.application")
@@ -24,10 +25,30 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "signing/release.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            val keystorePath = System.getenv("KEYSTORE_PATH") ?: "signing/release.keystore"
+            val keystoreFile = file(keystorePath)
+            val envStorePassword = System.getenv("KEYSTORE_PASSWORD")
+            val envKeyAlias = System.getenv("KEY_ALIAS")
+            val envKeyPassword = System.getenv("KEY_PASSWORD")
+
+            if (keystoreFile.exists() &&
+                envStorePassword != null &&
+                envKeyAlias != null &&
+                envKeyPassword != null
+            ) {
+                // CI release：使用真正的 release keystore（由 release.yml 注入 secrets）
+                storeFile = keystoreFile
+                storePassword = envStorePassword
+                keyAlias = envKeyAlias
+                keyPassword = envKeyPassword
+            } else {
+                // 本地打包回退到 debug keystore，保证签名稳定且可重复
+                // ~/.android/debug.keystore 由 Android SDK 维护，签名指纹在不同构建间保持一致
+                storeFile = File(System.getProperty("user.home"), ".android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 

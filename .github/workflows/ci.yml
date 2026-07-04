@@ -11,8 +11,13 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    name: Run Unit Tests
+    uses: ./.github/workflows/test.yml
+
   build:
     name: Build Debug APK
+    needs: test
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]' }}
     permissions:

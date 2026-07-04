@@ -22,7 +22,13 @@ on:
         default: true
 
 jobs:
+  test:
+    name: Run Unit Tests
+    uses: ./.github/workflows/test.yml
+
   build:
+    name: Build Release APK
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
