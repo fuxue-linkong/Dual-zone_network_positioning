@@ -1,6 +1,7 @@
 package com.example.radioarealocator.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
@@ -36,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -58,15 +61,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+
+private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+private const val APP_NAME_FONT_SIZE = 36
+private const val UTC_FONT_SIZE_SCALE = 0.4f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +88,18 @@ fun MainScreen(
     val uiState by viewModel.uiState
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showAbout by remember { mutableStateOf(false) }
+    // 主页二级页面：0=列表, 1=定位详情, 2=卫星详情
+    var homeSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
+
+    // 时钟状态，每秒刷新
+    var now by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = Instant.now()
+            delay(1000)
+        }
+    }
 
     // 背景图选择器（Photo Picker）
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
@@ -96,8 +118,11 @@ fun MainScreen(
         }
     }
 
-    BackHandler(enabled = showAbout) {
-        showAbout = false
+    BackHandler(enabled = showAbout || (selectedTab == 0 && homeSubScreen != 0)) {
+        when {
+            showAbout -> showAbout = false
+            selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
+        }
     }
 
     if (showAbout) {
@@ -108,15 +133,37 @@ fun MainScreen(
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(
-                            if (selectedTab == 0) R.string.app_name else R.string.settings
-                        )
-                    )
-                }
-            )
+            when {
+                selectedTab == 0 && homeSubScreen == 0 -> HomeHeader(
+                    uiState = uiState,
+                    now = now
+                )
+                selectedTab == 0 && homeSubScreen == 1 -> TopAppBar(
+                    title = { Text(stringResource(R.string.home_location)) },
+                    navigationIcon = {
+                        IconButton(onClick = { homeSubScreen = 0 }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    }
+                )
+                selectedTab == 0 && homeSubScreen == 2 -> TopAppBar(
+                    title = { Text(stringResource(R.string.home_satellite)) },
+                    navigationIcon = {
+                        IconButton(onClick = { homeSubScreen = 0 }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    }
+                )
+                else -> TopAppBar(
+                    title = { Text(stringResource(R.string.settings)) }
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -136,14 +183,25 @@ fun MainScreen(
         }
     ) { padding ->
         if (selectedTab == 0) {
-            HomeContent(
-                uiState = uiState,
-                hasLocationPermission = viewModel.hasLocationPermission,
-                onRequestPermission = onRequestPermission,
-                onRefresh = { viewModel.refreshLocation() },
-                onDismissError = { viewModel.dismissError() },
-                contentPadding = padding
-            )
+            when (homeSubScreen) {
+                0 -> HomeListContent(
+                    onLocationClick = { homeSubScreen = 1 },
+                    onSatelliteClick = { homeSubScreen = 2 },
+                    contentPadding = padding
+                )
+                1 -> LocationDetailContent(
+                    uiState = uiState,
+                    hasLocationPermission = viewModel.hasLocationPermission,
+                    onRequestPermission = onRequestPermission,
+                    onRefresh = { viewModel.refreshLocation() },
+                    onDismissError = { viewModel.dismissError() },
+                    contentPadding = padding
+                )
+                2 -> SatelliteDetailContent(
+                    uiState = uiState,
+                    contentPadding = padding
+                )
+            }
         } else {
             SettingsScreen(
                 satelliteSource = viewModel.satelliteSource.value,
@@ -162,8 +220,156 @@ fun MainScreen(
     }
 }
 
+/**
+ * 主页头部：放大应用名（颜色随定位状态变化）+ 居中当地时间 + UTC 时间。
+ */
 @Composable
-private fun HomeContent(
+private fun HomeHeader(
+    uiState: MainUiState,
+    now: Instant
+) {
+    val stateColor = if (uiState.result != null) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
+    val appNameSize = APP_NAME_FONT_SIZE.sp
+    val utcSize = (APP_NAME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
+
+    val localTime = now.atZone(ZoneId.systemDefault()).format(timeFormatter)
+    val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = TextStyle(
+                fontSize = appNameSize,
+                fontWeight = FontWeight.Bold
+            ),
+            color = stateColor,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Text(
+            text = localTime,
+            style = TextStyle(
+                fontSize = appNameSize,
+                fontWeight = FontWeight.Bold
+            ),
+            color = stateColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "$utcTime UTC",
+            style = TextStyle(fontSize = utcSize),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * 主页列表：定位、卫星两个入口。
+ */
+@Composable
+private fun HomeListContent(
+    onLocationClick: () -> Unit,
+    onSatelliteClick: () -> Unit,
+    contentPadding: PaddingValues
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            HomeListItem(
+                title = stringResource(R.string.home_location),
+                description = stringResource(R.string.home_location_desc),
+                badgeChar = "定",
+                onClick = onLocationClick
+            )
+        }
+        item {
+            HomeListItem(
+                title = stringResource(R.string.home_satellite),
+                description = stringResource(R.string.home_satellite_desc),
+                badgeChar = "卫",
+                onClick = onSatelliteClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeListItem(
+    title: String,
+    description: String,
+    badgeChar: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = badgeChar,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationDetailContent(
     uiState: MainUiState,
     hasLocationPermission: Boolean,
     onRequestPermission: () -> Unit,
@@ -190,10 +396,28 @@ private fun HomeContent(
 
         if (uiState.result != null) {
             item {
-                ZoneInfoCard(result = uiState.result!!)
+                ZoneInfoCard(result = uiState.result)
             }
         }
+    }
 
+    uiState.error?.let { message ->
+        ErrorDialog(message = message, onDismiss = onDismissError)
+    }
+}
+
+@Composable
+private fun SatelliteDetailContent(
+    uiState: MainUiState,
+    contentPadding: PaddingValues
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+    ) {
         item {
             SatelliteSection(
                 isLoading = uiState.isSatelliteLoading,
@@ -202,10 +426,6 @@ private fun HomeContent(
                 hasLocation = uiState.result != null
             )
         }
-    }
-
-    uiState.error?.let { message ->
-        ErrorDialog(message = message, onDismiss = onDismissError)
     }
 }
 
