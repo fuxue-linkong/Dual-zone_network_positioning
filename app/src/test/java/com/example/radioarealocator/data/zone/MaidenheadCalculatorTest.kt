@@ -21,15 +21,15 @@ class MaidenheadCalculatorTest {
         // 期望值由算法本身推导，并与多个业界实现交叉验证
         assertEquals("OM89ev", MaidenheadCalculator.calculate(39.9042, 116.4074)) // 北京
         assertEquals("PM95tq", MaidenheadCalculator.calculate(35.6762, 139.6503)) // 东京
-        assertEquals("FN30xr", MaidenheadCalculator.calculate(40.7128, -74.0060)) // 纽约
+        assertEquals("FN20xr", MaidenheadCalculator.calculate(40.7128, -74.0060)) // 纽约
         assertEquals("IO91wm", MaidenheadCalculator.calculate(51.5074, -0.1278))  // 伦敦
         assertEquals("QF56od", MaidenheadCalculator.calculate(-33.8688, 151.2093)) // 悉尼
     }
 
     @Test
-    fun `origin produces AA00aa`() {
-        // 经纬度均为 0 时应落在 AA00aa
-        assertEquals("AA00aa", MaidenheadCalculator.calculate(0.0, 0.0))
+    fun `origin produces JJ00aa`() {
+        // 经纬度均为 0 时：adjustedLon=180 → fieldLon=9 → 'J'，adjustedLat=90 → fieldLat=9 → 'J'
+        assertEquals("JJ00aa", MaidenheadCalculator.calculate(0.0, 0.0))
     }
 
     @Test

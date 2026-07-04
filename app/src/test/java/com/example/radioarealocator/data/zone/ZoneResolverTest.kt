@@ -36,7 +36,7 @@ class ZoneResolverTest {
         val info = ZoneResolver.resolve(40.7128, -74.0060)
         assertEquals(4, info.cqZone)
         assertEquals(8, info.ituZone)
-        assertEquals("FN30xr", info.maidenhead)
+        assertEquals("FN20xr", info.maidenhead)
     }
 
     @Test
