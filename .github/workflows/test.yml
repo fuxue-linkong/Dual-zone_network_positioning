@@ -14,6 +14,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_call:  # 允许 ci.yml / release.yml 复用本工作流（先测试后打包）
   workflow_dispatch:
 
 jobs:
