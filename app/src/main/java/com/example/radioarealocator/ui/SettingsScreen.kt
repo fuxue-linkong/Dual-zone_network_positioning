@@ -1,24 +1,28 @@
 package com.example.radioarealocator.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -115,7 +119,6 @@ fun SettingsScreen(
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun SourceDropdown(
     labels: List<String>,
@@ -123,26 +126,35 @@ private fun SourceDropdown(
     onSelected: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val currentLabel = labels.getOrNull(selectedIndex) ?: ""
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = labels.getOrNull(selectedIndex) ?: "",
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MiuixTheme.colorScheme.primary,
-                unfocusedBorderColor = MiuixTheme.colorScheme.outline
+                .clip(RoundedCornerShape(8.dp))
+                .border(
+                    width = 1.dp,
+                    color = MiuixTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = currentLabel,
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onSurface
             )
-        )
-        ExposedDropdownMenu(
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurfaceSecondary
+            )
+        }
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
@@ -152,8 +164,7 @@ private fun SourceDropdown(
                     onClick = {
                         onSelected(index)
                         expanded = false
-                    },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    }
                 )
             }
         }
