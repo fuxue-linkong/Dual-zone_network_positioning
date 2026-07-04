@@ -76,7 +76,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-private const val APP_NAME_FONT_SIZE = 36
+private const val APP_NAME_FONT_SIZE = 32
 private const val UTC_FONT_SIZE_SCALE = 0.4f
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -221,7 +221,7 @@ fun MainScreen(
 }
 
 /**
- * 主页头部：放大应用名（颜色随定位状态变化）+ 居中当地时间 + UTC 时间。
+ * 主页头部：应用名位于左上（类似应用标题），下方居中显示本地时间 + UTC。
  */
 @Composable
 private fun HomeHeader(
@@ -234,6 +234,7 @@ private fun HomeHeader(
         MaterialTheme.colorScheme.outline
     }
     val appNameSize = APP_NAME_FONT_SIZE.sp
+    val localTimeSize = APP_NAME_FONT_SIZE.sp
     val utcSize = (APP_NAME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
 
     val localTime = now.atZone(ZoneId.systemDefault()).format(timeFormatter)
@@ -248,7 +249,7 @@ private fun HomeHeader(
             text = stringResource(R.string.app_name),
             style = TextStyle(
                 fontSize = appNameSize,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Normal
             ),
             color = stateColor,
             modifier = Modifier.fillMaxWidth(),
@@ -257,13 +258,13 @@ private fun HomeHeader(
         Text(
             text = localTime,
             style = TextStyle(
-                fontSize = appNameSize,
-                fontWeight = FontWeight.Bold
+                fontSize = localTimeSize,
+                fontWeight = FontWeight.Normal
             ),
             color = stateColor,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp),
+                .padding(top = 8.dp),
             textAlign = TextAlign.Center
         )
         Text(
