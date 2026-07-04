@@ -37,22 +37,25 @@ object BackgroundPalette {
                 } else bitmap
                 val palette = Palette.from(scaled).generate()
                 scaled.recycle()
+                // dominantSwatch 几乎总有值；为空则视为提取失败
+                val dominant = palette.dominantSwatch ?: return@use null
                 PaletteSwatches(
                     primary = palette.vibrantSwatch?.rgb
                         ?: palette.mutedSwatch?.rgb
-                        ?: palette.dominantSwatch?.rgb,
+                        ?: dominant.rgb,
                     secondary = palette.mutedSwatch?.rgb
                         ?: palette.lightVibrantSwatch?.rgb
-                        ?: palette.dominantSwatch?.rgb,
+                        ?: dominant.rgb,
                     tertiary = palette.lightVibrantSwatch?.rgb
                         ?: palette.darkVibrantSwatch?.rgb
-                        ?: palette.dominantSwatch?.rgb,
+                        ?: dominant.rgb,
                     surface = palette.lightMutedSwatch?.rgb
                         ?: palette.darkMutedSwatch?.rgb
-                        ?: palette.mutedSwatch?.rgb,
+                        ?: palette.mutedSwatch?.rgb
+                        ?: dominant.rgb,
                     bodyTextColor = palette.vibrantSwatch?.bodyTextColor
                         ?: palette.mutedSwatch?.bodyTextColor
-                        ?: palette.dominantSwatch?.bodyTextColor
+                        ?: dominant.bodyTextColor
                 )
             }
         }.getOrNull()
