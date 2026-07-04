@@ -2,9 +2,6 @@ package com.example.radioarealocator.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// KernelSU / M3E inspired primary green palette
-val PrimaryGreen = Color(0xFF36D167)
-
 // Light theme colors
 val md_theme_light_primary = Color(0xFF006E2C)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
@@ -22,8 +19,6 @@ val md_theme_light_error = Color(0xFFBA1A1A)
 val md_theme_light_onError = Color(0xFFFFFFFF)
 val md_theme_light_errorContainer = Color(0xFFFFDAD6)
 val md_theme_light_onErrorContainer = Color(0xFF410002)
-val md_theme_light_background = Color(0xFFFCFDF7)
-val md_theme_light_onBackground = Color(0xFF1A1C19)
 val md_theme_light_surface = Color(0xFFF5F5F5)
 val md_theme_light_onSurface = Color(0xFF1A1C19)
 val md_theme_light_surfaceVariant = Color(0xFFDDE5DA)
@@ -47,8 +42,6 @@ val md_theme_dark_error = Color(0xFFFFB4AB)
 val md_theme_dark_onError = Color(0xFF690005)
 val md_theme_dark_errorContainer = Color(0xFF93000A)
 val md_theme_dark_onErrorContainer = Color(0xFFFFDAD6)
-val md_theme_dark_background = Color(0xFF121212)
-val md_theme_dark_onBackground = Color(0xFFE2E3DE)
 val md_theme_dark_surface = Color(0xFF1E1E1E)
 val md_theme_dark_onSurface = Color(0xFFE2E3DE)
 val md_theme_dark_surfaceVariant = Color(0xFF414941)

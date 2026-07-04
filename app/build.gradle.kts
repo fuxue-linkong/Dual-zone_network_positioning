@@ -72,9 +72,6 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-alpha22")
     implementation("androidx.compose.material:material-icons-core")
 
-    // Fragment (required for ActivityResultContracts on some dependency configurations)
-    implementation("androidx.fragment:fragment-ktx:1.8.6")
-
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
