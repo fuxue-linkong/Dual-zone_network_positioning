@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -141,12 +143,12 @@ private fun SourceDropdown(
                 unfocusedBorderColor = MiuixTheme.colorScheme.outline
             )
         )
-        androidx.compose.material3.ExposedDropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             labels.forEachIndexed { index, label ->
-                androidx.compose.material3.DropdownMenuItem(
+                DropdownMenuItem(
                     text = { Text(label) },
                     onClick = {
                         onSelected(index)
