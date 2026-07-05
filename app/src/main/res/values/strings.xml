@@ -53,4 +53,11 @@
     <string name="home_location_desc">查看当前位置及 CQ/ITU/梅登兰德分区</string>
     <string name="home_satellite">卫星</string>
     <string name="home_satellite_desc">查看附近过境卫星信息</string>
+    <string name="sat_action_get_location">获取定位</string>
+    <string name="sat_action_update_source">更新卫星源</string>
+    <string name="sat_no_location_time">未获取</string>
+    <string name="sat_no_source_time">未更新</string>
+    <string name="sat_no_city">未知地区</string>
+    <string name="sat_source_expired">已过期</string>
+    <string name="sat_source_fresh">有效</string>
 </resources>

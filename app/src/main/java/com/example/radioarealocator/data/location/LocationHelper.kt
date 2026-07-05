@@ -402,6 +402,54 @@ class LocationHelper(private val context: Context) {
         }
     }
 
+    /**
+     * 仅返回市级地址（locality 优先，缺失时回退到 adminArea）。
+     * 失败或不可用时返回空字符串。
+     */
+    suspend fun getCityAddress(latitude: Double, longitude: Double): String {
+        return try {
+            withTimeout(3_000) {
+                if (!Geocoder.isPresent()) {
+                    return@withTimeout ""
+                }
+
+                val geocoder = Geocoder(context)
+                val address: Address? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    suspendCancellableCoroutine { continuation ->
+                        geocoder.getFromLocation(
+                            latitude,
+                            longitude,
+                            1,
+                            object : Geocoder.GeocodeListener {
+                                override fun onGeocode(addresses: MutableList<Address>) {
+                                    continuation.resume(addresses.firstOrNull())
+                                }
+
+                                override fun onError(errorMessage: String?) {
+                                    continuation.resume(null)
+                                }
+                            }
+                        )
+                        continuation.invokeOnCancellation { /* 迟到回调由 CancellableContinuation 静默忽略 */ }
+                    }
+                } else {
+                    withContext(Dispatchers.IO) {
+                        @Suppress("DEPRECATION")
+                        geocoder.getFromLocation(latitude, longitude, 1)?.firstOrNull()
+                    }
+                }
+
+                address?.locality?.takeIf { it.isNotBlank() }
+                    ?: address?.adminArea?.takeIf { it.isNotBlank() }
+                    ?: ""
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     private fun formatAddress(address: Address?): String {
         if (address == null) return ""
         val parts = listOfNotNull(

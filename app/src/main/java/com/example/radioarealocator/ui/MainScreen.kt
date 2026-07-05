@@ -199,6 +199,8 @@ fun MainScreen(
                 )
                 2 -> SatelliteDetailContent(
                     uiState = uiState,
+                    onGetLocation = { viewModel.refreshLocationOnly() },
+                    onUpdateSource = { viewModel.refreshSatelliteSourceOnly() },
                     contentPadding = padding
                 )
             }
@@ -412,6 +414,8 @@ private fun LocationDetailContent(
 @Composable
 private fun SatelliteDetailContent(
     uiState: MainUiState,
+    onGetLocation: () -> Unit,
+    onUpdateSource: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -422,12 +426,143 @@ private fun SatelliteDetailContent(
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
     ) {
         item {
+            SatelliteActionCard(
+                isLoading = uiState.isLoading,
+                isSatelliteLoading = uiState.isSatelliteLoading,
+                lastLocationTime = uiState.lastLocationUpdateTime,
+                lastLocationCity = uiState.lastLocationCity,
+                lastSatelliteTime = uiState.lastSatelliteUpdateTime,
+                onGetLocation = onGetLocation,
+                onUpdateSource = onUpdateSource
+            )
+        }
+        item {
             SatelliteSection(
                 isLoading = uiState.isSatelliteLoading,
                 satellites = uiState.satellites,
                 satelliteError = uiState.satelliteError,
                 hasLocation = uiState.result != null
             )
+        }
+    }
+}
+
+/**
+ * 卫星页操作卡片：两个按钮并行居左，右侧分别显示最近更新时间和附加信息。
+ */
+@Composable
+private fun SatelliteActionCard(
+    isLoading: Boolean,
+    isSatelliteLoading: Boolean,
+    lastLocationTime: Instant?,
+    lastLocationCity: String,
+    lastSatelliteTime: Instant?,
+    onGetLocation: () -> Unit,
+    onUpdateSource: () -> Unit
+) {
+    val dateTimeFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss") }
+    val zoneId = remember { ZoneId.systemDefault() }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 第一行：获取定位按钮 + 最近定位信息
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onGetLocation,
+                    enabled = !isLoading,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(stringResource(R.string.sat_action_get_location))
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (lastLocationTime != null) {
+                            lastLocationTime.atZone(zoneId).format(dateTimeFormatter)
+                        } else {
+                            stringResource(R.string.sat_no_location_time)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = lastLocationCity.ifBlank { stringResource(R.string.sat_no_city) },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+            // 第二行：更新卫星源按钮 + 最近更新时间 + 是否过期
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onUpdateSource,
+                    enabled = !isSatelliteLoading,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    if (isSatelliteLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(stringResource(R.string.sat_action_update_source))
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (lastSatelliteTime != null) {
+                            lastSatelliteTime.atZone(zoneId).format(dateTimeFormatter)
+                        } else {
+                            stringResource(R.string.sat_no_source_time)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val expired = isSatelliteSourceExpired(lastSatelliteTime)
+                    Text(
+                        text = if (expired) {
+                            stringResource(R.string.sat_source_expired)
+                        } else {
+                            stringResource(R.string.sat_source_fresh)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (expired) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
