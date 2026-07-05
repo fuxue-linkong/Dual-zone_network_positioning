@@ -42,6 +42,8 @@
     <string name="filter_only_favorites">仅已关注</string>
     <string name="filter_more">更多</string>
     <string name="filter_reset">重置筛选</string>
+    <string name="filter_title">筛选卫星</string>
+    <string name="filter_done">完成</string>
     <string name="satellite_management">卫星管理</string>
     <string name="satellite_management_desc">点击卫星可添加或取消特别关注。关注的卫星在即将过境和在境时会以高亮显示。</string>
     <string name="favorites_count">已关注</string>

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -69,7 +72,6 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -77,8 +79,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.satellite.SatelliteInfo
@@ -1152,8 +1152,8 @@ private fun SatelliteSectionHeader(
 }
 
 /**
- * 卫星筛选悬窗：以 Popup 形式呈现的浮层卡片，支持模式多选与开关筛选，
- * 末尾提供"更多"入口进入三级页面。
+ * 卫星筛选弹窗：以 Dialog 形式呈现，支持模式多选与开关筛选，
+ * 底部提供"更多"入口进入三级页面。
  */
 @Composable
 private fun SatelliteFilterPopup(
@@ -1200,98 +1200,133 @@ private fun SatelliteFilterPopup(
             }
         }
         if (expanded) {
-            Popup(
-                alignment = Alignment.TopEnd,
-                onDismissRequest = { expanded = false },
-                properties = PopupProperties(focusable = true)
+            BasicAlertDialog(
+                onDismissRequest = { expanded = false }
             ) {
                 Surface(
                     modifier = Modifier
-                        .width(260.dp)
-                        .heightIn(max = 460.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .fillMaxWidth()
+                        .heightIn(max = 560.dp),
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 6.dp,
                     shadowElevation = 8.dp
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.filter_mode_section),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                        )
-                        FILTER_MODE_OPTIONS.forEach { mode ->
-                            val selected = mode.value in filter.modes
-                            FilterCheckRow(
-                                label = mode.label,
-                                checked = selected,
-                                onToggle = {
-                                    val newModes = if (selected) {
-                                        filter.modes - mode.value
-                                    } else {
-                                        filter.modes + mode.value
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // 标题区
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.filter_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (filter.isActive) {
+                                TextButton(
+                                    onClick = { onFilterChange(SatelliteFilter()) }
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.filter_reset),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+
+                        // 内容区（可滚动）
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.filter_mode_section),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+                            )
+                            FILTER_MODE_OPTIONS.forEach { mode ->
+                                val selected = mode.value in filter.modes
+                                FilterCheckRow(
+                                    label = mode.label,
+                                    checked = selected,
+                                    onToggle = {
+                                        val newModes = if (selected) {
+                                            filter.modes - mode.value
+                                        } else {
+                                            filter.modes + mode.value
+                                        }
+                                        onFilterChange(filter.copy(modes = newModes))
                                     }
-                                    onFilterChange(filter.copy(modes = newModes))
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            FilterSwitchRow(
+                                label = stringResource(R.string.filter_only_in_pass),
+                                checked = filter.onlyInPass,
+                                onToggle = {
+                                    onFilterChange(
+                                        filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false)
+                                    )
+                                }
+                            )
+                            FilterSwitchRow(
+                                label = stringResource(R.string.filter_only_upcoming),
+                                checked = filter.onlyUpcoming,
+                                onToggle = {
+                                    onFilterChange(
+                                        filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false)
+                                    )
+                                }
+                            )
+                            FilterSwitchRow(
+                                label = stringResource(R.string.filter_only_amsat),
+                                checked = filter.onlyAmsat,
+                                onToggle = {
+                                    onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat))
+                                }
+                            )
+                            FilterSwitchRow(
+                                label = stringResource(R.string.filter_only_favorites),
+                                checked = filter.onlyFavorites,
+                                onToggle = {
+                                    onFilterChange(filter.copy(onlyFavorites = !filter.onlyFavorites))
                                 }
                             )
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        FilterSwitchRow(
-                            label = stringResource(R.string.filter_only_in_pass),
-                            checked = filter.onlyInPass,
-                            onToggle = {
-                                onFilterChange(
-                                    filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false)
-                                )
-                            }
-                        )
-                        FilterSwitchRow(
-                            label = stringResource(R.string.filter_only_upcoming),
-                            checked = filter.onlyUpcoming,
-                            onToggle = {
-                                onFilterChange(
-                                    filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false)
-                                )
-                            }
-                        )
-                        FilterSwitchRow(
-                            label = stringResource(R.string.filter_only_amsat),
-                            checked = filter.onlyAmsat,
-                            onToggle = {
-                                onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat))
-                            }
-                        )
-                        FilterSwitchRow(
-                            label = stringResource(R.string.filter_only_favorites),
-                            checked = filter.onlyFavorites,
-                            onToggle = {
-                                onFilterChange(filter.copy(onlyFavorites = !filter.onlyFavorites))
-                            }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        FilterActionRow(
-                            label = stringResource(R.string.filter_more),
-                            icon = Icons.AutoMirrored.Filled.ArrowForward,
-                            onClick = {
+
+                        // 底部按钮区
+                        HorizontalDivider()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = {
                                 expanded = false
                                 onOpenManagement()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.filter_more))
                             }
-                        )
-                        if (filter.isActive) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            FilterActionRow(
-                                label = stringResource(R.string.filter_reset),
-                                labelColor = MaterialTheme.colorScheme.error,
-                                icon = null,
-                                onClick = {
-                                    onFilterChange(SatelliteFilter())
-                                }
-                            )
+                            Button(onClick = { expanded = false }) {
+                                Text(stringResource(R.string.filter_done))
+                            }
                         }
                     }
                 }
@@ -1355,37 +1390,6 @@ private fun FilterSwitchRow(
                 checkedTrackColor = MaterialTheme.colorScheme.primary
             )
         )
-    }
-}
-
-@Composable
-private fun FilterActionRow(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
-    labelColor: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = labelColor
-        )
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = labelColor,
-                modifier = Modifier.size(18.dp)
-            )
-        }
     }
 }
 
