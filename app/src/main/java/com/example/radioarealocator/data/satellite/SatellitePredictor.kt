@@ -4,6 +4,9 @@ import com.github.amsacode.predict4java.GroundStationPosition
 import com.github.amsacode.predict4java.PassPredictor
 import com.github.amsacode.predict4java.SatNotFoundException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.util.Date
@@ -30,13 +33,26 @@ class SatellitePredictor {
         altitude: Double = 0.0,
         hoursAhead: Int = 48
     ): List<SatelliteInfo> = withContext(Dispatchers.Default) {
+        if (sourcedTles.isEmpty()) return@withContext emptyList()
+
         val groundStation = GroundStationPosition(latitude, longitude, altitude)
         val now = Date()
         val searchEnd = Date(now.time + hoursAhead * 60L * 60L * 1000L)
 
-        // 并行预测每颗卫星的过境
-        val passes = sourcedTles.mapNotNull { sourcedTle ->
-            predictSinglePass(sourcedTle, groundStation, now, searchEnd)
+        // 并行预测每颗卫星的过境：每颗卫星的 SGP4/SDP4 计算是独立的，
+        // 使用 async + awaitAll 充分利用多核 CPU，相比串行 mapNotNull 显著降低总耗时。
+        // 对超大列表分批处理，避免同时派发过多协程导致调度压力。
+        val passes = coroutineScope {
+            sourcedTles
+                .chunked(CHUNK_SIZE)
+                .flatMap { batch ->
+                    batch.map { sourcedTle ->
+                        async(Dispatchers.Default) {
+                            predictSinglePass(sourcedTle, groundStation, now, searchEnd)
+                        }
+                    }.awaitAll()
+                }
+                .filterNotNull()
         }
 
         // 当前在境内的优先显示，其次按 AOS 时间排序
@@ -45,6 +61,16 @@ class SatellitePredictor {
                 compareByDescending<SatelliteInfo> { it.isCurrentlyVisible }
                     .thenBy { it.aosTime }
             )
+    }
+
+    private companion object {
+        /**
+         * 单批并行预测的卫星数量上限。
+         * 过大会一次性派发过多协程、增加调度开销；
+         * 过小则并行度不足。业余卫星总数约 20~30 颗，分批意义不大，
+         * 但为应对未来数据源扩展（如全量 CelesTrak）保留分批能力。
+         */
+        private const val CHUNK_SIZE = 32
     }
 
     private fun predictSinglePass(

@@ -159,6 +159,10 @@ class SatelliteDataSource {
     /**
      * 从 SatNOGS 批量获取 TLE，然后过滤出 SatelliteCatalog 中关心的卫星。
      * 单次请求可拿到全部 TLE，避免逐颗查询的大量网络往返。
+     *
+     * 优化：SatNOGS 返回全量 TLE（数千颗），但只关心 catalog 中的几十颗。
+     * 使用 HashSet 进行 O(1) 过滤，并优先判断 norad_cat_id 是否命中目标集合，
+     * 命中后才解析 tle0/tle1/tle2，避免对无关记录做字符串读取与对象构造。
      */
     private fun fetchSatnogsTLEs(): List<SourcedTLE> {
         val request = Request.Builder()
@@ -171,17 +175,18 @@ class SatelliteDataSource {
             }
             val body = response.body?.string() ?: throw IOException("SatNOGS 响应为空")
             val array = JSONArray(body)
-            val catalogNumbers = SatelliteCatalog.catalogNumbers
+            // 用 HashSet 加速 contains 查询；目标卫星数量少，构建成本可忽略
+            val catalogNumbers = SatelliteCatalog.catalogNumbers.toHashSet()
             val tles = mutableListOf<SourcedTLE>()
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
                 val noradCatId = obj.optInt("norad_cat_id", -1)
-                if (!catalogNumbers.contains(noradCatId)) continue
+                if (noradCatId < 0 || !catalogNumbers.contains(noradCatId)) continue
 
-                val tle0 = obj.optString("tle0", "")
                 val tle1 = obj.optString("tle1", "")
                 val tle2 = obj.optString("tle2", "")
                 if (tle1.isBlank() || tle2.isBlank()) continue
+                val tle0 = obj.optString("tle0", "")
 
                 try {
                     tles.add(
