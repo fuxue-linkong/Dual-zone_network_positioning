@@ -90,6 +90,7 @@ import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 private const val APP_NAME_FONT_SIZE = 32
+private const val LOCAL_TIME_FONT_SIZE = 44
 private const val UTC_FONT_SIZE_SCALE = 0.4f
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -266,6 +267,7 @@ fun MainScreen(
 
 /**
  * 主页头部：应用名位于左上（类似应用标题），下方居中显示本地时间 + UTC。
+ * 时间区域带背景色，与状态色联动。
  */
 @Composable
 private fun HomeHeader(
@@ -278,11 +280,14 @@ private fun HomeHeader(
         MaterialTheme.colorScheme.outline
     }
     val appNameSize = APP_NAME_FONT_SIZE.sp
-    val localTimeSize = APP_NAME_FONT_SIZE.sp
-    val utcSize = (APP_NAME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
+    val localTimeSize = LOCAL_TIME_FONT_SIZE.sp
+    val utcSize = (LOCAL_TIME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
 
     val localTime = now.atZone(ZoneId.systemDefault()).format(timeFormatter)
     val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
+
+    // 时间区域背景色：状态色半透明
+    val timeBgColor = stateColor.copy(alpha = 0.12f)
 
     Column(
         modifier = Modifier
@@ -301,27 +306,36 @@ private fun HomeHeader(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
         )
-        Text(
-            text = localTime,
-            style = TextStyle(
-                fontSize = localTimeSize,
-                fontWeight = FontWeight.Normal
-            ),
-            color = stateColor,
+        // 时间区域：带圆角背景色
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = "$utcTime UTC",
-            style = TextStyle(fontSize = utcSize),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
-            textAlign = TextAlign.Center
-        )
+                .padding(top = 8.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(timeBgColor)
+                .padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = localTime,
+                style = TextStyle(
+                    fontSize = localTimeSize,
+                    fontWeight = FontWeight.Normal
+                ),
+                color = stateColor,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "$utcTime UTC",
+                style = TextStyle(fontSize = utcSize),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

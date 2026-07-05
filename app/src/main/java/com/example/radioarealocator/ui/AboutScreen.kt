@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,11 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.radioarealocator.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +94,7 @@ fun AboutScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.head_portrait),
+                        painter = painterResource(R.mipmap.ic_launcher),
                         contentDescription = null,
                         modifier = Modifier
                             .size(100.dp)
@@ -140,9 +141,13 @@ fun AboutScreen(
                             headlineContent = { Text(maintainer.name) },
                             supportingContent = { Text(maintainer.role) },
                             leadingContent = {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null
+                                AsyncImage(
+                                    model = maintainer.avatarUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
                                 )
                             },
                             modifier = Modifier.clickable {
@@ -215,13 +220,15 @@ fun AboutScreen(
 private data class Maintainer(
     val name: String,
     val role: String,
-    val githubUrl: String? = null
+    val githubUrl: String? = null,
+    val avatarUrl: String? = null
 )
 
 private val MAINTAINERS = listOf(
     Maintainer(
         name = "凌空",
         role = "主要维护者",
-        githubUrl = "https://github.com/fuxue-linkong"
+        githubUrl = "https://github.com/fuxue-linkong",
+        avatarUrl = "https://github.com/fuxue-linkong.png"
     )
 )
