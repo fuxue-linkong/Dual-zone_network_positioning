@@ -32,8 +32,24 @@ private suspend inline fun <R> runCatchingCancellable(block: suspend () -> R): R
 data class SourcedTLE(
     val tle: TLE,
     val source: String, // "CT" / "SNOGS" / "ALL"
-    val status: String = "" // AMSAT 状态：Heard / Telemetry Only / Not Heard / Crew Active
-)
+    val status: String = "", // AMSAT 状态：Heard / Telemetry Only / Not Heard / Crew Active
+    val rawLines: Array<String> = arrayOf("", "", "") // 原始三行 TLE，用于本地缓存序列化
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SourcedTLE) return false
+        return tle == other.tle && source == other.source && status == other.status &&
+            rawLines.contentEquals(other.rawLines)
+    }
+
+    override fun hashCode(): Int {
+        var result = tle.hashCode()
+        result = 31 * result + source.hashCode()
+        result = 31 * result + status.hashCode()
+        result = 31 * result + rawLines.contentHashCode()
+        return result
+    }
+}
 
 /**
  * 卫星 TLE 数据源，同时从 CelesTrak 和 SatNOGS 获取并合并去重。
@@ -80,25 +96,30 @@ class SatelliteDataSource {
 
             // 按 NORAD 编号合并，记录来源
             val merged = LinkedHashMap<Int, SourcedTLE>()
-            celestrakResult?.getOrNull()?.forEach { (tle) ->
-                merged[tle.catnum] = SourcedTLE(tle, "CT")
+            celestrakResult?.getOrNull()?.forEach { stle ->
+                merged[stle.tle.catnum] = stle
             }
-            satnogsResult?.getOrNull()?.forEach { (tle) ->
-                val existing = merged[tle.catnum]
+            satnogsResult?.getOrNull()?.forEach { stle ->
+                val existing = merged[stle.tle.catnum]
                 if (existing == null) {
-                    merged[tle.catnum] = SourcedTLE(tle, "SNOGS")
+                    merged[stle.tle.catnum] = stle
                 } else {
                     // 两个源都有，标记为 ALL
-                    merged[tle.catnum] = SourcedTLE(existing.tle, "ALL")
+                    merged[stle.tle.catnum] = SourcedTLE(
+                        tle = existing.tle,
+                        source = "ALL",
+                        status = existing.status,
+                        rawLines = existing.rawLines
+                    )
                 }
             }
 
             // 按用户选择的来源过滤
             val filtered = when (source) {
                 "CT" -> merged.values.filter { it.source == "CT" || it.source == "ALL" }
-                    .map { SourcedTLE(it.tle, "CT") }
+                    .map { it.copy(source = "CT") }
                 "SNOGS" -> merged.values.filter { it.source == "SNOGS" || it.source == "ALL" }
-                    .map { SourcedTLE(it.tle, "SNOGS") }
+                    .map { it.copy(source = "SNOGS") }
                 else -> merged.values.toList()
             }
 
@@ -125,7 +146,13 @@ class SatelliteDataSource {
                 throw IOException("CelesTrak 请求失败：${response.code}")
             }
             val body = response.body?.string() ?: throw IOException("CelesTrak 响应为空")
-            return parseTextTLEs(body).map { SourcedTLE(it, "CT") }
+            return parseTextTLEs(body).map { (name, line1, line2) ->
+                SourcedTLE(
+                    tle = TLE(arrayOf(name, line1, line2)),
+                    source = "CT",
+                    rawLines = arrayOf(name, line1, line2)
+                )
+            }
         }
     }
 
@@ -157,7 +184,13 @@ class SatelliteDataSource {
                 if (tle1.isBlank() || tle2.isBlank()) continue
 
                 try {
-                    tles.add(SourcedTLE(TLE(arrayOf(tle0, tle1, tle2)), "SNOGS"))
+                    tles.add(
+                        SourcedTLE(
+                            tle = TLE(arrayOf(tle0, tle1, tle2)),
+                            source = "SNOGS",
+                            rawLines = arrayOf(tle0, tle1, tle2)
+                        )
+                    )
                 } catch (_: IllegalArgumentException) {
                     // 跳过解析失败的 TLE
                 }
@@ -170,14 +203,14 @@ class SatelliteDataSource {
     }
 
     /**
-     * 解析标准三行文本格式 TLE。
+     * 解析标准三行文本格式 TLE，返回 (name, line1, line2) 三元组列表。
      */
-    private fun parseTextTLEs(text: String): List<TLE> {
+    private fun parseTextTLEs(text: String): List<Triple<String, String, String>> {
         val lines = text.lines()
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
-        val result = mutableListOf<TLE>()
+        val result = mutableListOf<Triple<String, String, String>>()
         var i = 0
         while (i < lines.size) {
             val isNameLine = !lines[i].startsWith("1 ") && !lines[i].startsWith("2 ")
@@ -191,11 +224,7 @@ class SatelliteDataSource {
             val line2 = lines[line2Index]
 
             if (line1.startsWith("1 ") && line2.startsWith("2 ")) {
-                try {
-                    result.add(TLE(arrayOf(name, line1, line2)))
-                } catch (_: IllegalArgumentException) {
-                    // 跳过解析失败的 TLE
-                }
+                result.add(Triple(name, line1, line2))
             }
 
             i = line2Index + 1

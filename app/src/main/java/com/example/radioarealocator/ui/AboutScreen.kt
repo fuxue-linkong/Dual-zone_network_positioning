@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -102,7 +103,7 @@ fun AboutScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "凌空",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -111,17 +112,51 @@ fun AboutScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    Text(
                         text = stringResource(R.string.version_info, versionName),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
+                }
+            }
+
+            // 维护者列表
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.maintainers),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
+                    )
+                    MAINTAINERS.forEach { maintainer ->
+                        ListItem(
+                            headlineContent = { Text(maintainer.name) },
+                            supportingContent = { Text(maintainer.role) },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                maintainer.githubUrl?.let { url ->
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: ActivityNotFoundException) {
+                                        Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -176,3 +211,17 @@ fun AboutScreen(
         }
     }
 }
+
+private data class Maintainer(
+    val name: String,
+    val role: String,
+    val githubUrl: String? = null
+)
+
+private val MAINTAINERS = listOf(
+    Maintainer(
+        name = "凌空",
+        role = "主要维护者",
+        githubUrl = "https://github.com/fuxue-linkong"
+    )
+)

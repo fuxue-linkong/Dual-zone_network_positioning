@@ -25,6 +25,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
@@ -35,6 +37,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -91,6 +95,11 @@ fun MainScreen(
     // 主页二级页面：0=列表, 1=定位详情, 2=卫星详情
     var homeSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
+
+    // 启动时初始化：从缓存加载 TLE，必要时后台拉取
+    LaunchedEffect(Unit) {
+        viewModel.initializeIfNeeded()
+    }
 
     // 时钟状态，每秒刷新
     var now by remember { mutableStateOf(Instant.now()) }
@@ -199,6 +208,8 @@ fun MainScreen(
                 )
                 2 -> SatelliteDetailContent(
                     uiState = uiState,
+                    filter = viewModel.satelliteFilter.value,
+                    onFilterChange = viewModel::updateSatelliteFilter,
                     onGetLocation = { viewModel.refreshLocationOnly() },
                     onUpdateSource = { viewModel.refreshSatelliteSourceOnly() },
                     contentPadding = padding
@@ -414,10 +425,15 @@ private fun LocationDetailContent(
 @Composable
 private fun SatelliteDetailContent(
     uiState: MainUiState,
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit,
     onGetLocation: () -> Unit,
     onUpdateSource: () -> Unit,
     contentPadding: PaddingValues
 ) {
+    val filteredSatellites = remember(uiState.satellites, filter) {
+        uiState.satellites.applyFilter(filter)
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -439,9 +455,12 @@ private fun SatelliteDetailContent(
         item {
             SatelliteSection(
                 isLoading = uiState.isSatelliteLoading,
-                satellites = uiState.satellites,
+                satellites = filteredSatellites,
+                totalCount = uiState.satellites.size,
                 satelliteError = uiState.satelliteError,
-                hasLocation = uiState.result != null
+                hasLocation = uiState.result != null,
+                filter = filter,
+                onFilterChange = onFilterChange
             )
         }
     }
@@ -795,8 +814,11 @@ private fun ZoneItem(label: String, value: String) {
 private fun SatelliteSection(
     isLoading: Boolean,
     satellites: List<SatelliteInfo>,
+    totalCount: Int,
     satelliteError: String?,
-    hasLocation: Boolean
+    hasLocation: Boolean,
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -813,12 +835,23 @@ private fun SatelliteSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            if (satellites.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.satellite_count, satellites.size),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (totalCount > 0) {
+                    val countText = if (filter.isActive) {
+                        stringResource(R.string.satellite_count_filtered, satellites.size, totalCount)
+                    } else {
+                        stringResource(R.string.satellite_count, totalCount)
+                    }
+                    Text(
+                        text = countText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                SatelliteFilterMenu(filter = filter, onFilterChange = onFilterChange)
             }
         }
 
@@ -852,7 +885,10 @@ private fun SatelliteSection(
             satellites.isEmpty() -> {
                 SatellitePlaceholderCard {
                     Text(
-                        text = stringResource(R.string.no_satellites),
+                        text = stringResource(
+                            if (filter.isActive) R.string.no_satellites_filtered
+                            else R.string.no_satellites
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -867,6 +903,146 @@ private fun SatelliteSection(
         }
     }
 }
+
+@Composable
+private fun SatelliteFilterMenu(
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = null,
+                tint = if (filter.isActive) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+            if (filter.isActive) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // 类型筛选
+            Text(
+                text = stringResource(R.string.filter_mode_section),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+            FILTER_MODE_OPTIONS.forEach { mode ->
+                val selected = filter.mode == mode.value
+                DropdownMenuItem(
+                    text = { Text(mode.label) },
+                    onClick = {
+                        onFilterChange(filter.copy(mode = if (selected) "" else mode.value))
+                    },
+                    trailingIcon = {
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+            }
+            HorizontalDivider()
+            // 开关类筛选
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.filter_only_in_pass)) },
+                onClick = {
+                    onFilterChange(
+                        filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false)
+                    )
+                },
+                trailingIcon = {
+                    if (filter.onlyInPass) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.filter_only_upcoming)) },
+                onClick = {
+                    onFilterChange(
+                        filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false)
+                    )
+                },
+                trailingIcon = {
+                    if (filter.onlyUpcoming) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.filter_only_amsat)) },
+                onClick = {
+                    onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat))
+                },
+                trailingIcon = {
+                    if (filter.onlyAmsat) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
+            if (filter.isActive) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.filter_reset),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        onFilterChange(SatelliteFilter())
+                    }
+                )
+            }
+        }
+    }
+}
+
+private data class FilterModeOption(val value: String, val label: String)
+
+private val FILTER_MODE_OPTIONS = listOf(
+    FilterModeOption("FM", "FM"),
+    FilterModeOption("SSTV", "SSTV"),
+    FilterModeOption("DSTAR", "D-Star"),
+    FilterModeOption("CW", "CW"),
+    FilterModeOption("USB", "USB"),
+    FilterModeOption("LSB", "LSB")
+)
 
 @Composable
 private fun SatellitePlaceholderCard(content: @Composable () -> Unit) {
@@ -997,8 +1173,12 @@ private fun SatelliteItem(satellite: SatelliteInfo) {
                 if (satellite.status.isNotEmpty()) {
                     StatusChip(status = satellite.status)
                 }
-                satellite.modes.forEach { mode ->
-                    ModeChip(mode = mode)
+                if (satellite.modes.isEmpty()) {
+                    ModeChip(mode = stringResource(R.string.mode_unknown))
+                } else {
+                    satellite.modes.forEach { mode ->
+                        ModeChip(mode = mode)
+                    }
                 }
             }
 

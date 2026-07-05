@@ -21,7 +21,6 @@ class SatellitePredictor {
      * @param latitude 地面站纬度（度）
      * @param longitude 地面站经度（度）
      * @param altitude 地面站海拔（米）
-     * @param limit 返回结果数量上限
      * @param hoursAhead 预测未来小时数
      */
     suspend fun predictUpcomingPasses(
@@ -29,7 +28,6 @@ class SatellitePredictor {
         latitude: Double,
         longitude: Double,
         altitude: Double = 0.0,
-        limit: Int = 25,
         hoursAhead: Int = 48
     ): List<SatelliteInfo> = withContext(Dispatchers.Default) {
         val groundStation = GroundStationPosition(latitude, longitude, altitude)
@@ -47,7 +45,6 @@ class SatellitePredictor {
                 compareByDescending<SatelliteInfo> { it.isCurrentlyVisible }
                     .thenBy { it.aosTime }
             )
-            .take(limit)
     }
 
     private fun predictSinglePass(
@@ -58,8 +55,8 @@ class SatellitePredictor {
     ): SatelliteInfo? {
         return try {
             val tle = sourcedTle.tle
+            // 不在 catalog 中的卫星返回空 modes 列表（UI 显示"未知"）
             val modes = SatelliteCatalog.MODES_BY_CATALOG_NUMBER[tle.catnum].orEmpty()
-            if (modes.isEmpty()) return null
 
             val predictor = PassPredictor(tle, groundStation)
 

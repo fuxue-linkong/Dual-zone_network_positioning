@@ -21,6 +21,9 @@
     <string name="settings">设置</string>
     <string name="home">主页</string>
     <string name="about_app">关于本应用</string>
+    <string name="maintainers">维护者</string>
+    <string name="maintainer_role_lead">主要维护者</string>
+    <string name="maintainer_role_contributor">贡献者</string>
     <string name="satellite_source">卫星数据来源</string>
     <string name="source_all">全部 (ALL)</string>
     <string name="source_celestrak">CelesTrak 源</string>
@@ -30,6 +33,14 @@
     <string name="about_description">一款基于手机定位自动生成 CQ/ITU 分区和梅登兰德定位的小工具。</string>
     <string name="nearby_satellites">附近卫星</string>
     <string name="satellite_count">共 %d 颗</string>
+    <string name="satellite_count_filtered">%d / %d 颗</string>
+    <string name="no_satellites_filtered">当前筛选条件下无卫星</string>
+    <string name="filter_mode_section">按工作模式</string>
+    <string name="filter_only_in_pass">仅在境卫星</string>
+    <string name="filter_only_upcoming">仅即将入境</string>
+    <string name="filter_only_amsat">仅 AMSAT 收录</string>
+    <string name="filter_reset">重置筛选</string>
+    <string name="mode_unknown">未知</string>
     <string name="max_elevation">最大仰角</string>
     <string name="aos_time">入境</string>
     <string name="los_time">出境</string>
