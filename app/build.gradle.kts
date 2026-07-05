@@ -1,9 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import java.io.File
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    jacoco
 }
 
 android {
@@ -53,6 +55,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
@@ -60,6 +66,28 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // JaCoCo 覆盖率报告配置：排除自动生成与框架代码，聚焦业务逻辑
+    testOptions {
+        unitTests {
+            all {
+                it.extensions.configure<JacocoTaskExtension> {
+                    isIncludeNoLocationClasses = true
+                    excludes = listOf(
+                        "jdk.internal.*",
+                        "android.*",
+                        "androidx.*",
+                        "com.android.*",
+                        "*_Factory",
+                        "*_MembersInjector",
+                        "*Hilt*",
+                        "Dagger*",
+                        "*Binding*"
+                    )
+                }
+            }
         }
     }
     compileOptions {
@@ -80,6 +108,11 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
+}
+
+// JaCoCo 工具版本配置（顶层 Gradle Jacoco 插件扩展）
+jacoco {
+    toolVersion = "0.8.12"
 }
 
 dependencies {
