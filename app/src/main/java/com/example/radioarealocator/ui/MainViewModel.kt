@@ -296,9 +296,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tlesOverride: List<SourcedTLE>? = null
     ) {
         val tles = tlesOverride ?: _uiState.value.cachedTles
+        predictJob?.cancel()
         if (tles.isEmpty()) {
             // 无 TLE 数据，先拉取再预测
-            viewModelScope.launch {
+            predictJob = viewModelScope.launch {
                 try {
                     val fresh = fetchAndCacheTLEs()
                     predictAndApply(fresh, latitude, longitude)
@@ -313,7 +314,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             return
         }
-        predictJob?.cancel()
         predictJob = viewModelScope.launch {
             predictAndApply(tles, latitude, longitude)
         }
@@ -335,7 +335,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isSatelliteLoading = false,
                 satellites = satellites,
                 cachedTles = tles,
-                satelliteError = null
+                satelliteError = null,
+                lastSatelliteUpdateTime = Instant.now()
             )
         } catch (e: CancellationException) {
             throw e
