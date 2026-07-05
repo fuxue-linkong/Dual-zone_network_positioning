@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.SettingsStore
 import com.example.radioarealocator.data.location.LocationHelper
+import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
 import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatelliteInfo
@@ -30,6 +31,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val satellitePredictor = SatellitePredictor()
     private val settingsStore = SettingsStore(application)
     private val satelliteCache = SatelliteCacheStore(application)
+    private val favoriteStore = FavoriteSatellitesStore(application)
 
     // 跟踪上一次刷新的 Job，避免用户快速多次点击导致并发竞态
     private var refreshJob: Job? = null
@@ -50,13 +52,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 卫星筛选状态。类型筛选为空字符串时表示不按类型筛选。
+     * 卫星筛选状态。类型筛选为空集合时表示不按模式筛选。
      */
     private val _satelliteFilter = mutableStateOf(SatelliteFilter())
     val satelliteFilter: State<SatelliteFilter> = _satelliteFilter
 
     fun updateSatelliteFilter(filter: SatelliteFilter) {
         _satelliteFilter.value = filter
+    }
+
+    /**
+     * 用户关注的卫星 NORAD 编号集合，进程重启后可从本地恢复。
+     */
+    private val _favoriteSatellites = mutableStateOf(favoriteStore.load())
+    val favoriteSatellites: State<Set<Int>> = _favoriteSatellites
+
+    /**
+     * 切换某颗卫星的关注状态并持久化。
+     */
+    fun toggleFavorite(catalogNumber: Int) {
+        val updated = favoriteStore.toggle(catalogNumber)
+        _favoriteSatellites.value = updated
     }
 
     // 背景图 URI：null 表示未设置
@@ -349,35 +365,41 @@ fun isSatelliteSourceExpired(lastUpdate: Instant?, now: Instant = Instant.now())
 /**
  * 卫星筛选条件。
  *
- * @param mode 工作模式筛选，空字符串表示不筛选。可选值：FM/SSTV/DSTAR/CW/USB/LSB
+ * @param modes 工作模式多选筛选，空集合表示不按模式筛选。可选值：FM/SSTV/DSTAR/CW/USB/LSB
  * @param onlyUpcoming 仅显示即将入境（不含当前在境）
  * @param onlyInPass 仅显示当前在境
  * @param onlyAmsat 仅显示 AMSAT 状态 API 中的卫星（即有 status 报告的）
+ * @param onlyFavorites 仅显示已关注卫星
  */
 data class SatelliteFilter(
-    val mode: String = "",
+    val modes: Set<String> = emptySet(),
     val onlyUpcoming: Boolean = false,
     val onlyInPass: Boolean = false,
-    val onlyAmsat: Boolean = false
+    val onlyAmsat: Boolean = false,
+    val onlyFavorites: Boolean = false
 ) {
     /**
      * 当前筛选是否处于激活状态（任一条件被设置）。
      */
     val isActive: Boolean
-        get() = mode.isNotEmpty() || onlyUpcoming || onlyInPass || onlyAmsat
+        get() = modes.isNotEmpty() || onlyUpcoming || onlyInPass || onlyAmsat || onlyFavorites
 }
 
 /**
  * 应用筛选条件到卫星列表。
  */
-fun List<SatelliteInfo>.applyFilter(filter: SatelliteFilter): List<SatelliteInfo> {
+fun List<SatelliteInfo>.applyFilter(
+    filter: SatelliteFilter,
+    favorites: Set<Int> = emptySet()
+): List<SatelliteInfo> {
     if (!filter.isActive) return this
     return this.filter { sat ->
-        val modeOk = filter.mode.isEmpty() || sat.modes.contains(filter.mode)
+        val modeOk = filter.modes.isEmpty() || filter.modes.any { it in sat.modes }
         val upcomingOk = !filter.onlyUpcoming || !sat.isCurrentlyVisible
         val inPassOk = !filter.onlyInPass || sat.isCurrentlyVisible
         val amsatOk = !filter.onlyAmsat || sat.status.isNotBlank()
-        modeOk && upcomingOk && inPassOk && amsatOk
+        val favoriteOk = !filter.onlyFavorites || sat.catalogNumber in favorites
+        modeOk && upcomingOk && inPassOk && amsatOk && favoriteOk
     }
 }
 

@@ -1,6 +1,7 @@
 package com.example.radioarealocator.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.BackHandler
@@ -25,20 +28,20 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,6 +50,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -63,6 +69,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -70,6 +77,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.satellite.SatelliteInfo
@@ -90,9 +99,10 @@ fun MainScreen(
     onRequestPermission: () -> Unit
 ) {
     val uiState by viewModel.uiState
+    val favorites by viewModel.favoriteSatellites
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showAbout by remember { mutableStateOf(false) }
-    // 主页二级页面：0=列表, 1=定位详情, 2=卫星详情
+    // 主页子页面：0=列表, 1=定位详情, 2=卫星详情, 3=卫星管理（三级）
     var homeSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
 
@@ -130,6 +140,7 @@ fun MainScreen(
     BackHandler(enabled = showAbout || (selectedTab == 0 && homeSubScreen != 0)) {
         when {
             showAbout -> showAbout = false
+            selectedTab == 0 && homeSubScreen == 3 -> homeSubScreen = 2
             selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
         }
     }
@@ -151,6 +162,17 @@ fun MainScreen(
                     title = { Text(stringResource(R.string.home_location)) },
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    }
+                )
+                selectedTab == 0 && homeSubScreen == 3 -> TopAppBar(
+                    title = { Text(stringResource(R.string.satellite_management)) },
+                    navigationIcon = {
+                        IconButton(onClick = { homeSubScreen = 2 }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.back)
@@ -212,6 +234,15 @@ fun MainScreen(
                     onFilterChange = viewModel::updateSatelliteFilter,
                     onGetLocation = { viewModel.refreshLocationOnly() },
                     onUpdateSource = { viewModel.refreshSatelliteSourceOnly() },
+                    favorites = favorites,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onOpenManagement = { homeSubScreen = 3 },
+                    contentPadding = padding
+                )
+                3 -> SatelliteManagementContent(
+                    uiState = uiState,
+                    favorites = favorites,
+                    onToggleFavorite = viewModel::toggleFavorite,
                     contentPadding = padding
                 )
             }
@@ -429,11 +460,16 @@ private fun SatelliteDetailContent(
     onFilterChange: (SatelliteFilter) -> Unit,
     onGetLocation: () -> Unit,
     onUpdateSource: () -> Unit,
+    favorites: Set<Int>,
+    onToggleFavorite: (Int) -> Unit,
+    onOpenManagement: () -> Unit,
     contentPadding: PaddingValues
 ) {
-    val filteredSatellites = remember(uiState.satellites, filter) {
-        uiState.satellites.applyFilter(filter)
+    val filteredSatellites = remember(uiState.satellites, filter, favorites) {
+        uiState.satellites.applyFilter(filter, favorites)
     }
+    val totalCount = uiState.satellites.size
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -453,22 +489,281 @@ private fun SatelliteDetailContent(
             )
         }
         item {
-            SatelliteSection(
+            SatelliteSectionHeader(
                 isLoading = uiState.isSatelliteLoading,
-                satellites = filteredSatellites,
-                totalCount = uiState.satellites.size,
-                satelliteError = uiState.satelliteError,
-                hasLocation = uiState.result != null,
+                filteredCount = filteredSatellites.size,
+                totalCount = totalCount,
+                isActive = filter.isActive,
                 filter = filter,
-                onFilterChange = onFilterChange
+                onFilterChange = onFilterChange,
+                onOpenManagement = onOpenManagement
             )
+        }
+        when {
+            uiState.isSatelliteLoading && filteredSatellites.isEmpty() -> {
+                item {
+                    SatellitePlaceholderCard { CircularProgressIndicator() }
+                }
+            }
+            uiState.satelliteError != null -> {
+                item {
+                    SatellitePlaceholderCard {
+                        Text(
+                            text = stringResource(R.string.satellite_load_failed, uiState.satelliteError),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+            uiState.result == null -> {
+                item {
+                    SatellitePlaceholderCard {
+                        Text(
+                            text = stringResource(R.string.satellite_need_location),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            filteredSatellites.isEmpty() -> {
+                item {
+                    SatellitePlaceholderCard {
+                        Text(
+                            text = stringResource(
+                                if (filter.isActive) R.string.no_satellites_filtered
+                                else R.string.no_satellites
+                            ),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            else -> {
+                items(
+                    items = filteredSatellites,
+                    key = { it.catalogNumber }
+                ) { sat ->
+                    SatelliteItem(
+                        satellite = sat,
+                        isFavorite = sat.catalogNumber in favorites,
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                    )
+                }
+            }
         }
     }
 }
 
 /**
- * 卫星页操作卡片：两个按钮并行居左，右侧分别显示最近更新时间和附加信息。
+ * 卫星管理三级页面：展示所有可见卫星，可对任意卫星加/取消特别关注。
  */
+@Composable
+private fun SatelliteManagementContent(
+    uiState: MainUiState,
+    favorites: Set<Int>,
+    onToggleFavorite: (Int) -> Unit,
+    contentPadding: PaddingValues
+) {
+    val satellites = uiState.satellites
+    val favoriteCount = satellites.count { it.catalogNumber in favorites }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+    ) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.satellite_management_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ManagementStat(
+                            label = stringResource(R.string.satellite_count, satellites.size),
+                            value = satellites.size.toString()
+                        )
+                        ManagementStat(
+                            label = stringResource(R.string.favorites_count),
+                            value = favoriteCount.toString()
+                        )
+                    }
+                }
+            }
+        }
+        when {
+            uiState.isSatelliteLoading && satellites.isEmpty() -> {
+                item {
+                    SatellitePlaceholderCard { CircularProgressIndicator() }
+                }
+            }
+            uiState.result == null -> {
+                item {
+                    SatellitePlaceholderCard {
+                        Text(
+                            text = stringResource(R.string.satellite_need_location),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            satellites.isEmpty() -> {
+                item {
+                    SatellitePlaceholderCard {
+                        Text(
+                            text = stringResource(R.string.no_satellites),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            else -> {
+                // 已关注的卫星排在前面
+                val sorted = satellites.sortedWith(
+                    compareByDescending<SatelliteInfo> { it.catalogNumber in favorites }
+                        .thenByDescending { it.isCurrentlyVisible }
+                        .thenBy { it.aosTime }
+                )
+                items(
+                    items = sorted,
+                    key = { it.catalogNumber }
+                ) { sat ->
+                    SatelliteManagementItem(
+                        satellite = sat,
+                        isFavorite = sat.catalogNumber in favorites,
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManagementStat(label: String, value: String) {
+    Column {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SatelliteManagementItem(
+    satellite: SatelliteInfo,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit
+) {
+    val formatter = remember { DateTimeFormatter.ofPattern("MM-dd HH:mm") }
+    val zone = remember { ZoneId.systemDefault() }
+    val timeText = if (satellite.isCurrentlyVisible) {
+        stringResource(R.string.in_pass)
+    } else {
+        satellite.aosTime.atZone(zone).format(formatter)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFavorite) {
+                MaterialTheme.colorScheme.tertiaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+            contentColor = if (isFavorite) {
+                MaterialTheme.colorScheme.onTertiaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggleFavorite)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = null,
+                tint = if (isFavorite) {
+                    MaterialTheme.colorScheme.tertiary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = satellite.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = if (satellite.isCurrentlyVisible) {
+                        "${stringResource(R.string.in_pass)} · $timeText"
+                    } else {
+                        "${stringResource(R.string.aos_time)}：$timeText"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isFavorite) {
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            if (isFavorite) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.tertiary)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.favorited),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiary
+                    )
+                }
+            }
+        }
+    }
+}
+
+
 @Composable
 private fun SatelliteActionCard(
     isLoading: Boolean,
@@ -811,103 +1106,60 @@ private fun ZoneItem(label: String, value: String) {
 }
 
 @Composable
-private fun SatelliteSection(
+private fun SatelliteSectionHeader(
     isLoading: Boolean,
-    satellites: List<SatelliteInfo>,
+    filteredCount: Int,
     totalCount: Int,
-    satelliteError: String?,
-    hasLocation: Boolean,
+    isActive: Boolean,
     filter: SatelliteFilter,
-    onFilterChange: (SatelliteFilter) -> Unit
+    onFilterChange: (SatelliteFilter) -> Unit,
+    onOpenManagement: () -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Text(
+            text = stringResource(R.string.nearby_satellites),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.nearby_satellites),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            if (totalCount > 0) {
+                val countText = if (isActive) {
+                    stringResource(R.string.satellite_count_filtered, filteredCount, totalCount)
+                } else {
+                    stringResource(R.string.satellite_count, totalCount)
+                }
+                Text(
+                    text = countText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            SatelliteFilterPopup(
+                filter = filter,
+                onFilterChange = onFilterChange,
+                onOpenManagement = onOpenManagement
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (totalCount > 0) {
-                    val countText = if (filter.isActive) {
-                        stringResource(R.string.satellite_count_filtered, satellites.size, totalCount)
-                    } else {
-                        stringResource(R.string.satellite_count, totalCount)
-                    }
-                    Text(
-                        text = countText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                SatelliteFilterMenu(filter = filter, onFilterChange = onFilterChange)
-            }
-        }
-
-        when {
-            isLoading && satellites.isEmpty() -> {
-                SatellitePlaceholderCard {
-                    CircularProgressIndicator()
-                }
-            }
-
-            satelliteError != null -> {
-                SatellitePlaceholderCard {
-                    Text(
-                        text = stringResource(R.string.satellite_load_failed, satelliteError),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            !hasLocation -> {
-                SatellitePlaceholderCard {
-                    Text(
-                        text = stringResource(R.string.satellite_need_location),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            satellites.isEmpty() -> {
-                SatellitePlaceholderCard {
-                    Text(
-                        text = stringResource(
-                            if (filter.isActive) R.string.no_satellites_filtered
-                            else R.string.no_satellites
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            else -> {
-                satellites.forEach { sat ->
-                    SatelliteItem(satellite = sat)
-                }
-            }
         }
     }
 }
 
+/**
+ * 卫星筛选悬窗：以 Popup 形式呈现的浮层卡片，支持模式多选与开关筛选，
+ * 末尾提供"更多"入口进入三级页面。
+ */
 @Composable
-private fun SatelliteFilterMenu(
+private fun SatelliteFilterPopup(
     filter: SatelliteFilter,
-    onFilterChange: (SatelliteFilter) -> Unit
+    onFilterChange: (SatelliteFilter) -> Unit,
+    onOpenManagement: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -915,6 +1167,15 @@ private fun SatelliteFilterMenu(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(10.dp))
+                .border(
+                    width = 1.dp,
+                    color = if (filter.isActive) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                )
                 .clickable { expanded = true }
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -938,97 +1199,192 @@ private fun SatelliteFilterMenu(
                 )
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // 类型筛选
-            Text(
-                text = stringResource(R.string.filter_mode_section),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-            )
-            FILTER_MODE_OPTIONS.forEach { mode ->
-                val selected = filter.mode == mode.value
-                DropdownMenuItem(
-                    text = { Text(mode.label) },
-                    onClick = {
-                        onFilterChange(filter.copy(mode = if (selected) "" else mode.value))
-                    },
-                    trailingIcon = {
-                        if (selected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+        if (expanded) {
+            Popup(
+                alignment = Alignment.TopEnd,
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = true)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .width(260.dp)
+                        .heightIn(max = 460.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.filter_mode_section),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                        FILTER_MODE_OPTIONS.forEach { mode ->
+                            val selected = mode.value in filter.modes
+                            FilterCheckRow(
+                                label = mode.label,
+                                checked = selected,
+                                onToggle = {
+                                    val newModes = if (selected) {
+                                        filter.modes - mode.value
+                                    } else {
+                                        filter.modes + mode.value
+                                    }
+                                    onFilterChange(filter.copy(modes = newModes))
+                                }
+                            )
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        FilterSwitchRow(
+                            label = stringResource(R.string.filter_only_in_pass),
+                            checked = filter.onlyInPass,
+                            onToggle = {
+                                onFilterChange(
+                                    filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false)
+                                )
+                            }
+                        )
+                        FilterSwitchRow(
+                            label = stringResource(R.string.filter_only_upcoming),
+                            checked = filter.onlyUpcoming,
+                            onToggle = {
+                                onFilterChange(
+                                    filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false)
+                                )
+                            }
+                        )
+                        FilterSwitchRow(
+                            label = stringResource(R.string.filter_only_amsat),
+                            checked = filter.onlyAmsat,
+                            onToggle = {
+                                onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat))
+                            }
+                        )
+                        FilterSwitchRow(
+                            label = stringResource(R.string.filter_only_favorites),
+                            checked = filter.onlyFavorites,
+                            onToggle = {
+                                onFilterChange(filter.copy(onlyFavorites = !filter.onlyFavorites))
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        FilterActionRow(
+                            label = stringResource(R.string.filter_more),
+                            icon = Icons.AutoMirrored.Filled.ArrowForward,
+                            onClick = {
+                                expanded = false
+                                onOpenManagement()
+                            }
+                        )
+                        if (filter.isActive) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            FilterActionRow(
+                                label = stringResource(R.string.filter_reset),
+                                labelColor = MaterialTheme.colorScheme.error,
+                                icon = null,
+                                onClick = {
+                                    onFilterChange(SatelliteFilter())
+                                }
                             )
                         }
                     }
-                )
+                }
             }
-            HorizontalDivider()
-            // 开关类筛选
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.filter_only_in_pass)) },
-                onClick = {
-                    onFilterChange(
-                        filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false)
-                    )
-                },
-                trailingIcon = {
-                    if (filter.onlyInPass) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+        }
+    }
+}
+
+@Composable
+private fun FilterCheckRow(
+    label: String,
+    checked: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        androidx.compose.material3.Checkbox(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.filter_only_upcoming)) },
-                onClick = {
-                    onFilterChange(
-                        filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false)
-                    )
-                },
-                trailingIcon = {
-                    if (filter.onlyUpcoming) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+        )
+    }
+}
+
+@Composable
+private fun FilterSwitchRow(
+    label: String,
+    checked: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = MaterialTheme.colorScheme.primary
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.filter_only_amsat)) },
-                onClick = {
-                    onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat))
-                },
-                trailingIcon = {
-                    if (filter.onlyAmsat) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+        )
+    }
+}
+
+@Composable
+private fun FilterActionRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    labelColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = labelColor
+        )
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = labelColor,
+                modifier = Modifier.size(18.dp)
             )
-            if (filter.isActive) {
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(R.string.filter_reset),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    onClick = {
-                        onFilterChange(SatelliteFilter())
-                    }
-                )
-            }
         }
     }
 }
@@ -1068,7 +1424,11 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SatelliteItem(satellite: SatelliteInfo) {
+private fun SatelliteItem(
+    satellite: SatelliteInfo,
+    isFavorite: Boolean = false,
+    onToggleFavorite: () -> Unit = {}
+) {
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     if (satellite.isCurrentlyVisible) {
         LaunchedEffect(satellite.losTime) {
@@ -1093,21 +1453,35 @@ private fun SatelliteItem(satellite: SatelliteInfo) {
         }
     }
 
-    val cardContainerColor = if (satellite.isCurrentlyVisible) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surface
+    // 关注卫星在境内/即将过境时使用 tertiary 系列强调色；境内优先用 primaryContainer
+    val cardContainerColor = when {
+        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.primaryContainer
+        isFavorite -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val cardContentColor = when {
+        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.onPrimaryContainer
+        isFavorite -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isFavorite) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor,
-            contentColor = if (satellite.isCurrentlyVisible) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
+            contentColor = cardContentColor
         )
     ) {
         Column(
@@ -1140,24 +1514,43 @@ private fun SatelliteItem(satellite: SatelliteInfo) {
                         text = satellite.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (satellite.isCurrentlyVisible) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
+                        color = cardContentColor
                     )
+                    if (isFavorite) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
-                Text(
-                    text = "${satellite.maxElevation.toInt()}°",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (satellite.isCurrentlyVisible) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "${satellite.maxElevation.toInt()}°",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = cardContentColor
+                    )
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (isFavorite) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
                     }
-                )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
