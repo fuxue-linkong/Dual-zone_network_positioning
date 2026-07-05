@@ -16,6 +16,7 @@ captures
 local.properties
 signing/release.keystore
 signing/*.bak.*
+signing/github-secrets.txt
 signing-report/
 *.jks
 *.keystore

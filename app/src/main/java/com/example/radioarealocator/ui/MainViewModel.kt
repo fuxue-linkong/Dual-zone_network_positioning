@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.SettingsStore
+import com.example.radioarealocator.data.calendar.CalendarHelper
 import com.example.radioarealocator.data.location.LocationHelper
 import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
@@ -86,6 +87,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setBackgroundUri(uri: Uri?) {
         _backgroundUri.value = uri
         settingsStore.backgroundUri = uri?.toString()
+    }
+
+    // 卫星过境日历提醒开关
+    private val _calendarReminderEnabled = mutableStateOf(settingsStore.calendarReminderEnabled)
+    val calendarReminderEnabled: State<Boolean> = _calendarReminderEnabled
+
+    fun setCalendarReminderEnabled(enabled: Boolean) {
+        _calendarReminderEnabled.value = enabled
+        settingsStore.calendarReminderEnabled = enabled
+    }
+
+    fun hasCalendarPermission(): Boolean {
+        return CalendarHelper.hasPermission(getApplication())
+    }
+
+    fun addToCalendar(satellite: SatelliteInfo): Boolean {
+        return CalendarHelper.addPassEvent(getApplication(), satellite) != null
     }
 
     val hasLocationPermission: Boolean

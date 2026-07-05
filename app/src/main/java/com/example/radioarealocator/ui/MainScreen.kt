@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -31,6 +33,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
@@ -138,6 +141,45 @@ fun MainScreen(
         }
     }
 
+    // 日历权限请求：用户开启"日历提醒"开关时触发
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.WRITE_CALENDAR] == true
+        if (granted) {
+            viewModel.setCalendarReminderEnabled(true)
+        } else {
+            viewModel.setCalendarReminderEnabled(false)
+            Toast.makeText(context, R.string.calendar_permission_required, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onToggleCalendarReminder: () -> Unit = {
+        val current = viewModel.calendarReminderEnabled.value
+        if (!current) {
+            if (viewModel.hasCalendarPermission()) {
+                viewModel.setCalendarReminderEnabled(true)
+            } else {
+                calendarPermissionLauncher.launch(arrayOf(
+                    Manifest.permission.READ_CALENDAR,
+                    Manifest.permission.WRITE_CALENDAR
+                ))
+            }
+        } else {
+            viewModel.setCalendarReminderEnabled(false)
+        }
+    }
+
+    val onAddToCalendar: (SatelliteInfo) -> Unit = { satellite ->
+        if (viewModel.hasCalendarPermission()) {
+            val success = viewModel.addToCalendar(satellite)
+            val msg = if (success) R.string.added_to_calendar else R.string.calendar_add_failed
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, R.string.calendar_permission_required, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     BackHandler(enabled = showAbout || (selectedTab == 0 && homeSubScreen != 0)) {
         when {
             showAbout -> showAbout = false
@@ -238,6 +280,9 @@ fun MainScreen(
                     favorites = favorites,
                     onToggleFavorite = viewModel::toggleFavorite,
                     onOpenManagement = { homeSubScreen = 3 },
+                    calendarReminderEnabled = viewModel.calendarReminderEnabled.value,
+                    onToggleCalendarReminder = onToggleCalendarReminder,
+                    onAddToCalendar = onAddToCalendar,
                     contentPadding = padding
                 )
                 3 -> SatelliteManagementContent(
@@ -477,6 +522,9 @@ private fun SatelliteDetailContent(
     favorites: Set<Int>,
     onToggleFavorite: (Int) -> Unit,
     onOpenManagement: () -> Unit,
+    calendarReminderEnabled: Boolean,
+    onToggleCalendarReminder: () -> Unit,
+    onAddToCalendar: (SatelliteInfo) -> Unit,
     contentPadding: PaddingValues
 ) {
     val filteredSatellites = remember(uiState.satellites, filter, favorites) {
@@ -499,7 +547,9 @@ private fun SatelliteDetailContent(
                 lastLocationCity = uiState.lastLocationCity,
                 lastSatelliteTime = uiState.lastSatelliteUpdateTime,
                 onGetLocation = onGetLocation,
-                onUpdateSource = onUpdateSource
+                onUpdateSource = onUpdateSource,
+                calendarReminderEnabled = calendarReminderEnabled,
+                onToggleCalendarReminder = onToggleCalendarReminder
             )
         }
         item {
@@ -563,7 +613,9 @@ private fun SatelliteDetailContent(
                     SatelliteItem(
                         satellite = sat,
                         isFavorite = sat.catalogNumber in favorites,
-                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
+                        calendarReminderEnabled = calendarReminderEnabled,
+                        onAddToCalendar = { onAddToCalendar(sat) }
                     )
                 }
             }
@@ -786,7 +838,9 @@ private fun SatelliteActionCard(
     lastLocationCity: String,
     lastSatelliteTime: Instant?,
     onGetLocation: () -> Unit,
-    onUpdateSource: () -> Unit
+    onUpdateSource: () -> Unit,
+    calendarReminderEnabled: Boolean,
+    onToggleCalendarReminder: () -> Unit
 ) {
     val dateTimeFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss") }
     val zoneId = remember { ZoneId.systemDefault() }
@@ -890,6 +944,36 @@ private fun SatelliteActionCard(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
+            }
+            // 第三行：日历提醒开关
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggleCalendarReminder)
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.calendar_reminder),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.calendar_reminder_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                Switch(
+                    checked = calendarReminderEnabled,
+                    onCheckedChange = { onToggleCalendarReminder() },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
             }
         }
     }
@@ -1446,7 +1530,9 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 private fun SatelliteItem(
     satellite: SatelliteInfo,
     isFavorite: Boolean = false,
-    onToggleFavorite: () -> Unit = {}
+    onToggleFavorite: () -> Unit = {},
+    calendarReminderEnabled: Boolean = false,
+    onAddToCalendar: () -> Unit = {}
 ) {
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     if (satellite.isCurrentlyVisible) {
@@ -1555,6 +1641,18 @@ private fun SatelliteItem(
                         fontWeight = FontWeight.SemiBold,
                         color = cardContentColor
                     )
+                    if (calendarReminderEnabled) {
+                        IconButton(
+                            onClick = onAddToCalendar,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Event,
+                                contentDescription = stringResource(R.string.add_to_calendar),
+                                tint = cardContentColor
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onToggleFavorite,
                         modifier = Modifier.size(32.dp)

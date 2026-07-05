@@ -20,8 +20,18 @@ class SettingsStore(context: Context) {
             prefs.edit().putString(KEY_BACKGROUND_URI, value).apply()
         }
 
+    /**
+     * 卫星过境日历提醒开关。开启后可在卫星卡片添加过境事件到系统日历。
+     */
+    var calendarReminderEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CALENDAR_REMINDER, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_CALENDAR_REMINDER, value).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
         private const val KEY_BACKGROUND_URI = "background_uri"
+        private const val KEY_CALENDAR_REMINDER = "calendar_reminder_enabled"
     }
 }
