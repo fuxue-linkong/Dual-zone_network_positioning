@@ -94,13 +94,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * ViewModel 初始化：从本地缓存加载 TLE，并按需触发后台更新。
      * 应在 UI 准备好后调用一次。多次调用安全（仅首次执行）。
+     *
+     * 缓存读取（JSON 解析）放在 IO 调度器执行，避免阻塞主线程导致 UI 卡顿。
      */
-    fun initializeIfNeeded() {
+    suspend fun initializeIfNeeded() {
         if (initialized) return
         initialized = true
 
-        // 先从本地缓存恢复 TLE 与时间戳
-        val cached = satelliteCache.load()
+        // 先从本地缓存恢复 TLE 与时间戳（IO 密集型，避免在主线程解析 JSON）
+        val cached = withContext(Dispatchers.IO) { satelliteCache.load() }
         if (cached != null) {
             _uiState.value = _uiState.value.copy(
                 cachedTles = cached.tles,
@@ -276,11 +278,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * 拉取 TLE 并写入本地缓存，返回最新 TLE 列表。
+     * 缓存写入（JSON 序列化）放在 IO 调度器执行，避免阻塞主线程。
      */
     private suspend fun fetchAndCacheTLEs(): List<SourcedTLE> {
         val tles = satelliteDataSource.fetchAmateurTLEs(source = _satelliteSource.value)
         val now = Instant.now()
-        satelliteCache.save(tles, now)
+        withContext(Dispatchers.IO) { satelliteCache.save(tles, now) }
         return tles
     }
 
