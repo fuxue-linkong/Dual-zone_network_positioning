@@ -108,6 +108,74 @@ jobs:
         run: |
           gradle assembleRelease --no-daemon --stacktrace
 
+      - name: Verify APK signature and output fingerprint
+        id: signature
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "Error: Release APK not found at $APK_PATH"
+            exit 1
+          fi
+
+          # 定位 apksigner（GitHub Actions 预装 build-tools）
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "Error: apksigner not found in $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
+
+          # 1. 验证 APK 签名有效性（v1+v2+v3 方案）
+          echo "=== 验证 APK 签名 ==="
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
+
+          # 2. 提取签名指纹用于一致性对比
+          echo ""
+          echo "=== 签名指纹（用于一致性对比）==="
+          FINGERPRINT_SHA1=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA1:" | head -1 | awk '{print $2}')
+          FINGERPRINT_SHA256=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA256:" | head -1 | awk '{print $2}')
+          echo "SHA-1:   $FINGERPRINT_SHA1"
+          echo "SHA-256: $FINGERPRINT_SHA256"
+
+          # 3. 将指纹写入文件，作为 artifact 上传供后续对比
+          mkdir -p signing-report
+          cat > signing-report/signature-fingerprint.txt <<EOF
+          RadioAreaLocator Release APK Signature Fingerprint
+          ===================================================
+          Build Tag:     ${{ github.event.inputs.tag }}
+          Build Date:    $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Commit:        ${{ github.sha }}
+
+          SHA-1:         $FINGERPRINT_SHA1
+          SHA-256:       $FINGERPRINT_SHA256
+
+          说明：
+          - 每次 Release 构建的签名指纹应与此一致
+          - 若指纹变化，说明 keystore 已更换，用户需卸载旧版才能安装新版
+          - 请妥善保存生成 keystore 时的签名信息
+          EOF
+          echo "fingerprint_sha1=$FINGERPRINT_SHA1" >> "$GITHUB_OUTPUT"
+          echo "fingerprint_sha256=$FINGERPRINT_SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Check signature consistency
+        env:
+          CURRENT_SHA256: ${{ steps.signature.outputs.fingerprint_sha256 }}
+        run: |
+          echo "=== 签名一致性检查 ==="
+          echo "本次构建签名 SHA-256: $CURRENT_SHA256"
+          # 输出到 GitHub Step Summary，便于在 Actions 页面查看
+          echo "## 签名信息" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 项目 | 值 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA-1 | \`${{ steps.signature.outputs.fingerprint_sha1 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA-256 | \`${{ steps.signature.outputs.fingerprint_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "若此指纹与上次 Release 不同，用户设备将无法直接更新，需先卸载旧版本。" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload build reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -120,6 +188,12 @@ jobs:
       - name: Rename APK
         run: |
           cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+
+      - name: Upload signature report
+        uses: actions/upload-artifact@v4
+        with:
+          name: signature-report-${{ github.event.inputs.tag }}
+          path: signing-report/signature-fingerprint.txt
 
       - name: Commit version bump
         if: ${{ github.event.inputs.commit_version == 'true' }}
@@ -134,7 +208,18 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag }}
-          files: RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+          files: |
+            RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+            signing-report/signature-fingerprint.txt
+          body: |
+            ## 版本 ${{ github.event.inputs.tag }}
+
+            ### 签名信息
+            - SHA-1: `${{ steps.signature.outputs.fingerprint_sha1 }}`
+            - SHA-256: `${{ steps.signature.outputs.fingerprint_sha256 }}`
+
+            > 若此指纹与已安装版本不同，需先卸载旧版才能安装新版。
+            > 签名指纹一致性意味着可以直接覆盖安装更新。
           generate_release_notes: true
           prerelease: false
         env:

@@ -15,5 +15,7 @@ captures
 .cxx
 local.properties
 signing/release.keystore
+signing/*.bak.*
+signing-report/
 *.jks
 *.keystore
