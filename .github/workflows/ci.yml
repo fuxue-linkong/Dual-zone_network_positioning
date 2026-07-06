@@ -16,6 +16,9 @@ jobs:
   test:
     name: Run Unit Tests
     uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+      checks: write       # 授权 test.yml 发布测试报告到 GitHub Checks
 
   # 后打包：构建 Debug APK 供开发团队内部测试
   build:
