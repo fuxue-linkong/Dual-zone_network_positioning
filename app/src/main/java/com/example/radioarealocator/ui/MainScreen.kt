@@ -484,6 +484,19 @@ private fun SatelliteDetailContent(
     }
     val totalCount = uiState.satellites.size
 
+    // 统一的倒计时时钟：仅当有在境卫星时才每秒更新，
+    // 避免每颗在境卫星各自启动 LaunchedEffect 导致 N 次/秒重组
+    var inPassNowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val hasInPassSatellites = filteredSatellites.any { it.isCurrentlyVisible }
+    LaunchedEffect(hasInPassSatellites) {
+        if (hasInPassSatellites) {
+            while (true) {
+                inPassNowMillis = System.currentTimeMillis()
+                delay(1000)
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -563,7 +576,8 @@ private fun SatelliteDetailContent(
                     SatelliteItem(
                         satellite = sat,
                         isFavorite = sat.catalogNumber in favorites,
-                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
+                        nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L
                     )
                 }
             }
@@ -1176,7 +1190,7 @@ private fun SatelliteFilterPopup(
     onFilterChange: (SatelliteFilter) -> Unit,
     onOpenManagement: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box {
         Row(
@@ -1446,24 +1460,17 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 private fun SatelliteItem(
     satellite: SatelliteInfo,
     isFavorite: Boolean = false,
-    onToggleFavorite: () -> Unit = {}
+    onToggleFavorite: () -> Unit = {},
+    nowMillis: Long = 0L
 ) {
-    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    if (satellite.isCurrentlyVisible) {
-        LaunchedEffect(satellite.losTime) {
-            while (true) {
-                nowMillis = System.currentTimeMillis()
-                delay(1000)
-            }
-        }
-    }
-
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
         val formatter = satelliteTimeFormatter
         val zone = ZoneId.systemDefault()
         if (satellite.isCurrentlyVisible) {
             val losTime = satellite.losTime.atZone(zone).format(formatter)
-            val remainingSeconds = Duration.between(Instant.now(), satellite.losTime).seconds
+            // 使用父级传入的 nowMillis 计算剩余时间，避免每颗卫星各自维护时钟
+            val now = if (nowMillis > 0) Instant.ofEpochMilli(nowMillis) else Instant.now()
+            val remainingSeconds = Duration.between(now, satellite.losTime).seconds
             val remainingText = formatRemainingTime(remainingSeconds)
             SatelliteTimeInfo.InPass(losTime, remainingText)
         } else {

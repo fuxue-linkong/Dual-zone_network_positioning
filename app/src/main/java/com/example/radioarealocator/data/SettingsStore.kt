@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * 应用设置持久化存储。当前用于保存用户选择的背景图 URI。
+ * 应用设置持久化存储。保存用户选择的背景图 URI、卫星源等设置。
  */
 class SettingsStore(context: Context) {
 
@@ -20,8 +20,18 @@ class SettingsStore(context: Context) {
             prefs.edit().putString(KEY_BACKGROUND_URI, value).apply()
         }
 
+    /**
+     * 卫星 TLE 数据来源："ALL" / "CT" / "SNOGS"。默认 ALL。
+     */
+    var satelliteSource: String
+        get() = prefs.getString(KEY_SATELLITE_SOURCE, "ALL") ?: "ALL"
+        set(value) {
+            prefs.edit().putString(KEY_SATELLITE_SOURCE, value).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
         private const val KEY_BACKGROUND_URI = "background_uri"
+        private const val KEY_SATELLITE_SOURCE = "satellite_source"
     }
 }

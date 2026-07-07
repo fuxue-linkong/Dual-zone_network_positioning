@@ -150,14 +150,19 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           # 阈值检查（仅在 fail-on-coverage=true 时强制失败）
+          # 注意：检查的是"指令覆盖率"（COVERAGE），而非"测试通过率"（PASS_RATE）
           THRESHOLD=90
           FAIL_ON_COVERAGE="${{ inputs.fail-on-coverage || 'false' }}"
           if [ "$FAIL_ON_COVERAGE" = "true" ]; then
-            if [ "$(awk "BEGIN { print ($PASS_RATE < $THRESHOLD) }")" = "1" ]; then
-              echo "❌ 测试通过率 ${PASS_RATE}% 低于阈值 ${THRESHOLD}%" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$(awk "BEGIN { print ($PASS_RATE < 100) }")" = "1" ]; then
+              echo "❌ 测试通过率 ${PASS_RATE}% 低于 100%（存在失败/跳过用例）" >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
-            echo "✅ 测试通过率 ${PASS_RATE}% 满足阈值要求 (≥${THRESHOLD}%)" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$(awk "BEGIN { print ($COVERAGE < $THRESHOLD) }")" = "1" ]; then
+              echo "❌ 指令覆盖率 ${COVERAGE}% 低于阈值 ${THRESHOLD}%" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "✅ 测试通过率 ${PASS_RATE}%，指令覆盖率 ${COVERAGE}% 满足阈值要求" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ℹ️ 覆盖率阈值检查已跳过（fail-on-coverage=false）" >> "$GITHUB_STEP_SUMMARY"
           fi

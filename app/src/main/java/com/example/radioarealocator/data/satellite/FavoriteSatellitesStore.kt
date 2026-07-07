@@ -30,7 +30,11 @@ class FavoriteSatellitesStore(context: Context) {
 
     /**
      * 切换某颗卫星的关注状态，返回新的关注集合。
+     *
+     * 使用 synchronized 保证 load-modify-save 的原子性，
+     * 避免快速连续点击时并发读改写导致状态丢失。
      */
+    @Synchronized
     fun toggle(catalogNumber: Int): Set<Int> {
         val current = load()
         val updated = if (catalogNumber in current) {

@@ -1,12 +1,7 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/
 .DS_Store
 /build
 /app/build
@@ -16,6 +11,7 @@ captures
 local.properties
 signing/release.keystore
 signing/*.bak.*
+signing/github-secrets.txt
 signing-report/
 *.jks
 *.keystore

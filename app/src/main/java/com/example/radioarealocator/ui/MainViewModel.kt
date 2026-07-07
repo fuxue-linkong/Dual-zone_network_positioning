@@ -43,12 +43,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = mutableStateOf(MainUiState())
     val uiState: State<MainUiState> = _uiState
 
-    // 卫星数据来源设置："ALL" / "CT" / "SNOGS"
-    private val _satelliteSource = mutableStateOf("ALL")
+    // 卫星数据来源设置："ALL" / "CT" / "SNOGS"，从本地恢复
+    private val _satelliteSource = mutableStateOf(settingsStore.satelliteSource)
     val satelliteSource: State<String> = _satelliteSource
 
     fun setSatelliteSource(source: String) {
         _satelliteSource.value = source
+        settingsStore.satelliteSource = source
     }
 
     /**

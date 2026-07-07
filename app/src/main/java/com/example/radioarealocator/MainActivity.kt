@@ -86,8 +86,22 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(uri) {
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
+                    // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
+                    val bounds = android.graphics.BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                    }
                     context.contentResolver.openInputStream(uri)?.use { input ->
-                        android.graphics.BitmapFactory.decodeStream(input)
+                        android.graphics.BitmapFactory.decodeStream(input, null, bounds)
+                    }
+                    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+
+                    // 目标宽度 1080px，按 2 的幂次计算 inSampleSize
+                    val sampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, 1080, 1920)
+                    val opts = android.graphics.BitmapFactory.Options().apply {
+                        inSampleSize = sampleSize
+                    }
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        android.graphics.BitmapFactory.decodeStream(input, null, opts)
                     }
                 }.getOrNull()
             }
@@ -126,4 +140,24 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+/**
+ * 计算图片下采样比例，避免解码超大图导致 OOM。
+ * 返回 2 的幂次，符合 BitmapFactory.inSampleSize 的要求。
+ */
+private fun calculateInSampleSize(
+    srcWidth: Int,
+    srcHeight: Int,
+    targetWidth: Int,
+    targetHeight: Int
+): Int {
+    if (srcWidth <= 0 || srcHeight <= 0) return 1
+    var sampleSize = 1
+    while (srcWidth / sampleSize > targetWidth * 2 ||
+        srcHeight / sampleSize > targetHeight * 2
+    ) {
+        sampleSize *= 2
+    }
+    return sampleSize.coerceAtLeast(1)
 }

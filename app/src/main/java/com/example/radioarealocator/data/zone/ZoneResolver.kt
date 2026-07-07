@@ -20,8 +20,18 @@ object ZoneResolver {
         val cqZone: Int,
         val ituZone: Int
     ) {
+        /**
+         * 判断坐标是否落在本区域内。
+         *
+         * 经纬度均采用左开右闭区间 (min, max]：边界点归属上限区域，
+         * 避免相邻区域在边界点（如经度 40.0）上同时命中导致匹配错误。
+         * 例：欧洲 maxLon=40、俄罗斯 minLon=40，则经度 40.0 归欧洲，41.0 归俄罗斯。
+         * 边界 -180.0 / -90.0 作为闭区间下限包含，确保对蹟点仍可命中。
+         */
         fun contains(lat: Double, lon: Double): Boolean {
-            return lat in minLat..maxLat && lon in minLon..maxLon
+            val latOk = if (minLat <= -90.0) lat in minLat..maxLat else lat > minLat && lat <= maxLat
+            val lonOk = if (minLon <= -180.0) lon in minLon..maxLon else lon > minLon && lon <= maxLon
+            return latOk && lonOk
         }
     }
 
