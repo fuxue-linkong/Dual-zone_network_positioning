@@ -301,27 +301,32 @@ private fun HomeHeader(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
         )
-        Text(
-            text = localTime,
-            style = TextStyle(
-                fontSize = localTimeSize,
-                fontWeight = FontWeight.Normal
-            ),
-            color = stateColor,
+        // 时间区域：带背景色的卡片，整体靠左，卡片内文字靠右对齐
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = "$utcTime UTC",
-            style = TextStyle(fontSize = utcSize),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
-            textAlign = TextAlign.Center
-        )
+                .padding(top = 8.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(stateColor.copy(alpha = 0.12f))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .align(Alignment.Start)
+        ) {
+            Text(
+                text = localTime,
+                style = TextStyle(
+                    fontSize = localTimeSize,
+                    fontWeight = FontWeight.Normal
+                ),
+                color = stateColor,
+                textAlign = TextAlign.End
+            )
+            Text(
+                text = "$utcTime UTC",
+                style = TextStyle(fontSize = utcSize),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+                textAlign = TextAlign.End
+            )
+        }
     }
 }
 
