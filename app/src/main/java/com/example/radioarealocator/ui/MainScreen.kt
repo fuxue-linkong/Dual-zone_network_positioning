@@ -286,9 +286,6 @@ private fun HomeHeader(
     val localTime = now.atZone(ZoneId.systemDefault()).format(timeFormatter)
     val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
 
-    // 时间区域背景色：状态色半透明
-    val timeBgColor = stateColor.copy(alpha = 0.12f)
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -306,15 +303,14 @@ private fun HomeHeader(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
         )
-        // 时间区域：带圆角背景色
+        // 时间区域：带背景色的卡片，整体靠左，卡片内文字靠右对齐
         Column(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(top = 8.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(timeBgColor)
-                .padding(vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(stateColor.copy(alpha = 0.12f))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .align(Alignment.Start)
         ) {
             Text(
                 text = localTime,
@@ -323,17 +319,14 @@ private fun HomeHeader(
                     fontWeight = FontWeight.Normal
                 ),
                 color = stateColor,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.End
             )
             Text(
                 text = "$utcTime UTC",
                 style = TextStyle(fontSize = utcSize),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
-                textAlign = TextAlign.Center
+                modifier = Modifier.padding(top = 2.dp),
+                textAlign = TextAlign.End
             )
         }
     }
