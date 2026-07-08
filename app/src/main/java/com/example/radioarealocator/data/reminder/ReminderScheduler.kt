@@ -4,7 +4,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.time.Instant
@@ -143,11 +145,17 @@ class ReminderScheduler(private val context: Context) {
      * 重复调用安全（ExistingPeriodicWorkPolicy.KEEP 保持已有任务，UPDATE 更新配置）。
      */
     fun scheduleDailyRefresh() {
+        // 网络约束：Worker 需要下载 TLE 数据，仅在有网络时执行
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
         val request = PeriodicWorkRequestBuilder<ReminderRefreshWorker>(
             REPEAT_INTERVAL_HOURS, TimeUnit.HOURS,
             // flex period 让 Work 在每日的最后 1 小时内执行，减少电量消耗
             FLEX_PERIOD_HOURS, TimeUnit.HOURS
-        ).build()
+        )
+            .setConstraints(constraints)
+            .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_DAILY_REFRESH,
             ExistingPeriodicWorkPolicy.UPDATE,

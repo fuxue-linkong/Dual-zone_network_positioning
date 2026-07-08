@@ -3,15 +3,28 @@ package com.example.radioarealocator.data.reminder
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.radioarealocator.data.SettingsStore
+import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
+import com.example.radioarealocator.data.satellite.SatelliteCacheStore
+import com.example.radioarealocator.data.satellite.SatelliteDataSource
+import com.example.radioarealocator.data.satellite.SatellitePredictor
+import java.time.Duration
+import java.time.Instant
 
 /**
- * 每日刷新提醒调度的 Worker。
+ * 提醒刷新 Worker。
  *
- * 职责：
- * - 重新注册所有 [ReminderItem] 的 AlarmManager 闹钟。
- *   Android 设备重启或应用被强杀后，已注册的精确闹钟会丢失，需定期重新调度。
- * - 不做卫星过境重预测（那是 ViewModel 的职责，需要 TLE + 用户位置）。
- *   仅基于 ReminderStore 中已存的 aosTimeMillis 重新调度。
+ * 职责（完整后台预测链路）：
+ * 1. 从 [SettingsStore] 读取用户最后已知位置（由 MainViewModel 在前台定位时持久化）
+ * 2. 从 [SatelliteCacheStore] 读取 TLE 缓存；若缓存超过 24 小时则重新下载
+ * 3. 用 [SatellitePredictor] 预测未来 48 小时的卫星过境
+ * 4. 过滤出收藏卫星（[FavoriteSatellitesStore]），更新 [ReminderStore] 中的提醒项
+ * 5. 用 [ReminderScheduler] 重新注册所有 AlarmManager 闹钟
+ *
+ * 此 Worker 可在应用进程不存在时独立运行，保证后台持续推送提醒通知。
+ * 由两种方式触发：
+ * - [ReminderScheduler.scheduleDailyRefresh] 注册的 24 小时周期任务
+ * - [ReminderBootReceiver] 在设备重启后注册的一次性任务
  *
  * 周期：每 24 小时执行一次（WorkManager 最小周期 15 分钟，但每日足够）。
  */
@@ -22,17 +35,102 @@ class ReminderRefreshWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            val store = ReminderStore(applicationContext)
-            val settings = store.loadSettings()
-            val items = store.loadItems()
-            val scheduler = ReminderScheduler(applicationContext)
+            val settingsStore = SettingsStore(applicationContext)
+            val reminderStore = ReminderStore(applicationContext)
+            val favoriteStore = FavoriteSatellitesStore(applicationContext)
+            val settings = reminderStore.loadSettings()
 
-            // 重新调度所有提醒
-            scheduler.scheduleAll(items, settings)
+            // 提醒功能未启用时，仅取消现有闹钟，不做预测
+            if (!settings.enabled) {
+                val scheduler = ReminderScheduler(applicationContext)
+                val existingItems = reminderStore.loadItems()
+                existingItems.forEach { scheduler.cancel(it.catalogNumber) }
+                return Result.success()
+            }
+
+            // 读取用户最后已知位置（前台定位时持久化到 SharedPreferences）
+            if (!settingsStore.hasLastLocation()) {
+                // 无位置信息，仅重新注册已有闹钟（兼容旧行为）
+                val items = reminderStore.loadItems()
+                val scheduler = ReminderScheduler(applicationContext)
+                scheduler.scheduleAll(items, settings)
+                return Result.success()
+            }
+
+            val latitude = settingsStore.lastLatitude.toDouble()
+            val longitude = settingsStore.lastLongitude.toDouble()
+            val satelliteSource = settingsStore.satelliteSource
+
+            // 获取 TLE 数据：优先使用缓存，超过 24 小时则重新下载
+            val cacheStore = SatelliteCacheStore(applicationContext)
+            val cached = cacheStore.load()
+            val tles = if (cached == null || isCacheExpired(cached.updatedAt)) {
+                // 缓存过期或不存在，重新下载 TLE
+                val dataSource = SatelliteDataSource()
+                val fresh = dataSource.fetchAmateurTLEs(source = satelliteSource)
+                cacheStore.save(fresh, Instant.now())
+                fresh
+            } else {
+                cached.tles
+            }
+
+            // 预测未来 48 小时的卫星过境
+            val predictor = SatellitePredictor()
+            val satellites = predictor.predictUpcomingPasses(
+                sourcedTles = tles,
+                latitude = latitude,
+                longitude = longitude,
+                hoursAhead = 48
+            )
+
+            // 过滤出收藏卫星的未来过境
+            val favorites = favoriteStore.load()
+            val futureFavorites = satellites.filter {
+                it.catalogNumber in favorites && !it.isCurrentlyVisible
+            }
+
+            if (futureFavorites.isNotEmpty()) {
+                // 更新提醒项
+                val updatedItems = reminderStore.loadItems().toMutableList()
+                futureFavorites.forEach { sat ->
+                    val item = ReminderItem(
+                        catalogNumber = sat.catalogNumber,
+                        name = sat.name,
+                        aosTimeMillis = sat.aosTime.toEpochMilli(),
+                        losTimeMillis = sat.losTime.toEpochMilli(),
+                        maxElevation = sat.maxElevation,
+                        aosAzimuth = sat.aosAzimuth,
+                        losAzimuth = sat.losAzimuth,
+                        modes = sat.modes,
+                        enabled = true
+                    )
+                    val idx = updatedItems.indexOfFirst { it.catalogNumber == sat.catalogNumber }
+                    if (idx >= 0) {
+                        // 保留原 enabled 状态，仅更新过境信息
+                        val merged = item.copy(enabled = updatedItems[idx].enabled)
+                        updatedItems[idx] = merged
+                    } else {
+                        updatedItems.add(item)
+                    }
+                }
+                reminderStore.saveItems(updatedItems)
+            }
+
+            // 重新注册所有闹钟
+            val scheduler = ReminderScheduler(applicationContext)
+            scheduler.scheduleAll(reminderStore.loadItems(), settings)
+
             Result.success()
         } catch (e: Exception) {
             // 失败不阻塞下次执行
             Result.retry()
         }
+    }
+
+    /**
+     * 判断 TLE 缓存是否过期（超过 24 小时）。
+     */
+    private fun isCacheExpired(updatedAt: Instant): Boolean {
+        return Duration.between(updatedAt, Instant.now()).toHours() >= 24
     }
 }
