@@ -405,10 +405,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastLocationCity = ""
                 )
 
-                // 持久化位置坐标，供后台 Worker 做过境预测时使用
-                settingsStore.lastLatitude = location.latitude.toFloat()
-                settingsStore.lastLongitude = location.longitude.toFloat()
-
                 // 后台加载地址
                 val addressDeferred = async {
                     locationHelper.getAddress(location.latitude, location.longitude)
@@ -499,9 +495,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         // 监听恢复正常，清空之前的重试错误提示
                         error = null
                     )
-                    // 持久化位置坐标，供后台 Worker 做过境预测时使用
-                    settingsStore.lastLatitude = location.latitude.toFloat()
-                    settingsStore.lastLongitude = location.longitude.toFloat()
                     // 收到有效位置，重置退避计数
                     retryAttempt = 0
 
@@ -580,9 +573,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastLocationUpdateTime = Instant.now(),
                     lastLocationCity = city
                 )
-                // 持久化位置坐标，供后台 Worker 做过境预测时使用
-                settingsStore.lastLatitude = location.latitude.toFloat()
-                settingsStore.lastLongitude = location.longitude.toFloat()
                 // 用新定位重新预测
                 triggerPrediction(location.latitude, location.longitude)
 
