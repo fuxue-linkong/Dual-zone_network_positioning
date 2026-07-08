@@ -87,10 +87,16 @@ class SatelliteDataSource {
             val satnogsResult = satnogsDeferred?.await()
             val amsatStatusResult = amsatStatusDeferred.await()
 
-            if (celestrakResult?.isFailure == true && satnogsResult?.isFailure == true) {
+            // 只有请求了的源才参与失败判断：单一数据源失败时也应抛异常，
+            // 避免返回空列表覆盖本地缓存
+            val requestedResults = listOfNotNull(
+                if (needCelestrak) celestrakResult else null,
+                if (needSatnogs) satnogsResult else null
+            )
+            if (requestedResults.isNotEmpty() && requestedResults.all { it.isFailure }) {
                 throw IOException(
-                    "TLE 下载失败：CelesTrak=${celestrakResult.exceptionOrNull()?.message}, " +
-                        "SatNOGS=${satnogsResult.exceptionOrNull()?.message}"
+                    "TLE 下载失败：CelesTrak=${celestrakResult?.exceptionOrNull()?.message}, " +
+                        "SatNOGS=${satnogsResult?.exceptionOrNull()?.message}"
                 )
             }
 

@@ -89,8 +89,14 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+// 日期格式化：分两行显示“X月”和“X日”，与时间并排
+private val monthFormatter = DateTimeFormatter.ofPattern("M月")
+private val dayFormatter = DateTimeFormatter.ofPattern("d日")
 private const val APP_NAME_FONT_SIZE = 32
+private const val LOCAL_TIME_FONT_SIZE = 44
 private const val UTC_FONT_SIZE_SCALE = 0.4f
+// 日期字体相对本地时间的比例：作为时间的伴随信息，略小于时间主显示
+private const val DATE_FONT_SIZE_SCALE = 0.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,11 +110,28 @@ fun MainScreen(
     var showAbout by remember { mutableStateOf(false) }
     // 主页子页面：0=列表, 1=定位详情, 2=卫星详情, 3=卫星管理（三级）
     var homeSubScreen by rememberSaveable { mutableIntStateOf(0) }
+    // 设置 tab 下的子页面：0=设置主页, 1=提醒列表
+    var settingsSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
-    // 启动时初始化：从缓存加载 TLE，必要时后台拉取
+    // 监听提醒反馈消息，自动显示 SnackBar
+    val feedback by viewModel.reminderFeedback
+    androidx.compose.runtime.LaunchedEffect(feedback) {
+        feedback?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeReminderFeedback()
+        }
+    }
+
+    // 启动时初始化：从缓存加载 TLE，必要时后台拉取；
+    // 若已授予定位权限，自动发起首次定位以启动持续位置监听，
+    // 确保设备位置变化能被实时捕获并更新到界面
     LaunchedEffect(Unit) {
         viewModel.initializeIfNeeded()
+        if (viewModel.hasLocationPermission) {
+            viewModel.refreshLocation()
+        }
     }
 
     // 时钟状态，每秒刷新
@@ -137,11 +160,16 @@ fun MainScreen(
         }
     }
 
-    BackHandler(enabled = showAbout || (selectedTab == 0 && homeSubScreen != 0)) {
+    BackHandler(
+        enabled = showAbout ||
+            (selectedTab == 0 && homeSubScreen != 0) ||
+            (selectedTab == 1 && settingsSubScreen != 0)
+    ) {
         when {
             showAbout -> showAbout = false
             selectedTab == 0 && homeSubScreen == 3 -> homeSubScreen = 2
             selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
+            selectedTab == 1 && settingsSubScreen != 0 -> settingsSubScreen = 0
         }
     }
 
@@ -156,7 +184,11 @@ fun MainScreen(
             when {
                 selectedTab == 0 && homeSubScreen == 0 -> HomeHeader(
                     uiState = uiState,
-                    now = now
+                    now = now,
+                    weather = viewModel.weather.value,
+                    weatherLoading = viewModel.weatherLoading.value,
+                    weatherError = viewModel.weatherError.value,
+                    onRefreshWeather = { viewModel.refreshWeather(force = true) }
                 )
                 selectedTab == 0 && homeSubScreen == 1 -> TopAppBar(
                     title = { Text(stringResource(R.string.home_location)) },
@@ -191,10 +223,24 @@ fun MainScreen(
                         }
                     }
                 )
+                selectedTab == 1 && settingsSubScreen == 1 -> TopAppBar(
+                    title = { Text(stringResource(R.string.reminder_list_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = { settingsSubScreen = 0 }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    }
+                )
                 else -> TopAppBar(
                     title = { Text(stringResource(R.string.settings)) }
                 )
             }
+        },
+        snackbarHost = {
+            androidx.compose.material3.SnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
             NavigationBar {
@@ -247,30 +293,49 @@ fun MainScreen(
                 )
             }
         } else {
-            SettingsScreen(
-                satelliteSource = viewModel.satelliteSource.value,
-                onSourceSelected = { viewModel.setSatelliteSource(it) },
-                backgroundUri = viewModel.backgroundUri.value,
-                onPickBackground = {
-                    pickBackgroundLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                },
-                onClearBackground = { viewModel.setBackgroundUri(null) },
-                onAboutClick = { showAbout = true },
-                contentPadding = padding
-            )
+            // 设置 tab：根据 settingsSubScreen 切换主页 / 提醒列表
+            if (settingsSubScreen == 1) {
+                ReminderListScreen(
+                    items = viewModel.reminderItems.value,
+                    onToggleEnabled = viewModel::setReminderItemEnabled,
+                    onDelete = viewModel::deleteReminderItem,
+                    contentPadding = padding
+                )
+            } else {
+                SettingsScreen(
+                    satelliteSource = viewModel.satelliteSource.value,
+                    onSourceSelected = { viewModel.setSatelliteSource(it) },
+                    backgroundUri = viewModel.backgroundUri.value,
+                    onPickBackground = {
+                        pickBackgroundLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    onClearBackground = { viewModel.setBackgroundUri(null) },
+                    onAboutClick = { showAbout = true },
+                    reminderSettings = viewModel.reminderSettings.value,
+                    onUpdateReminderSettings = viewModel::updateReminderSettings,
+                    onOpenReminderList = { settingsSubScreen = 1 },
+                    contentPadding = padding
+                )
+            }
         }
     }
 }
 
 /**
- * 主页头部：应用名位于左上（类似应用标题），下方居中显示本地时间 + UTC。
+ * 主页头部：应用名位于左上（类似应用标题），下方纵向排列本地时间卡片 + 天气卡片。
+ * 时间区域与天气区域均带背景色，与状态色联动；天气卡片位于时间卡片正下方，
+ * 视觉层级清晰，符合从上到下的阅读习惯。
  */
 @Composable
 private fun HomeHeader(
     uiState: MainUiState,
-    now: Instant
+    now: Instant,
+    weather: com.example.radioarealocator.data.weather.WeatherResult?,
+    weatherLoading: Boolean,
+    weatherError: String?,
+    onRefreshWeather: () -> Unit
 ) {
     val stateColor = if (uiState.result != null) {
         MaterialTheme.colorScheme.primary
@@ -278,11 +343,20 @@ private fun HomeHeader(
         MaterialTheme.colorScheme.outline
     }
     val appNameSize = APP_NAME_FONT_SIZE.sp
-    val localTimeSize = APP_NAME_FONT_SIZE.sp
-    val utcSize = (APP_NAME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
+    val localTimeSize = LOCAL_TIME_FONT_SIZE.sp
+    val utcSize = (LOCAL_TIME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
+    val dateSize = (LOCAL_TIME_FONT_SIZE * DATE_FONT_SIZE_SCALE).sp
 
-    val localTime = now.atZone(ZoneId.systemDefault()).format(timeFormatter)
+    val zonedNow = now.atZone(ZoneId.systemDefault())
+    val localTime = zonedNow.format(timeFormatter)
     val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
+    val dateMonth = zonedNow.format(monthFormatter)
+    val dateDay = zonedNow.format(dayFormatter)
+
+    // 下颗即将过境的卫星（AOS 在未来且非当前在境），用于显示过境天气预测
+    val nextSatellite = uiState.satellites.firstOrNull {
+        !it.isCurrentlyVisible && it.aosTime.isAfter(now)
+    }
 
     Column(
         modifier = Modifier
@@ -301,30 +375,73 @@ private fun HomeHeader(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
         )
-        // 时间区域：带背景色的卡片，整体靠左，卡片内文字靠右对齐
+        // 时间 + 天气 纵向排列：时间卡片在上，天气卡片在其正下方
         Column(
             modifier = Modifier
-                .padding(top = 8.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(stateColor.copy(alpha = 0.12f))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .align(Alignment.Start)
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = localTime,
-                style = TextStyle(
-                    fontSize = localTimeSize,
-                    fontWeight = FontWeight.Normal
-                ),
-                color = stateColor,
-                textAlign = TextAlign.End
-            )
-            Text(
-                text = "$utcTime UTC",
-                style = TextStyle(fontSize = utcSize),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
-                textAlign = TextAlign.End
+            // 时间卡片
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(stateColor.copy(alpha = 0.12f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                // 本地时间 + 日期并排：时间在左，月/日（两行）在右
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = localTime,
+                        style = TextStyle(
+                            fontSize = localTimeSize,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        color = stateColor,
+                        textAlign = TextAlign.Start
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = dateMonth,
+                            style = TextStyle(
+                                fontSize = dateSize,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            color = stateColor
+                        )
+                        Text(
+                            text = dateDay,
+                            style = TextStyle(
+                                fontSize = dateSize,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            color = stateColor
+                        )
+                    }
+                }
+                Text(
+                    text = "$utcTime UTC",
+                    style = TextStyle(fontSize = utcSize),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    textAlign = TextAlign.Start
+                )
+            }
+            // 天气卡片：位于时间卡片正下方，占满宽度
+            WeatherCard(
+                weather = weather,
+                isLoading = weatherLoading,
+                error = weatherError,
+                nextSatellite = nextSatellite,
+                onRefresh = onRefreshWeather,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -450,6 +567,12 @@ private fun LocationDetailContent(
             item {
                 ZoneInfoCard(result = uiState.result)
             }
+            item {
+                AMapCard(
+                    latitude = uiState.result.latitude,
+                    longitude = uiState.result.longitude
+                )
+            }
         }
     }
 
@@ -474,6 +597,19 @@ private fun SatelliteDetailContent(
         uiState.satellites.applyFilter(filter, favorites)
     }
     val totalCount = uiState.satellites.size
+
+    // 统一的倒计时时钟：仅当有在境卫星时才每秒更新，
+    // 避免每颗在境卫星各自启动 LaunchedEffect 导致 N 次/秒重组
+    var inPassNowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val hasInPassSatellites = filteredSatellites.any { it.isCurrentlyVisible }
+    LaunchedEffect(hasInPassSatellites) {
+        if (hasInPassSatellites) {
+            while (true) {
+                inPassNowMillis = System.currentTimeMillis()
+                delay(1000)
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -554,7 +690,8 @@ private fun SatelliteDetailContent(
                     SatelliteItem(
                         satellite = sat,
                         isFavorite = sat.catalogNumber in favorites,
-                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
+                        nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L
                     )
                 }
             }
@@ -943,16 +1080,6 @@ private fun LocationStatusCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             when {
-                isLoading -> {
-                    CircularProgressIndicator(color = contentColor)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.locating),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = contentColor
-                    )
-                }
-
                 result != null -> {
                     Text(
                         text = "%.5f".format(result.latitude),
@@ -967,22 +1094,48 @@ private fun LocationStatusCard(
                         color = contentColor
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onRefresh,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                    if (isLoading) {
+                        // 刷新中：保留显示旧位置，同时在下方显示 loading 指示，
+                        // 避免位置突然消失导致用户误以为"刷新失灵"
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = contentColor
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.action_refresh))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.locating),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = contentColor
+                        )
+                    } else {
+                        Button(
+                            onClick = onRefresh,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.action_refresh))
+                        }
                     }
+                }
+
+                isLoading -> {
+                    CircularProgressIndicator(color = contentColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.locating),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor
+                    )
                 }
 
                 else -> {
@@ -1167,7 +1320,7 @@ private fun SatelliteFilterPopup(
     onFilterChange: (SatelliteFilter) -> Unit,
     onOpenManagement: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box {
         Row(
@@ -1437,24 +1590,17 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 private fun SatelliteItem(
     satellite: SatelliteInfo,
     isFavorite: Boolean = false,
-    onToggleFavorite: () -> Unit = {}
+    onToggleFavorite: () -> Unit = {},
+    nowMillis: Long = 0L
 ) {
-    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    if (satellite.isCurrentlyVisible) {
-        LaunchedEffect(satellite.losTime) {
-            while (true) {
-                nowMillis = System.currentTimeMillis()
-                delay(1000)
-            }
-        }
-    }
-
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
         val formatter = satelliteTimeFormatter
         val zone = ZoneId.systemDefault()
         if (satellite.isCurrentlyVisible) {
             val losTime = satellite.losTime.atZone(zone).format(formatter)
-            val remainingSeconds = Duration.between(Instant.now(), satellite.losTime).seconds
+            // 使用父级传入的 nowMillis 计算剩余时间，避免每颗卫星各自维护时钟
+            val now = if (nowMillis > 0) Instant.ofEpochMilli(nowMillis) else Instant.now()
+            val remainingSeconds = Duration.between(now, satellite.losTime).seconds
             val remainingText = formatRemainingTime(remainingSeconds)
             SatelliteTimeInfo.InPass(losTime, remainingText)
         } else {

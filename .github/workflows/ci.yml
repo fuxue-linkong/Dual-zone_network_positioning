@@ -8,17 +8,29 @@ on:
       - 'README.md'
       - 'docs/**'
       - '.github/*.md'
+      - 'log/**'
   workflow_dispatch:
 
+# 并发控制：同一分支的新推送自动取消旧运行，避免资源浪费
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # 先测试：复用 test.yml，coverage 阈值不强制（CI 仅提示）
   test:
     name: Run Unit Tests
     uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+      checks: write       # 授权 test.yml 发布测试报告到 GitHub Checks
 
+  # 后打包：构建 Debug APK 供开发团队内部测试
   build:
     name: Build Debug APK
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: ${{ github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]' }}
     permissions:
       contents: write
@@ -36,16 +48,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.4.1'
-          cache-disabled: true
-
-      - name: Verify JDK version
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-
-      - name: Set JAVA_HOME for Gradle
-        run: |
-          echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
+          # cache-disabled 已移除：启用 Gradle 依赖缓存，避免每次构建重复下载依赖
 
       - name: Clean old CI logs
         run: |
@@ -55,9 +58,10 @@ jobs:
       - name: Build Debug APK
         run: |
           set -o pipefail
-          gradle assembleDebug --console=plain --stacktrace --info 2>&1 | tee log/ci/build.log
+          gradle assembleDebug --console=plain --stacktrace 2>&1 | tee log/ci/build.log
 
       - name: Upload Debug APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
@@ -85,4 +89,55 @@ jobs:
           else
             git commit -m "ci: upload latest build log"
             git push
+          fi
+
+      # 构建状态报告：输出到 Step Summary，GitHub 会自动向提交者发送邮件通知
+      - name: Publish CI status report
+        if: always()
+        run: |
+          echo "## 🏗️ CI 构建状态报告" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 项目 | 值 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 触发分支 | ${{ github.ref_name }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 提交 | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 测试结果 | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 构建状态 | ${{ job.status }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ CI 构建成功，Debug APK 已生成" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ CI 构建失败，请查看上方日志或下载 build-reports artifact 排查" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # 工作流状态通知：汇总测试与构建结果
+  notify:
+    name: Status Notification
+    needs: [test, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Workflow status notification
+        run: |
+          echo "## 🔔 工作流状态通知" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 任务 | 状态 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 单元测试 | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Debug 构建 | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # skipped 视为正常（如 bot 提交时 build job 被跳过）
+          TEST_OK=false
+          BUILD_OK=false
+          [ "${{ needs.test.result }}" = "success" ] || [ "${{ needs.test.result }}" = "skipped" ] && TEST_OK=true
+          [ "${{ needs.build.result }}" = "success" ] || [ "${{ needs.build.result }}" = "skipped" ] && BUILD_OK=true
+
+          if [ "$TEST_OK" = "true" ] && [ "$BUILD_OK" = "true" ]; then
+            echo "✅ 整体状态: 成功"
+          else
+            echo "❌ 整体状态: 失败"
+            # 显式失败以触发 GitHub 的失败通知邮件
+            exit 1
           fi

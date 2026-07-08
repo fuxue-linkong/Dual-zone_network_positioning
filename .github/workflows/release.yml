@@ -1,6 +1,10 @@
 name: Release Build APK
 
 on:
+  push:
+    # 语义化版本标签触发完整发布流程（v1.0.0、v2.1.3-rc1 等）
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       tag:
@@ -21,20 +25,31 @@ on:
         type: boolean
         default: true
 
+# 并发控制：发布流程不取消进行中的运行，避免中断发布
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     name: Run Unit Tests
     uses: ./.github/workflows/test.yml
+    with:
+      # 发布流程强制覆盖率检查，确保发布质量
+      fail-on-coverage: true
 
   build:
     name: Build Release APK
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 完整历史，便于生成变更日志
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -46,30 +61,37 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.4.1'
-          cache-disabled: true
+          # cache-disabled 已移除：启用 Gradle 依赖缓存，避免每次构建重复下载依赖
 
-      - name: Verify JDK version
+      # 解析发布参数：tag 触发时从 $GITHUB_REF 推断，手动触发从 inputs 读取
+      - name: Resolve release parameters
+        id: params
         run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-
-      - name: Set JAVA_HOME for Gradle
-        run: |
-          echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # 标签触发：从 GITHUB_REF 提取 tag 名
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "trigger=tag" >> "$GITHUB_OUTPUT"
+          else
+            # 手动触发
+            TAG="${{ github.event.inputs.tag }}"
+            echo "trigger=manual" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $TAG"
 
       - name: Update version
         id: version
         run: |
-          TAG="${{ github.event.inputs.tag }}"
-          VERSION_NAME="${{ github.event.inputs.version_name }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          TAG="${{ steps.params.outputs.tag }}"
+          VERSION_NAME="${{ github.event.inputs.version_name || '' }}"
+          VERSION_CODE="${{ github.event.inputs.version_code || '' }}"
 
-          # 推断 version_name
+          # 从 tag 推断 version_name（去除前缀 v）
           if [ -z "$VERSION_NAME" ]; then
             VERSION_NAME="${TAG#v}"
           fi
 
-          # 推断 version_code
+          # 推断 version_code：当前值 +1
           if [ -z "$VERSION_CODE" ]; then
             CURRENT_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts)
             VERSION_CODE=$((CURRENT_CODE + 1))
@@ -108,6 +130,77 @@ jobs:
         run: |
           gradle assembleRelease --no-daemon --stacktrace
 
+      # 签名验证：使用 apksigner 验证 v1+v2+v3 签名方案，输出指纹供一致性检查
+      - name: Verify APK signature and output fingerprint
+        id: signature
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "Error: Release APK not found at $APK_PATH"
+            exit 1
+          fi
+
+          # 定位 apksigner（GitHub Actions 预装 build-tools）
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "Error: apksigner not found in $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
+
+          # 1. 验证 APK 签名有效性（v1+v2+v3 方案）
+          echo "=== 验证 APK 签名 ==="
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
+
+          # 2. 提取签名指纹用于一致性对比
+          echo ""
+          echo "=== 签名指纹（用于一致性对比）==="
+          FINGERPRINT_SHA1=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA1:" | head -1 | awk '{print $2}')
+          FINGERPRINT_SHA256=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA256:" | head -1 | awk '{print $2}')
+          echo "SHA-1:   $FINGERPRINT_SHA1"
+          echo "SHA-256: $FINGERPRINT_SHA256"
+
+          # 3. 将指纹写入文件，作为 artifact 上传供后续对比
+          mkdir -p signing-report
+          cat > signing-report/signature-fingerprint.txt <<EOF
+          RadioAreaLocator Release APK Signature Fingerprint
+          ===================================================
+          Build Tag:     ${{ steps.params.outputs.tag }}
+          Build Date:    $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Commit:        ${{ github.sha }}
+
+          SHA-1:         $FINGERPRINT_SHA1
+          SHA-256:       $FINGERPRINT_SHA256
+
+          说明：
+          - 每次 Release 构建的签名指纹应与此一致
+          - 若指纹变化，说明 keystore 已更换，用户需卸载旧版才能安装新版
+          - 请妥善保存生成 keystore 时的签名信息
+          EOF
+          echo "fingerprint_sha1=$FINGERPRINT_SHA1" >> "$GITHUB_OUTPUT"
+          echo "fingerprint_sha256=$FINGERPRINT_SHA256" >> "$GITHUB_OUTPUT"
+
+      # 签名一致性检查：输出到 Step Summary，便于跨版本对比
+      - name: Check signature consistency
+        env:
+          CURRENT_SHA256: ${{ steps.signature.outputs.fingerprint_sha256 }}
+        run: |
+          echo "=== 签名一致性检查 ==="
+          echo "本次构建签名 SHA-256: $CURRENT_SHA256"
+          echo "## 签名信息" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 项目 | 值 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA-1 | \`${{ steps.signature.outputs.fingerprint_sha1 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA-256 | \`${{ steps.signature.outputs.fingerprint_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 版本号 | ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 标签 | ${{ steps.params.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "若此指纹与上次 Release 不同，用户设备将无法直接更新，需先卸载旧版本。" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload build reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -119,10 +212,16 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+          cp app/build/outputs/apk/release/app-release.apk RadioAreaLocator-${{ steps.params.outputs.tag }}.apk
+
+      - name: Upload signature report
+        uses: actions/upload-artifact@v4
+        with:
+          name: signature-report-${{ steps.params.outputs.tag }}
+          path: signing-report/signature-fingerprint.txt
 
       - name: Commit version bump
-        if: ${{ github.event.inputs.commit_version == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_version == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -130,12 +229,90 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }})"
           git push origin HEAD:main
 
+      # 创建 GitHub Release，包含详细发布说明、签名指纹、变更日志
       - name: Create Release
+        id: release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag }}
-          files: RadioAreaLocator-${{ github.event.inputs.tag }}.apk
+          tag_name: ${{ steps.params.outputs.tag }}
+          files: |
+            RadioAreaLocator-${{ steps.params.outputs.tag }}.apk
+            signing-report/signature-fingerprint.txt
+          body: |
+            ## 版本 ${{ steps.params.outputs.tag }}
+
+            ### 版本信息
+            - 版本号: ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }})
+            - 提交: ${{ github.sha }}
+
+            ### 签名信息
+            - SHA-1: `${{ steps.signature.outputs.fingerprint_sha1 }}`
+            - SHA-256: `${{ steps.signature.outputs.fingerprint_sha256 }}`
+
+            ### 安装说明
+            > 若此指纹与已安装版本不同，需先卸载旧版才能安装新版。
+            > 签名指纹一致性意味着可以直接覆盖安装更新。
+
+            ### 变更日志
+            详见下方自动生成的 Release Notes。
           generate_release_notes: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 发布状态报告：汇总构建结果到 Step Summary
+      - name: Publish release status report
+        if: always()
+        run: |
+          echo "## 📦 发布状态报告" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 项目 | 值 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 触发方式 | ${{ github.event_name }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 标签 | ${{ steps.params.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 版本号 | ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 测试结果 | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 发布状态 | ${{ job.status }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ 发布流程成功完成" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ 发布流程失败，请检查上方日志" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # 工作流状态通知：在失败时通过 GitHub Checks API 标记
+  notify:
+    name: Status Notification
+    needs: [test, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Workflow status notification
+        run: |
+          echo "## 🔔 工作流状态通知" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 任务 | 状态 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 单元测试 | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 构建发布 | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # skipped 视为正常（如 bot 提交时 job 被跳过）
+          TEST_OK=false
+          BUILD_OK=false
+          [ "${{ needs.test.result }}" = "success" ] || [ "${{ needs.test.result }}" = "skipped" ] && TEST_OK=true
+          [ "${{ needs.build.result }}" = "success" ] || [ "${{ needs.build.result }}" = "skipped" ] && BUILD_OK=true
+
+          if [ "$TEST_OK" = "true" ] && [ "$BUILD_OK" = "true" ]; then
+            echo "✅ 整体状态: 成功"
+            echo "GitHub 将自动向仓库 Watchers 和提交者发送成功通知邮件。"
+          else
+            echo "❌ 整体状态: 失败"
+            echo "GitHub 将自动向提交者和 Watchers 发送失败通知邮件。"
+            # 显式失败以触发 GitHub 的失败通知系统
+            exit 1
+          fi

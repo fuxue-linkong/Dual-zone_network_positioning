@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 高德地图 SDK Maven 仓库（国内镜像，稳定可靠）
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
     }
 }
 
