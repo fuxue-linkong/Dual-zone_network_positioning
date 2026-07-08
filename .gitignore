@@ -15,3 +15,7 @@ signing/github-secrets.txt
 signing-report/
 *.jks
 *.keystore
+*.log
+*.txt
+*.png
+ui.xml

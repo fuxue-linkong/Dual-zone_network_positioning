@@ -1,7 +1,6 @@
 package com.example.radioarealocator.data.weather
 
-import com.example.radioarealocator.BuildConfig
-import com.example.radioarealocator.data.crypto.ApiKeyCrypto
+import com.example.radioarealocator.data.crypto.SecretManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -16,16 +15,11 @@ import java.util.concurrent.TimeUnit
  *
  * API 文档：https://lbs.amap.com/api/webservice/guide/api/weatherinfo
  *
- * 三个核心接口：
- * 1. 逆地理编码（经纬度→adcode）：GET /v3/geocode/regeo?location=lng,lat
- * 2. 实时天气：GET /v3/weather/weatherInfo?city=adcode&extensions=base
- * 3. 天气预报：GET /v3/weather/weatherInfo?city=adcode&extensions=all
- *
  * Key 安全策略：
- * - Key 存储在 local.properties（不进 git）
- * - 编译时 AES-GCM 加密后注入 BuildConfig.AMAP_API_KEY_ENCRYPTED
- * - 运行时通过 ApiKeyCrypto.decrypt() 解密
- * - 与静态地图服务共用同一个高德 Web 服务 Key
+ * - 明文 Key 仅存在于 local.properties（不进 git）
+ * - 开发阶段通过 `gradle encryptSecrets` 加密为 assets/secrets.dat（提交到 git）
+ * - 运行时由 [SecretManager] 从 secrets.dat 解密，三碎片组装主密钥 + AES-GCM
+ * - CI 构建无需 GitHub Secrets，secrets.dat 已在仓库中
  *
  * 错误处理：
  * - API Key 缺失时抛出 [ApiKeyMissingException]，避免发出注定失败的网络请求
@@ -235,7 +229,7 @@ class WeatherApiService {
      * 获取已解密的 API Key。
      * 与静态地图服务共用同一个高德 Web 服务 Key。
      */
-    private fun apiKey(): String = ApiKeyCrypto.decrypt(BuildConfig.AMAP_API_KEY_ENCRYPTED)
+    private fun apiKey(): String = SecretManager.getSecret("amap.api.key")
 
     companion object {
         // 高德 Web 服务 API 基础 URL
@@ -248,7 +242,7 @@ class WeatherApiService {
  * API Key 未配置：构建时未注入 AMAP_API_KEY secret（local.properties 缺失或为空）。
  * 此时所有高德 API 请求都会返回 INVALID_USER_KEY，无需发出网络请求。
  */
-class ApiKeyMissingException : Exception("API Key 未配置，请检查构建环境是否注入 AMAP_API_KEY")
+class ApiKeyMissingException : Exception("API Key 未配置，请运行 gradle encryptSecrets 生成 secrets.dat")
 
 /**
  * 网络层异常：连接超时、DNS 解析失败、断网、HTTP 非 2xx 等。

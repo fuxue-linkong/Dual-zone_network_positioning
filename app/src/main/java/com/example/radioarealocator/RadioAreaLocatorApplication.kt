@@ -2,22 +2,43 @@ package com.example.radioarealocator
 
 import android.app.Application
 import com.amap.api.maps.MapsInitializer
+import com.example.radioarealocator.data.crypto.SecretManager
 
 /**
  * 应用入口。
  *
- * 在此处完成高德地图 SDK 隐私合规初始化，确保在 SDK 任何接口调用前执行：
- * - [MapsInitializer.updatePrivacyShow]：设置隐私弹窗是否显示
- * - [MapsInitializer.updatePrivacyAgree]：设置用户是否同意隐私协议
+ * 在此处完成：
+ * 1. 敏感信息解密：从 assets/secrets.dat 解密 API Key（三碎片密钥组装 + AES-GCM）
+ * 2. 高德地图 SDK 隐私合规初始化
+ * 3. 地图 SDK Key 运行时注入（不依赖 manifestPlaceholders，CI 无需 Secrets）
  *
- * 未调用会导致 errorCode 555570（隐私合规校验失败）及 native library 加载失败。
+ * 未调用隐私合规接口会导致 errorCode 555570（隐私合规校验失败）及 native library 加载失败。
  */
 class RadioAreaLocatorApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // 高德 SDK 隐私合规：在 SDK 任何接口调用前必须先调用这两个接口
-        // 参数 true 表示已向用户展示隐私政策且用户已同意
+
+        // 1. 解密敏感信息（天气 API Key、地图 SDK Key）
+        SecretManager.init(this)
+
+        // 2. 高德 SDK 隐私合规：在 SDK 任何接口调用前必须先调用这两个接口
         MapsInitializer.updatePrivacyShow(this, true, true)
         MapsInitializer.updatePrivacyAgree(this, true)
+
+        // 3. 地图 SDK Key 运行时注入
+        // 本地构建时 manifestPlaceholders 已从 local.properties 填充 Key，
+        // CI 构建时 manifest 为空，此处通过解密后的 Key 覆盖设置。
+        val sdkKey = SecretManager.getSecret("amap.sdk.key")
+        if (sdkKey.isNotEmpty()) {
+            try {
+                MapsInitializer::class.java
+                    .getMethod("setApiKey", String::class.java)
+                    .invoke(null, sdkKey)
+            } catch (_: NoSuchMethodException) {
+                // 当前 SDK 版本不支持 setApiKey，依赖 manifest meta-data（本地构建已有）
+            } catch (_: Exception) {
+                // 设置失败不影响其他功能，地图可能无法正常显示
+            }
+        }
     }
 }

@@ -121,19 +121,8 @@ jobs:
             exit 1
           }
 
-      # 注入 API Key：从仓库 Secrets 写入 local.properties，使构建出的
-      # release APK 内置有效的高德天气/地图 Key。
-      - name: Configure API keys
-        env:
-          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
-          AMAP_SDK_KEY: ${{ secrets.AMAP_SDK_KEY }}
-        run: |
-          {
-            echo "amap.api.key=${AMAP_API_KEY}"
-            echo "amap.sdk.key=${AMAP_SDK_KEY}"
-          } > local.properties
-          echo "local.properties created (api key length: ${#AMAP_API_KEY}, sdk key length: ${#AMAP_SDK_KEY})"
-
+      # 敏感信息已通过 secrets.dat 加密入库，Release 构建无需 GitHub Secrets。
+      # secrets.dat 在 app/src/main/assets/ 中，由 SecretManager 运行时解密。
       - name: Build Release APK
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/signing/release.keystore

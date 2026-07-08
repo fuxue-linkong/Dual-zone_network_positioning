@@ -169,7 +169,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 throw e
             } catch (e: ApiKeyMissingException) {
                 // API Key 未配置：构建时未注入 secret，无需重试
-                _weatherError.value = "API Key 未配置，请检查构建环境是否注入 AMAP_API_KEY"
+                _weatherError.value = "API Key 未配置，请运行 gradle encryptSecrets 生成 secrets.dat"
             } catch (e: WeatherNetworkException) {
                 // 网络层失败：连接超时、断网、DNS 等
                 _weatherError.value = "网络连接失败：${e.message}，请检查网络后重试"
