@@ -29,9 +29,36 @@ class SettingsStore(context: Context) {
             prefs.edit().putString(KEY_SATELLITE_SOURCE, value).apply()
         }
 
+    /**
+     * 最后已知纬度。供后台 Worker 做过境预测时使用，避免依赖应用进程存活。
+     * 默认 0.0 表示无有效位置。
+     */
+    var lastLatitude: Float
+        get() = prefs.getFloat(KEY_LAST_LAT, 0f)
+        set(value) {
+            prefs.edit().putFloat(KEY_LAST_LAT, value).apply()
+        }
+
+    /**
+     * 最后已知经度。供后台 Worker 做过境预测时使用。
+     */
+    var lastLongitude: Float
+        get() = prefs.getFloat(KEY_LAST_LON, 0f)
+        set(value) {
+            prefs.edit().putFloat(KEY_LAST_LON, value).apply()
+        }
+
+    /**
+     * 最后位置是否有效（latitude 和 longitude 均非 0）。
+     */
+    fun hasLastLocation(): Boolean =
+        prefs.contains(KEY_LAST_LAT) && prefs.contains(KEY_LAST_LON)
+
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
         private const val KEY_BACKGROUND_URI = "background_uri"
         private const val KEY_SATELLITE_SOURCE = "satellite_source"
+        private const val KEY_LAST_LAT = "last_lat"
+        private const val KEY_LAST_LON = "last_lon"
     }
 }

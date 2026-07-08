@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".RadioAreaLocatorApplication"
@@ -46,6 +47,17 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.radioarealocator.ACTION_TRIGGER_REMINDER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 设备重启后恢复提醒闹钟（AlarmManager 重启后清空所有闹钟） -->
+        <receiver
+            android:name=".data.reminder.ReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
     </application>
