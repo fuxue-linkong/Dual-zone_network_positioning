@@ -82,8 +82,11 @@ import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.satellite.SatelliteInfo
+import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
+import com.example.radioarealocator.data.satellite.SegmentStatus
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -691,7 +694,8 @@ private fun SatelliteDetailContent(
                         satellite = sat,
                         isFavorite = sat.catalogNumber in favorites,
                         onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
-                        nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L
+                        nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L,
+                        statusSegments = uiState.segmentStatuses[sat.catalogNumber]
                     )
                 }
             }
@@ -1591,7 +1595,8 @@ private fun SatelliteItem(
     satellite: SatelliteInfo,
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
-    nowMillis: Long = 0L
+    nowMillis: Long = 0L,
+    statusSegments: List<SegmentStatus>? = null
 ) {
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
         val formatter = satelliteTimeFormatter
@@ -1731,6 +1736,8 @@ private fun SatelliteItem(
                 }
             }
 
+            SatelliteStatusSegments(statusSegments)
+
             Spacer(modifier = Modifier.height(10.dp))
 
             when (timeInfo) {
@@ -1843,6 +1850,99 @@ private fun StatusChip(status: String) {
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Chip(text = displayText, bgColor = bgColor, contentColor = contentColor)
+}
+
+/**
+ * 卫星 BJT 分段运行状态展示（4 个 6 小时时段，含延续）。
+ *
+ * 无分段数据时不渲染；优先展示"今天"的 4 个时段，否则展示时间线中最近一天的时段。
+ */
+@Composable
+private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
+    if (segments.isNullOrEmpty()) return
+    val today = remember { SatelliteStatusSegmenter.dateOf(Instant.now()) }
+    val daySegments = remember(segments, today) {
+        SatelliteStatusSegmenter.segmentsForDate(segments, today)
+            .ifEmpty { segments.takeLast(4) }
+    }
+    if (daySegments.isEmpty()) return
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.status_segment_title),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            daySegments.forEach { seg ->
+                SegmentCell(
+                    segment = seg,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
+    val displayText = when (segment.status) {
+        "Heard" -> stringResource(R.string.status_heard)
+        "Telemetry Only" -> stringResource(R.string.status_telemetry_only)
+        "Not Heard" -> stringResource(R.string.status_not_heard)
+        "Crew Active" -> stringResource(R.string.status_crew_active)
+        null -> stringResource(R.string.status_no_data)
+        else -> segment.status ?: ""
+    }
+    val bgColor = when (segment.status) {
+        "Heard" -> MaterialTheme.colorScheme.primaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.errorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor = when (segment.status) {
+        "Heard" -> MaterialTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val rangeLabel = remember(segment.segment) {
+        "${segment.segment.startHour.toString().padStart(2, '0')}" +
+            "-${segment.segment.endHour.toString().padStart(2, '0')}"
+    }
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = rangeLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = displayText,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor
+        )
+        if (segment.carriedOver) {
+            Text(
+                text = stringResource(R.string.status_segment_carryover),
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
 }
 
 @Composable

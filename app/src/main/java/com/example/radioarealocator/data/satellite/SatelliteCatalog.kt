@@ -14,6 +14,7 @@ object SatelliteCatalog {
         25544 to listOf("FM", "SSTV"),      // ISS
         43017 to listOf("FM"),              // AO-91 (Fox-1B)
         43137 to listOf("FM"),              // AO-92 (Fox-1D)
+        61781 to listOf("FM"),              // AO-123 (ASRTU-1)
         27607 to listOf("FM"),              // SO-50
         22825 to listOf("FM"),              // AO-27
         43678 to listOf("FM"),              // PO-101 (Diwata-2)
@@ -48,6 +49,7 @@ object SatelliteCatalog {
         25544 to "ISS_[FM]",
         43017 to "AO-91_[FM]",
         43137 to "AO-92_[FM]",
+        61781 to "AO-123_[FM]",
         27607 to "SO-50_[FM]",
         22825 to "AO-27_[FM]",
         43678 to "PO-101_[FM]",

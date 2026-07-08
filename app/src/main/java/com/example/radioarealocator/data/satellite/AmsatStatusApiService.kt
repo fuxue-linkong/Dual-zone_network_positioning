@@ -7,6 +7,8 @@ import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.net.URLEncoder
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 /**
@@ -42,6 +44,56 @@ class AmsatStatusApiService {
             val body = response.body?.string() ?: throw IOException("AMSAT status 响应为空")
             parseSummary(body)
         }
+    }
+
+    /**
+     * 获取指定卫星的逐条状态报告（来自 sat_info.php）。
+     *
+     * 与 [fetchStatusSummaries] 不同，本方法返回带时间戳的原始报告列表，
+     * 供 [SatelliteStatusSegmenter] 按 BJT 时段聚合与延续使用。
+     *
+     * @param satName AMSAT 卫星名称（如 "AO-123_[FM]"），内部会做 URL 编码。
+     */
+    suspend fun fetchStatusReports(satName: String): List<AmsatStatusReport> = withContext(Dispatchers.IO) {
+        val encoded = URLEncoder.encode(satName, "UTF-8")
+        val request = Request.Builder()
+            .url("$BASE_URL/sat_info.php?name=$encoded")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("AMSAT sat_info 请求失败：${response.code}")
+            }
+            val body = response.body?.string() ?: throw IOException("AMSAT sat_info 响应为空")
+            parseReports(body)
+        }
+    }
+
+    private fun parseReports(json: String): List<AmsatStatusReport> {
+        // sat_info.php 直接返回 JSON 数组（非 { "data": [...] } 包装）
+        val arr = JSONArray(json)
+        val result = mutableListOf<AmsatStatusReport>()
+        for (i in 0 until arr.length()) {
+            val item = arr.optJSONObject(i) ?: continue
+            val timeStr = item.optString("reported_time", "").trim()
+            if (timeStr.isEmpty()) continue
+            val time = try {
+                Instant.parse(timeStr)
+            } catch (_: Exception) {
+                continue
+            }
+            val report = item.optString("report", "").trim()
+            if (report.isEmpty()) continue
+            result.add(
+                AmsatStatusReport(
+                    reportedTime = time,
+                    callsign = item.optString("callsign", "").trim(),
+                    report = report,
+                    gridSquare = item.optString("grid_square", "").trim()
+                )
+            )
+        }
+        return result
     }
 
     private fun parseSummary(json: String): Map<String, String> {

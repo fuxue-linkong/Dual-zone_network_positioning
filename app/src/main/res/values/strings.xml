@@ -62,6 +62,9 @@
     <string name="status_telemetry_only">仅遥测</string>
     <string name="status_not_heard">无信号</string>
     <string name="status_crew_active">机组活跃</string>
+    <string name="status_no_data">无报告</string>
+    <string name="status_segment_title">今日运行状态（北京时间）</string>
+    <string name="status_segment_carryover">延续</string>
     <string name="background_image">背景图</string>
     <string name="background_image_desc">选择背景图后，应用主题色将从背景图取色</string>
     <string name="background_pick">选择背景图</string>
