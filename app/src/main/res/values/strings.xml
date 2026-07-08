@@ -79,4 +79,44 @@
     <string name="sat_no_city">未知地区</string>
     <string name="sat_source_expired">已过期</string>
     <string name="sat_source_fresh">有效</string>
+
+    <!-- 日程提醒设置 -->
+    <string name="reminder_section_title">日程提醒</string>
+    <string name="reminder_section_desc">收藏卫星后自动创建过境提醒，在 AOS 前推送通知</string>
+    <string name="reminder_master_switch">启用日程提醒</string>
+    <string name="reminder_lead_time">提前提醒时间</string>
+    <string name="reminder_lead_minutes_format">%1$d 分钟</string>
+    <string name="reminder_repeat_mode">重复选项</string>
+    <string name="reminder_repeat_always">每次过境都提醒</string>
+    <string name="reminder_repeat_daytime">仅白天过境提醒（6:00-22:00）</string>
+    <string name="reminder_sound">通知声音</string>
+    <string name="reminder_vibration">通知振动</string>
+    <string name="reminder_view_list">查看提醒列表</string>
+    <string name="reminder_list_title">提醒列表</string>
+    <string name="reminder_list_empty">暂无提醒。收藏卫星后将自动添加过境提醒。</string>
+    <string name="reminder_item_off">已关闭</string>
+    <string name="reminder_item_on">已启用</string>
+    <string name="reminder_notification_title">%1$s 即将过境</string>
+    <string name="reminder_notification_content">AOS: %1$s | 仰角: %2$d° | 入境方位: %3$d° | 模式: %4$s</string>
+    <string name="reminder_notification_sub">LOS: %1$s | AOS UTC: %2$s</string>
+    <string name="reminder_auto_added_title">已自动添加提醒</string>
+    <string name="reminder_auto_added_text">%1$s：下次过境 %2$s，已添加提醒</string>
+    <string name="reminder_permission_required">需要通知权限才能显示提醒，请前往系统设置开启</string>
+
+    <!-- 天气模块 -->
+    <string name="weather_refresh">刷新天气</string>
+    <string name="weather_loading">天气加载中…</string>
+    <string name="weather_load_failed">天气加载失败</string>
+    <string name="weather_retry">重试</string>
+    <string name="weather_tap_to_load">点击加载天气</string>
+    <string name="weather_unknown_city">未知地区</string>
+    <string name="weather_next_pass_label">下次过境</string>
+    <string name="weather_location_required">需要定位权限才能获取天气</string>
+
+    <!-- 静态地图模块 -->
+    <string name="map_title">位置地图</string>
+    <string name="map_description">以当前坐标为中心的静态地图</string>
+    <string name="map_load_failed">地图加载失败</string>
+    <string name="map_network_error">网络不可用或 API Key 无效</string>
+    <string name="map_center_marker">当前位置</string>
 </resources>

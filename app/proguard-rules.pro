@@ -36,3 +36,16 @@
 -keep class com.example.radioarealocator.logging.** { *; }
 -keep class com.example.radioarealocator.logging.AndroidLogFactory { *; }
 -keep class com.example.radioarealocator.logging.AndroidLog { *; }
+
+# 高德地图 SDK 3D地图（保留 native 接口和反射调用的类）
+-keep class com.amap.api.** { *; }
+-keep class com.autonavi.** { *; }
+-keep class com.a.a.** { *; }
+-keep class com.loc.** { *; }
+-dontwarn com.amap.api.**
+-dontwarn com.autonavi.**
+-dontwarn com.a.a.**
+-dontwarn com.loc.**
+
+# 保留 BuildConfig 中的加密 key 字段
+-keep class com.example.radioarealocator.BuildConfig { *; }

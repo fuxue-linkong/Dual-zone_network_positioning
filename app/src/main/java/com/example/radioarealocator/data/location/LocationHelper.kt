@@ -22,6 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -120,6 +123,63 @@ class LocationHelper(private val context: Context) {
             throw Exception(
                 "无法获取定位，请检查手机是否开启 GPS/网络定位，或检查是否禁止了本应用定位权限。详情: $detail"
             )
+        }
+    }
+
+    /**
+     * 持续位置监听（Flow 形式）。
+     *
+     * 基于 FusedLocationProviderClient.requestLocationUpdates 注册持续回调，
+     * 当设备位置变化超过 [minDistanceM] 或经过 [intervalMs] 时上报新位置。
+     * Flow 被取消时自动移除回调，避免泄漏。
+     *
+     * 默认参数优先保证实时性：5 秒间隔 + 0 米最小位移 + 高精度优先级，
+     * 确保设备位置发生变化时经纬度能被及时捕获并更新到界面。
+     *
+     * @param intervalMs 期望的位置上报间隔（毫秒）
+     * @param minDistanceM 最小位移阈值（米），小于此距离的变化不上报
+     */
+    fun locationUpdates(
+        intervalMs: Long = 5_000L,
+        minDistanceM: Float = 0f
+    ): Flow<Location> = callbackFlow {
+        if (!hasPermission()) {
+            close(SecurityException("缺少定位权限"))
+            return@callbackFlow
+        }
+
+        val locationCallback = object : com.google.android.gms.location.LocationCallback() {
+            override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
+                result.lastLocation?.let { trySend(it) }
+            }
+        }
+
+        val locationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            intervalMs
+        ).apply {
+            setMinUpdateDistanceMeters(minDistanceM)
+            setWaitForAccurateLocation(false)
+        }.build()
+
+        try {
+            fusedClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            ).addOnFailureListener { e ->
+                close(e)
+            }
+        } catch (e: SecurityException) {
+            close(e)
+        }
+
+        awaitClose {
+            try {
+                fusedClient.removeLocationUpdates(locationCallback)
+            } catch (_: Exception) {
+                // 忽略移除回调时的异常
+            }
         }
     }
 

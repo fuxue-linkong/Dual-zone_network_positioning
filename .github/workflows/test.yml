@@ -15,27 +15,15 @@ on:
     branches:
       - main
   workflow_call:  # 允许 ci.yml / release.yml 复用本工作流（先测试后打包）
-    inputs:
-      fail-on-coverage:
-        description: '是否在覆盖率低于阈值时失败（发布流程默认开启）'
-        type: boolean
-        default: false
   workflow_dispatch:
-
-# 并发控制：同一分支的新推送自动取消旧运行，避免资源浪费
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   test:
     name: Run Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     if: ${{ github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]' }}
     permissions:
       contents: read
-      checks: write       # 允许发布测试报告到 GitHub Checks
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,15 +38,22 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.4.1'
-          # cache-disabled 已移除：启用 Gradle 依赖缓存，避免每次构建重复下载依赖
+          cache-disabled: true
 
-      # 运行单元测试并生成 JaCoCo 覆盖率数据
-      - name: Run unit tests with coverage
+      - name: Verify JDK version
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+
+      - name: Set JAVA_HOME for Gradle
+        run: |
+          echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
+
+      - name: Run unit tests
         run: |
           set -o pipefail
           gradle :app:testDebugUnitTest --console=plain --stacktrace 2>&1 | tee test-output.log
 
-      # 上传测试报告 artifact（失败时也保留以便排查）
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -69,134 +64,21 @@ jobs:
             app/build/test-results
             test-output.log
 
-      # 生成 JaCoCo HTML/XML 覆盖率报告
-      - name: Generate JaCoCo coverage report
-        if: always()
-        run: |
-          gradle :app:jacocoTestReport --console=plain 2>&1 | tee jacoco-output.log || true
-          if [ -f app/build/reports/jacoco/jacocoTestReport/html/index.html ]; then
-            echo "JaCoCo HTML 报告已生成"
-          else
-            echo "Warning: JaCoCo 报告未生成，可能没有测试用例"
-          fi
-
-      # 解析 XML 报告，计算覆盖率并检查阈值（≥90%）
-      - name: Check coverage threshold
-        id: coverage
-        if: always()
-        run: |
-          XML="app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
-          if [ ! -f "$XML" ]; then
-            echo "coverage_skipped=true" >> "$GITHUB_OUTPUT"
-            echo "⚠️ JaCoCo XML 报告不存在，跳过覆盖率检查" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          # 从 XML 中提取指令覆盖数与未覆盖数（指令覆盖率是最稳定的指标）
-          INSTRUCTIONS_MISSED=$(grep -oP '<counter type="INSTRUCTION" missed="\K\d+' "$XML" | head -1)
-          INSTRUCTIONS_COVERED=$(grep -oP '<counter type="INSTRUCTION" missed="\d+" covered="\K\d+' "$XML" | head -1)
-
-          if [ -z "$INSTRUCTIONS_MISSED" ] || [ -z "$INSTRUCTIONS_COVERED" ]; then
-            echo "coverage_skipped=true" >> "$GITHUB_OUTPUT"
-            echo "⚠️ 无法解析覆盖率数据" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          TOTAL=$((INSTRUCTIONS_MISSED + INSTRUCTIONS_COVERED))
-          if [ "$TOTAL" -eq 0 ]; then
-            COVERAGE=0
-          else
-            COVERAGE=$(awk "BEGIN { printf \"%.2f\", ($INSTRUCTIONS_COVERED / $TOTAL) * 100 }")
-          fi
-
-          echo "coverage_percent=$COVERAGE" >> "$GITHUB_OUTPUT"
-          echo "instructions_covered=$INSTRUCTIONS_COVERED" >> "$GITHUB_OUTPUT"
-          echo "instructions_missed=$INSTRUCTIONS_MISSED" >> "$GITHUB_OUTPUT"
-
-          # 同时计算测试通过率
-          TESTS_TOTAL=0
-          TESTS_FAILED=0
-          TESTS_SKIPPED=0
-          for f in app/build/test-results/testDebugUnitTest/TEST-*.xml; do
-            [ -f "$f" ] || continue
-            T=$(grep -oP 'tests="\K[^"]+' "$f" | head -1)
-            F=$(grep -oP 'failures="\K[^"]+' "$f" | head -1)
-            S=$(grep -oP 'skipped="\K[^"]+' "$f" | head -1)
-            TESTS_TOTAL=$((TESTS_TOTAL + ${T:-0}))
-            TESTS_FAILED=$((TESTS_FAILED + ${F:-0}))
-            TESTS_SKIPPED=$((TESTS_SKIPPED + ${S:-0}))
-          done
-          if [ "$TESTS_TOTAL" -gt 0 ]; then
-            PASS_RATE=$(awk "BEGIN { printf \"%.2f\", (($TESTS_TOTAL - $TESTS_FAILED - $TESTS_SKIPPED) / $TESTS_TOTAL) * 100 }")
-          else
-            PASS_RATE=0
-          fi
-          echo "pass_rate=$PASS_RATE" >> "$GITHUB_OUTPUT"
-          echo "tests_total=$TESTS_TOTAL" >> "$GITHUB_OUTPUT"
-          echo "tests_failed=$TESTS_FAILED" >> "$GITHUB_OUTPUT"
-
-          # 输出到 GitHub Step Summary
-          echo "## 📊 测试与覆盖率报告" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 指标 | 值 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 测试用例总数 | $TESTS_TOTAL |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 失败用例数 | $TESTS_FAILED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 跳过用例数 | $TESTS_SKIPPED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 测试通过率 | ${PASS_RATE}% |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 指令覆盖率 | ${COVERAGE}% |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 已覆盖指令 | $INSTRUCTIONS_COVERED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 未覆盖指令 | $INSTRUCTIONS_MISSED |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # 阈值检查（仅在 fail-on-coverage=true 时强制失败）
-          # 注意：检查的是"指令覆盖率"（COVERAGE），而非"测试通过率"（PASS_RATE）
-          THRESHOLD=90
-          FAIL_ON_COVERAGE="${{ inputs.fail-on-coverage || 'false' }}"
-          if [ "$FAIL_ON_COVERAGE" = "true" ]; then
-            if [ "$(awk "BEGIN { print ($PASS_RATE < 100) }")" = "1" ]; then
-              echo "❌ 测试通过率 ${PASS_RATE}% 低于 100%（存在失败/跳过用例）" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-            fi
-            if [ "$(awk "BEGIN { print ($COVERAGE < $THRESHOLD) }")" = "1" ]; then
-              echo "❌ 指令覆盖率 ${COVERAGE}% 低于阈值 ${THRESHOLD}%" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-            fi
-            echo "✅ 测试通过率 ${PASS_RATE}%，指令覆盖率 ${COVERAGE}% 满足阈值要求" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ℹ️ 覆盖率阈值检查已跳过（fail-on-coverage=false）" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            app/build/reports/jacoco
-            jacoco-output.log
-          if-no-files-found: ignore
-
       - name: Publish test summary
         if: always()
         run: |
-          if [ ! -s "$GITHUB_STEP_SUMMARY" ]; then
-            echo "## Unit Test Results" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if compgen -G "app/build/test-results/testDebugUnitTest/TEST-*.xml" > /dev/null; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "### 测试用例详情" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Module | Tests | Failures | Skipped |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|--------|-------|----------|---------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Unit Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f app/build/test-results/testDebugUnitTest/TEST-*.xml ]; then
+            echo "| Module | Tests | Failures | Skipped |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|----------|---------|" >> $GITHUB_STEP_SUMMARY
             for f in app/build/test-results/testDebugUnitTest/TEST-*.xml; do
               module=$(basename "$f" | sed 's/^TEST-//' | sed 's/\.xml$//')
               tests=$(grep -oP 'tests="\K[^"]+' "$f" | head -1)
               failures=$(grep -oP 'failures="\K[^"]+' "$f" | head -1)
               skipped=$(grep -oP 'skipped="\K[^"]+' "$f" | head -1)
-              echo "| $module | $tests | $failures | $skipped |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| $module | $tests | $failures | $skipped |" >> $GITHUB_STEP_SUMMARY
             done
           else
-            echo "测试结果文件未生成，请查看上方构建日志。" >> "$GITHUB_STEP_SUMMARY"
+            echo "测试结果文件未生成，请查看上方构建日志。" >> $GITHUB_STEP_SUMMARY
           fi

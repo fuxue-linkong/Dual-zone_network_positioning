@@ -1,6 +1,44 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import java.io.File
+import java.util.Base64
+import java.util.Properties
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+
+/**
+ * AES-GCM 加密 API Key。
+ * 明文 key 仅存在于 local.properties（不进 git），密文注入 BuildConfig。
+ * 运行时通过 ApiKeyCrypto.decrypt() 解密。
+ */
+fun encryptApiKey(plain: String): String {
+    if (plain.isEmpty()) return ""
+    val masterKey = byteArrayOf(
+        0x97.toByte(), 0x5F.toByte(), 0xAE.toByte(), 0x7F.toByte(),
+        0xBB.toByte(), 0x1A.toByte(), 0xE7.toByte(), 0xC4.toByte(),
+        0xB2.toByte(), 0x72.toByte(), 0x6D.toByte(), 0xFC.toByte(),
+        0xB3.toByte(), 0xF5.toByte(), 0xF6.toByte(), 0xE2.toByte(),
+        0xB3.toByte(), 0x9C.toByte(), 0x8C.toByte(), 0xCE.toByte(),
+        0xDD.toByte(), 0x1C.toByte(), 0xF8.toByte(), 0x1F.toByte(),
+        0xF9.toByte(), 0x12.toByte(), 0x14.toByte(), 0xE6.toByte(),
+        0x8D.toByte(), 0xD5.toByte(), 0x72.toByte(), 0x60.toByte()
+    )
+    val iv = ByteArray(12)
+    SecureRandom().nextBytes(iv)
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(
+        Cipher.ENCRYPT_MODE,
+        SecretKeySpec(masterKey, "AES"),
+        GCMParameterSpec(128, iv)
+    )
+    val cipherText = cipher.doFinal(plain.toByteArray())
+    val combined = ByteArray(12 + cipherText.size)
+    System.arraycopy(iv, 0, combined, 0, 12)
+    System.arraycopy(cipherText, 0, combined, 12, cipherText.size)
+    return Base64.getEncoder().encodeToString(combined)
+}
 
 plugins {
     id("com.android.application")
@@ -23,6 +61,31 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // 从 local.properties 读取 API Key（不进 git）
+        val localProps = Properties().apply {
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                propsFile.inputStream().use { load(it) }
+            }
+        }
+        // 高德 Web 服务 Key（天气API）：AES-GCM 加密后注入 BuildConfig
+        buildConfigField(
+            "String",
+            "AMAP_API_KEY_ENCRYPTED",
+            "\"${encryptApiKey(localProps.getProperty("amap.api.key", ""))}\""
+        )
+        // 高德 Android SDK Key（地图SDK）：AES-GCM 加密后注入 BuildConfig（运行时解密）
+        buildConfigField(
+            "String",
+            "AMAP_SDK_KEY_ENCRYPTED",
+            "\"${encryptApiKey(localProps.getProperty("amap.sdk.key", ""))}\""
+        )
+
+        // SDK Key 通过 manifestPlaceholders 注入 AndroidManifest meta-data
+        // 高德地图 SDK V11.x 在 MapView 创建时读取 meta-data，必须在 manifest 中配置
+        // Key 安全性：1) 绑定 SHA1+包名 2) Release 启用 R8 混淆 3) local.properties 不进 git
+        manifestPlaceholders["AMAP_SDK_KEY"] = localProps.getProperty("amap.sdk.key", "")
     }
 
     signingConfigs {
@@ -96,6 +159,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -148,6 +212,13 @@ dependencies {
 
     // Image loading (GitHub avatars in About)
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // 高德地图 SDK：3D地图（含缩放手势、Marker、控件）
+    // 文档：https://lbs.amap.com/api/android-sdk/summary
+    implementation("com.amap.api:3dmap:latest.integration")
+
+    // WorkManager: 用于日程提醒的每日刷新周期任务
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

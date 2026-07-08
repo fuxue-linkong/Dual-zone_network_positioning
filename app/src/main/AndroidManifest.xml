@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 日程提醒所需权限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".RadioAreaLocatorApplication"
@@ -17,6 +23,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RadioAreaLocator"
         tools:targetApi="31">
+
+        <!-- 高德地图 SDK Key：由 manifestPlaceholders 在构建时注入 -->
+        <!-- Key 绑定 SHA1+包名，且 Release APK 启用 R8 混淆 -->
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="${AMAP_SDK_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -26,6 +39,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 接收 AlarmManager 触发的过境提醒广播 -->
+        <receiver
+            android:name=".data.reminder.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.radioarealocator.ACTION_TRIGGER_REMINDER" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

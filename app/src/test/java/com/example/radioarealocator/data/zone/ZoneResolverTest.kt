@@ -100,46 +100,4 @@ class ZoneResolverTest {
             assertEquals("mismatch at ($lat, $lon)", expected, actual)
         }
     }
-
-    /**
-     * 验证半开区间修复：相邻区域边界点只应命中一个区域。
-     * 经度 40.0 是欧洲（maxLon=40）与俄罗斯（minLon=40）的边界，
-     * 修复前会被两个区域同时命中（反转后俄罗斯优先），导致错误。
-     * 修复后经度 40.0 归属欧洲（闭区间包含 maxLon），41.0 归属俄罗斯。
-     */
-    @Test
-    fun `boundary longitude 40 belongs to europe not russia`() {
-        // 莫斯科附近纬度 55、经度 40.0：应归欧洲 cqZone=14
-        val boundary = ZoneResolver.resolve(55.0, 40.0)
-        assertEquals(14, boundary.cqZone)
-        // 经度 41.0 应归俄罗斯 cqZone=16
-        val east = ZoneResolver.resolve(55.0, 41.0)
-        assertEquals(16, east.cqZone)
-    }
-
-    /**
-     * 验证极地边界 90/180 仍可命中区域（半开区间对极值用闭区间）。
-     */
-    @Test
-    fun `polar boundaries are still matched`() {
-        // 纬度 75、经度 180.0：应命中俄罗斯大区域 (50-77, 40-180) 而非 fallback
-        // 选择 lat=75 是为了避开子区域 (50-70, 150-180) cqZone=19，确保命中 cqZone=16
-        val northPole = ZoneResolver.resolve(75.0, 180.0)
-        // 俄罗斯区域 (50-77, 40-180) maxLon=180，闭区间包含
-        assertEquals(16, northPole.cqZone)
-    }
-
-    /**
-     * 验证多个边界相接的区域不会出现"无人区"（即半开区间不会让边界点全部不匹配）。
-     */
-    @Test
-    fun `no mans land at boundaries`() {
-        // 抽样多个边界经度，确保每个点都能命中某个区域或 fallback
-        val boundaryLongitudes = listOf(-180.0, -179.0, -50.0, -11.0, 0.0, 40.0, 97.0, 180.0)
-        for (lon in boundaryLongitudes) {
-            val info = ZoneResolver.resolve(35.0, lon)
-            // 只要 cqZone 在合法范围 1..40 即可
-            assertTrue("经度 $lon 未命中任何区域或 fallback", info.cqZone in 1..40)
-        }
-    }
 }

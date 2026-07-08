@@ -3,6 +3,7 @@ package com.example.radioarealocator
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.example.radioarealocator.data.reminder.ReminderNotificationHelper
+import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.ui.MainScreen
 import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.theme.RadioAreaLocatorTheme
@@ -45,8 +48,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * 通知权限请求（Android 13+ 必需）。结果不影响功能本身，
+     * 即使拒绝应用也不会崩溃，仅是通知无法显示。
+     */
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // 无论是否授予，都不阻塞应用使用
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 创建通知渠道（幂等），并在 Android 13+ 请求运行时通知权限
+        ensureNotificationReady()
+        // 启动天气定时刷新（每 30 分钟），仅在定位可用时实际请求网络
+        viewModel.startWeatherAutoRefresh()
         setContent {
             val backgroundUri by viewModel.backgroundUri
 
@@ -66,6 +83,26 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * 创建通知渠道（首次启动时），并在 Android 13+ 请求 POST_NOTIFICATIONS 权限。
+     * 渠道创建幂等，重复调用安全。
+     */
+    private fun ensureNotificationReady() {
+        val settings = ReminderStore(this).loadSettings()
+        val helper = ReminderNotificationHelper(this)
+        helper.createChannel(settings)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

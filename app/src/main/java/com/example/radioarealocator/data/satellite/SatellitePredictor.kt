@@ -90,34 +90,23 @@ class SatellitePredictor {
             val currentPos = predictor.getSatPos(now)
             val isCurrentlyVisible = currentPos != null && currentPos.elevation > 0
 
-            // predict4java 的 nextSatPass(date, keepTLE) 总是返回 date 之后的下一次过境，
-            // 即使当前在境也不会返回当前过境。这里统一调用一次获取下一次过境，
-            // 在境时通过 startDate 与 now 的关系判断是否为当前过境。
-            val nextPass = predictor.nextSatPass(now, false)
+            // 在境时获取当前过境（含出境时间），即将入境时获取下次过境
+            val nextPass = if (isCurrentlyVisible) {
+                predictor.nextSatPass(now, true)
+            } else {
+                predictor.nextSatPass(now, false)
+            }
             if (nextPass == null || nextPass.startTime == null || nextPass.endTime == null) return null
 
-            // 当前在境且 nextPass.startTime 在 now 之前：predict4java 返回了当前过境
-            // 此时 AOS 用 now 近似（实际 AOS 已过去），LOS 用 nextPass.endTime
-            // 否则：未来过境，直接使用 startTime/endTime
-            val aosTime: Date
-            val losTime: Date
-            if (isCurrentlyVisible && !nextPass.startTime.after(now)) {
-                // 当前过境：AOS 已过去，用 now 近似；LOS 在未来
-                aosTime = now
-                losTime = nextPass.endTime
-            } else {
-                // 未来过境：只取预测窗口内的过境
-                if (nextPass.startTime.after(searchEnd)) return null
-                aosTime = nextPass.startTime
-                losTime = nextPass.endTime
-            }
+            // 只取预测窗口内的过境
+            if (nextPass.startTime.after(searchEnd)) return null
 
             SatelliteInfo(
                 name = tle.name.trim().ifEmpty { tle.catnum.toString() },
                 catalogNumber = tle.catnum,
                 modes = modes,
-                aosTime = aosTime.toInstant(),
-                losTime = losTime.toInstant(),
+                aosTime = nextPass.startTime.toInstant(),
+                losTime = nextPass.endTime.toInstant(),
                 maxElevation = nextPass.maxEl,
                 aosAzimuth = nextPass.aosAzimuth,
                 losAzimuth = nextPass.losAzimuth,
