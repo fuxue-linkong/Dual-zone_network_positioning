@@ -8,50 +8,49 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:processDebugNavigationResources
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:javaPreCompileDebug
-> Task :app:parseDebugLocalResources
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
-> Task :app:generateDebugRFile
+> Task :app:parseDebugLocalResources
 > Task :app:generateDebugGlobalSynthetics
 > Task :app:generateDebugJacocoPropertiesFile
-> Task :app:desugarDebugFileDependencies
+> Task :app:generateDebugRFile
 > Task :app:checkDebugDuplicateClasses
-> Task :app:checkDebugAarMetadata
-> Task :app:compileDebugKotlin
-> Task :app:mergeExtDexDebug
-
-> Task :app:compileDebugKotlin
-w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/AMapCard.kt:63:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
-w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/SettingsScreen.kt:289:59 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
-w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/theme/Theme.kt:114:24 'var statusBarColor: Int' is deprecated. Deprecated in Java.
-
-> Task :app:compileDebugJavaWithJavac
-> Task :app:processDebugJavaRes
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeLibDexDebug
 > Task :app:mapDebugSourceSetPaths
+> Task :app:checkDebugAarMetadata
 > Task :app:compileDebugNavigationResources
-> Task :app:mergeDebugJavaResource
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:mergeDebugJniLibFolders
 > Task :app:processDebugManifestForPackage
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugResources
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
 > Task :app:stripDebugDebugSymbols
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeExtDexDebug
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/AMapCard.kt:63:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/MainScreen.kt:1899:32 Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
+w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/SettingsScreen.kt:289:59 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_positioning/app/src/main/java/com/example/radioarealocator/ui/theme/Theme.kt:114:24 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugJavaRes
 > Task :app:jacocoDebug
+> Task :app:mergeDebugJavaResource
 > Task :app:dexBuilderDebug
 > Task :app:mergeProjectDexDebug
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1783487990578.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1783522378150.json
 
-BUILD SUCCESSFUL in 3m 34s
+BUILD SUCCESSFUL in 1m 15s
 40 actionable tasks: 40 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
