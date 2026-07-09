@@ -88,7 +88,7 @@ class SatelliteStatusTracker(
 
     private suspend fun refresh() {
         try {
-            val reports = apiService.fetchStatusReports()
+            val reports = apiService.fetchStatusSummaryReports()
             val currentSlot = absoluteSlot()
             // 合并策略：保留未在新报告中出现的旧卫星（沿用其状态），
             // 新报告中出现的卫星覆盖为当前槽的实时状态

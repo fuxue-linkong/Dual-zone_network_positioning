@@ -23,6 +23,8 @@ import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatellitePredictor
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
+import com.example.radioarealocator.data.satellite.SegmentStatus
+import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SourcedTLE
 import com.example.radioarealocator.data.weather.ApiKeyMissingException
 import com.example.radioarealocator.data.weather.WeatherApiException
@@ -35,10 +37,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
@@ -66,6 +71,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var locationOnlyJob: Job? = null
     private var satelliteOnlyJob: Job? = null
     private var predictJob: Job? = null
+    // 卫星分段状态拉取 Job：与主刷新解耦，结果异步回填 uiState.segmentStatuses
+    private var segmentStatusJob: Job? = null
+    // 分段状态最近一次拉取时间，1 小时内不重复请求 AMSAT
+    private var segmentStatusFetchedAt: Instant? = null
     // 持续位置监听 Job：在首次成功定位后启动，自动跟踪设备位置变化
     private var locationUpdatesJob: Job? = null
     // 地址解析去抖 Job：位置频繁变化时延后解析地址，避免 Geocoder 被密集调用
@@ -686,6 +695,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         cachedTles = tles,
                         lastSatelliteUpdateTime = Instant.now()
                     )
+                    // 即便尚未预测，也可先拉取分段运行状态供展示
+                    refreshSegmentStatuses()
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -695,6 +706,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     satelliteError = e.message ?: "卫星源更新失败"
                 )
             }
+        }
+    }
+
+    /**
+     * 拉取并聚合各卫星的 BJT 分段运行状态（含延续逻辑），结果回填 [MainUiState.segmentStatuses]。
+     *
+     * 为目录中所有有 AMSAT 名称的卫星并行请求 sat_info.php，单星失败不影响其它卫星。
+     * 1 小时内不重复拉取，避免对 AMSAT 服务器造成压力。
+     */
+    fun refreshSegmentStatuses() {
+        segmentStatusFetchedAt?.let {
+            if (Duration.between(it, Instant.now()).toMinutes() < 60) return
+        }
+        segmentStatusJob?.cancel()
+        segmentStatusJob = viewModelScope.launch {
+            val namesByCat = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER
+            val results: Map<Int, List<SegmentStatus>> = coroutineScope {
+                namesByCat.map { (catNum, amsatName) ->
+                    async {
+                        val reports = try {
+                            amsatStatusApi.fetchStatusReports(amsatName)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (reports != null) {
+                            catNum to SatelliteStatusSegmenter.buildSegmentTimeline(reports)
+                        } else {
+                            null
+                        }
+                    }
+                }.awaitAll().filterNotNull().toMap()
+            }
+            segmentStatusFetchedAt = Instant.now()
+            _uiState.value = _uiState.value.copy(segmentStatuses = results)
         }
     }
 
@@ -762,6 +809,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             // 预测完成后刷新所有收藏卫星的提醒项
             refreshRemindersFromPrediction(satellites)
+            // 预测完成后异步拉取 BJT 分段运行状态（含延续逻辑）
+            refreshSegmentStatuses()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -893,5 +942,7 @@ data class MainUiState(
     /** 最近一次卫星源更新时间，null 表示从未更新 */
     val lastSatelliteUpdateTime: Instant? = null,
     /** 本地缓存的 TLE 列表，进程重启后可从 [SatelliteCacheStore] 恢复 */
-    val cachedTles: List<SourcedTLE> = emptyList()
+    val cachedTles: List<SourcedTLE> = emptyList(),
+    /** 每颗卫星（按 NORAD 编号）的 BJT 分段运行状态（已应用延续逻辑） */
+    val segmentStatuses: Map<Int, List<SegmentStatus>> = emptyMap()
 )
