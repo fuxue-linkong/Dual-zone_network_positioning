@@ -49,3 +49,28 @@
 
 # 保留 BuildConfig 中的加密 key 字段
 -keep class com.example.radioarealocator.BuildConfig { *; }
+
+# ──────────────────────────────────────────────────────────────────────────
+# WorkManager / Room：保留反射生成的数据库实现类
+#
+# 问题：WorkManager 内部使用 Room，Room 编译时生成 WorkDatabase_Impl。
+# WorkManagerInitializer 在 App 启动时通过反射 getDeclaredConstructor()
+# 查找该类的无参构造器。R8 full mode（AGP 8+ 默认）会因"无直接代码引用"
+# 剥离该构造器，导致启动崩溃：
+#   java.lang.NoSuchMethodException: androidx.work.impl.WorkDatabase_Impl.<init> []
+#   at androidx.work.WorkManagerInitializer.b(...)
+#   at androidx.startup.InitializationProvider.onCreate(...)
+#
+# 修复：保留 WorkDatabase_Impl 的无参构造器与全部成员，避免 R8 剥离。
+# 同时保留所有 Room 数据库实现类的构造器（通用保险）。
+# ──────────────────────────────────────────────────────────────────────────
+-keep class androidx.work.impl.WorkDatabase_Impl { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+
+# 通用 Room 保险：所有 RoomDatabase 子类的无参构造器
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class * extends androidx.room.RoomDatabase { *; }
+
+# WorkManager 内部通过反射实例化的其他类
+-keep class androidx.work.impl.** { *; }
+-dontwarn androidx.work.impl.**
