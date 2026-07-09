@@ -97,8 +97,8 @@ android {
         applicationId = "com.example.radioarealocator"
         minSdk = 26
         targetSdk = 37
-        versionCode = 9
-        versionName = "1.1.0"
+        versionCode = 10
+        versionName = "1.2.0-beta.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -163,6 +163,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+
+    // lint 配置：禁用 InvalidFragmentVersionForActivityResult 误报
+    //（androidx.activity-compose 已包含 Fragment 1.3.0+，lint 未正确识别）
+    lint {
+        disable += "InvalidFragmentVersionForActivityResult"
     }
 
     // JaCoCo 覆盖率报告配置：排除自动生成与框架代码，聚焦业务逻辑
