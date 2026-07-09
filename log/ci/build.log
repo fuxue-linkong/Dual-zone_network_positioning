@@ -8,17 +8,17 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:processDebugNavigationResources
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:javaPreCompileDebug
-> Task :app:parseDebugLocalResources
 > Task :app:mergeDebugAssets
+> Task :app:parseDebugLocalResources
 > Task :app:compressDebugAssets
-> Task :app:generateDebugRFile
 > Task :app:generateDebugGlobalSynthetics
 > Task :app:generateDebugJacocoPropertiesFile
-> Task :app:desugarDebugFileDependencies
+> Task :app:generateDebugRFile
 > Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeLibDexDebug
 > Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
-> Task :app:mergeLibDexDebug
 > Task :app:compileDebugNavigationResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
@@ -49,8 +49,8 @@ w: file:///home/runner/work/Dual-zone_network_positioning/Dual-zone_network_posi
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1783577025076.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1783577890849.json
 
-BUILD SUCCESSFUL in 57s
+BUILD SUCCESSFUL in 1m 8s
 40 actionable tasks: 40 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
