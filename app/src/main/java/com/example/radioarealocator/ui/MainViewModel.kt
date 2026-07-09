@@ -60,7 +60,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val satelliteCache = SatelliteCacheStore(application)
     private val favoriteStore = FavoriteSatellitesStore(application)
     private val reminderStore = ReminderStore(application)
-    private val weatherApiService = WeatherApiService()
+    private val weatherApiService = WeatherApiService(application)
     private val weatherStore = WeatherStore(application)
     private val reminderScheduler = ReminderScheduler(application)
     // 每日一言服务：从 https://v1.hitokoto.cn/ 获取，失败回退本地文案池

@@ -80,12 +80,14 @@ fun AMapCard(
 
     // 管理地图生命周期：随宿主 Activity 生命周期转发事件给 MapView
     // 高德 MapView 生命周期方法：onCreate/onResume/onPause/onDestroy（无 onStop）
+    // 注意：onDestroy 只在 onDispose 中调用一次。
+    // 不能同时在 ON_DESTROY 事件和 onDispose 中调用，否则会双重销毁导致闪退
+    // （Activity 销毁时 ON_DESTROY 先触发，随后 Compose 清理触发 onDispose）。
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> mapView.onResume()
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
                 else -> {}
             }
         }
