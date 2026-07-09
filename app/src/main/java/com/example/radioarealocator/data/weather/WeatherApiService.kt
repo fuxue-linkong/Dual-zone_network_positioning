@@ -1,256 +1,285 @@
 package com.example.radioarealocator.data.weather
 
+import android.content.Context
+import com.amap.api.services.core.LatLonPoint
+import com.amap.api.services.geocoder.GeocodeSearch
+import com.amap.api.services.geocoder.GeocodeResult
+import com.amap.api.services.geocoder.RegeocodeQuery
+import com.amap.api.services.geocoder.RegeocodeResult
+import com.amap.api.services.weather.LocalWeatherForecastResult
+import com.amap.api.services.weather.LocalWeatherLiveResult
+import com.amap.api.services.weather.WeatherSearch
+import com.amap.api.services.weather.WeatherSearchQuery
 import com.example.radioarealocator.data.crypto.SecretManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
- * 高德天气 API 封装。
+ * 高德天气 SDK 封装。
  *
- * API 文档：https://lbs.amap.com/api/webservice/guide/api/weatherinfo
+ * 使用高德搜索 SDK（com.amap.api:search）替代 Web API：
+ * - [GeocodeSearch]：经纬度 → adcode + 城市名（逆地理编码）
+ * - [WeatherSearch]：adcode → 实时天气（Live）+ 4 天预报（Forecast）
+ *
+ * SDK 内部处理 HTTP 请求、JSON 解析、线程切换，复用 manifest 注入的 [AMAP_SDK_KEY]，
+ * 不再需要独立的 Web 服务 Key（amap.api.key）。
+ *
+ * SDK 数据类层次（v9.7.1，通过 javap 反编译确认）：
+ * - 逆地理：`onRegeocodeSearched(RegeocodeResult, rCode)` → `result.regeocodeAddress` → `RegeocodeAddress`
+ *   （注意回调参数是包装类 RegeocodeResult，非 RegeocodeAddress）
+ * - 实时天气：`onWeatherLiveSearched(LocalWeatherLiveResult, rCode)` → `result.liveResult` → `LocalWeatherLive`
+ *   （注意方法名为 onWeatherLiveSearched，非 onLiveWeatherSearched）
+ * - 天气预报：`onWeatherForecastSearched(LocalWeatherForecastResult, rCode)` → `result.forecastResult` → `LocalWeatherForecast`
+ *   → `forecast.weatherForecast` → `List<LocalDayWeatherForecast>`
+ *   （注意属性名为 weatherForecast，非 casts；风向/风力为 dayWindDirection/nightWindDirection/dayWindPower/nightWindPower）
  *
  * Key 安全策略：
  * - 明文 Key 仅存在于 local.properties（不进 git）
  * - 开发阶段通过 `gradle encryptSecrets` 加密为 assets/secrets.dat（提交到 git）
- * - 运行时由 [SecretManager] 从 secrets.dat 解密，三碎片组装主密钥 + AES-GCM
+ * - 运行时由 [SecretManager] 从 secrets.dat 解密
  * - CI 构建无需 GitHub Secrets，secrets.dat 已在仓库中
  *
  * 错误处理：
- * - API Key 缺失时抛出 [ApiKeyMissingException]，避免发出注定失败的网络请求
- * - 网络异常抛出 [WeatherNetworkException]，与 API 业务错误区分
- * - 高德 API 返回 status!=1 时抛出 [WeatherApiException]，携带 info 描述
+ * - SDK Key 缺失时抛出 [ApiKeyMissingException]
+ * - 网络层错误（rCode 1800/1900）抛出 [WeatherNetworkException]
+ * - SDK 业务错误（rCode != 1000）抛出 [WeatherApiException]，携带 rCode
+ *
+ * @param context 应用上下文，用于创建 GeocodeSearch / WeatherSearch
  */
-class WeatherApiService {
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+class WeatherApiService(private val context: Context) {
 
     /**
      * 完整天气数据获取流程：
      * 1. 用经纬度逆地理编码获取 adcode（行政区划代码）和城市名
-     * 2. 用 adcode 查实时天气（extensions=base）
-     * 3. 用 adcode 查 4 天预报（extensions=all）
+     * 2. 用 adcode 查实时天气（WeatherSearchQuery.WEATHER_TYPE_LIVE）
+     * 3. 用 adcode 查 4 天预报（WeatherSearchQuery.WEATHER_TYPE_FORECAST）
+     *
+     * SDK 的回调式接口通过 [suspendCancellableCoroutine] 包装为 suspend 函数，
+     * 实时天气与预报通过 [coroutineScope] + [async] 并行查询。
      *
      * @param latitude 纬度
      * @param longitude 经度
      * @return [WeatherResult]
-     * @throws ApiKeyMissingException API Key 未配置（BuildConfig 中为空）
-     * @throws WeatherNetworkException 网络请求失败（连接超时、DNS、断网等）
-     * @throws WeatherApiException 高德 API 返回业务错误（Key 无效、配额超限等）
+     * @throws ApiKeyMissingException SDK Key 未配置（SecretManager 中 amap.sdk.key 为空）
+     * @throws WeatherNetworkException 网络请求失败（rCode 1800/1900）
+     * @throws WeatherApiException SDK 业务错误（rCode != 1000 或数据为空）
      */
     suspend fun fetchWeather(latitude: Double, longitude: Double): WeatherResult {
-        val key = apiKey()
+        val key = SecretManager.getSecret("amap.sdk.key")
         if (key.isBlank()) {
-            // API Key 为空：通常是构建时未注入 secret（如 GHA 缺少 AMAP_API_KEY），
-            // 不必发出注定失败的网络请求，直接抛出明确异常供上层定位
+            // SDK Key 为空：构建时未注入 secret，SDK 调用必然失败，直接抛出明确异常
             throw ApiKeyMissingException()
         }
 
-        return withContext(Dispatchers.IO) {
-            // Step 1: 经纬度逆地理编码获取 adcode
-            val locationInfo = fetchAdcode(latitude, longitude, key)
+        // Step 1: 经纬度逆地理编码获取 adcode + 城市名
+        val locationInfo = searchAdcode(latitude, longitude)
 
-            // Step 2 & 3: 并行获取实时天气和预报
-            coroutineScope {
-                val nowDeferred = async { fetchNowWeather(locationInfo.first, key) }
-                val dailyDeferred = async { fetchDailyForecast(locationInfo.first, key) }
-                val now = nowDeferred.await()
-                val daily = dailyDeferred.await()
+        // Step 2 & 3: 并行获取实时天气和预报
+        return coroutineScope {
+            val nowDeferred = async { searchNowWeather(locationInfo.first) }
+            val dailyDeferred = async { searchDailyForecast(locationInfo.first) }
+            val now = nowDeferred.await()
+            val daily = dailyDeferred.await()
 
-                WeatherResult(
-                    cityName = locationInfo.second,
-                    now = now,
-                    daily = daily
-                )
-            }
+            WeatherResult(
+                cityName = locationInfo.second,
+                now = now,
+                daily = daily
+            )
         }
     }
 
     /**
      * 逆地理编码：经纬度 → adcode + 城市名。
      *
-     * 高德 regeo API 返回格式：
-     * ```json
-     * {"status":"1","regeocode":{"addressComponent":{"adcode":"110000","city":"北京市"}}}
-     * ```
+     * 使用搜索 SDK 的 [GeocodeSearch.getFromLocationAsyn] 发起异步查询，
+     * 通过 [suspendCancellableCoroutine] 将回调转为挂起函数。
      *
      * @return Pair(adcode, cityName)
-     * @throws WeatherNetworkException 网络请求失败
-     * @throws WeatherApiException 高德 API 返回 status!=1
+     * @throws WeatherNetworkException 网络请求失败（rCode 1800/1900）
+     * @throws WeatherApiException SDK 业务错误（rCode != 1000 或 adcode 为空）
      */
-    private suspend fun fetchAdcode(lat: Double, lng: Double, key: String): Pair<String, String> {
-        return withContext(Dispatchers.IO) {
-            // 高德 API location 参数格式：经度,纬度（lng,lat）
-            val location = String.format("%.6f,%.6f", lng, lat)
-            val url = "$REGEO_BASE_URL?location=$location&key=$key"
-            val response = executeRequest(url)
-            val json = JSONObject(response)
-            checkApiStatus(json)
-            val regeocode = json.optJSONObject("regeocode")
-                ?: throw WeatherApiException("regeo 响应缺少 regeocode 字段")
-            val addrComponent = regeocode.optJSONObject("addressComponent")
-                ?: throw WeatherApiException("regeo 响应缺少 addressComponent 字段")
+    private suspend fun searchAdcode(lat: Double, lng: Double): Pair<String, String> =
+        suspendCancellableCoroutine { cont ->
+            val search = GeocodeSearch(context)
+            search.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
+                override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
+                    if (rCode != AMAP_SUCCESS) {
+                        cont.resumeWithException(mapRCode(rCode, "逆地理编码"))
+                        return
+                    }
+                    if (result == null) {
+                        cont.resumeWithException(WeatherApiException("逆地理编码结果为空"))
+                        return
+                    }
+                    // RegeocodeResult 是包装类，需通过 regeocodeAddress 获取实际地址数据
+                    val address = result.regeocodeAddress
+                    if (address == null) {
+                        cont.resumeWithException(WeatherApiException("逆地理编码地址为空"))
+                        return
+                    }
+                    val adcode = address.adCode ?: ""
+                    // city 可能为空（直辖市），回退到 province
+                    val city = address.city ?: ""
+                    val province = address.province ?: ""
+                    val cityName = if (city.isNotEmpty()) city else province
 
-            val adcode = addrComponent.optString("adcode")
-            if (adcode.isEmpty()) throw WeatherApiException("adcode 为空")
-
-            // city 可能为空（直辖市），回退到 province
-            val city = addrComponent.optString("city")
-            val province = addrComponent.optString("province")
-            val cityName = if (city.isNotEmpty()) city else province
-
-            if (cityName.isEmpty()) throw WeatherApiException("城市名为空") else Pair(adcode, cityName)
-        }
-    }
-
-    /**
-     * 获取实时天气（extensions=base）。
-     *
-     * 返回格式：
-     * ```json
-     * {"status":"1","lives":[{"temperature":"22","weather":"阴","winddirection":"东北","windpower":"≤3","humidity":"93","reporttime":"2026-07-07 22:03:09"}]}
-     * ```
-     *
-     * @throws WeatherNetworkException 网络请求失败
-     * @throws WeatherApiException 高德 API 返回 status!=1 或数据为空
-     */
-    private suspend fun fetchNowWeather(adcode: String, key: String): WeatherNow {
-        return withContext(Dispatchers.IO) {
-            val url = "$WEATHER_BASE_URL?city=$adcode&key=$key&extensions=base"
-            val response = executeRequest(url)
-            val json = JSONObject(response)
-            checkApiStatus(json)
-
-            val livesArr = json.optJSONArray("lives")
-                ?: throw WeatherApiException("lives 为空")
-            if (livesArr.length() == 0) throw WeatherApiException("lives 数组为空")
-
-            val live = livesArr.optJSONObject(0)
-                ?: throw WeatherApiException("lives[0] 为空")
-            WeatherNow(
-                temp = live.optString("temperature"),
-                text = live.optString("weather"),
-                windDir = live.optString("winddirection"),
-                windPower = live.optString("windpower"),
-                humidity = live.optString("humidity"),
-                reportTime = live.optString("reporttime")
-            )
-        }
-    }
-
-    /**
-     * 获取 4 天预报（extensions=all）。
-     *
-     * 返回格式：
-     * ```json
-     * {"status":"1","forecasts":[{"city":"北京市","adcode":"110000","casts":[{"date":"2026-07-07","week":"2","dayweather":"雷阵雨","nightweather":"多云","daytemp":"31","nighttemp":"22",...}]}]}
-     * ```
-     *
-     * @throws WeatherNetworkException 网络请求失败
-     * @throws WeatherApiException 高德 API 返回 status!=1 或数据为空
-     */
-    private suspend fun fetchDailyForecast(adcode: String, key: String): List<WeatherDay> {
-        return withContext(Dispatchers.IO) {
-            val url = "$WEATHER_BASE_URL?city=$adcode&key=$key&extensions=all"
-            val response = executeRequest(url)
-            val json = JSONObject(response)
-            checkApiStatus(json)
-
-            val forecastsArr = json.optJSONArray("forecasts")
-                ?: throw WeatherApiException("forecasts 为空")
-            if (forecastsArr.length() == 0) throw WeatherApiException("forecasts 数组为空")
-
-            val forecast = forecastsArr.optJSONObject(0)
-                ?: throw WeatherApiException("forecasts[0] 为空")
-            val castsArr = forecast.optJSONArray("casts")
-                ?: throw WeatherApiException("casts 为空")
-
-            (0 until castsArr.length()).mapNotNull { idx ->
-                val cast = castsArr.optJSONObject(idx) ?: return@mapNotNull null
-                WeatherDay(
-                    date = cast.optString("date"),
-                    week = cast.optString("week"),
-                    dayWeather = cast.optString("dayweather"),
-                    nightWeather = cast.optString("nightweather"),
-                    dayTemp = cast.optString("daytemp"),
-                    nightTemp = cast.optString("nighttemp"),
-                    dayWind = cast.optString("daywind"),
-                    nightWind = cast.optString("nightwind"),
-                    dayPower = cast.optString("daypower"),
-                    nightPower = cast.optString("nightpower")
-                )
-            }
-        }
-    }
-
-    /**
-     * 校验高德 API 响应状态。status != "1" 时抛出 [WeatherApiException] 携带 info。
-     */
-    private fun checkApiStatus(json: JSONObject) {
-        if (json.optString("status") != "1") {
-            val info = json.optString("info", "未知错误")
-            val infocode = json.optString("infocode", "")
-            throw WeatherApiException("$info(${infocode})")
-        }
-    }
-
-    /**
-     * 执行 HTTP 请求，返回响应体字符串。
-     *
-     * @throws WeatherNetworkException 网络层异常（连接超时、DNS 解析失败、断网等）
-     */
-    private fun executeRequest(url: String): String {
-        return try {
-            val request = Request.Builder().url(url).build()
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    response.body?.string()
-                        ?: throw WeatherNetworkException("响应体为空")
-                } else {
-                    throw WeatherNetworkException("HTTP ${response.code}")
+                    if (adcode.isEmpty()) {
+                        cont.resumeWithException(WeatherApiException("adcode 为空"))
+                    } else if (cityName.isEmpty()) {
+                        cont.resumeWithException(WeatherApiException("城市名为空"))
+                    } else {
+                        cont.resume(Pair(adcode, cityName))
+                    }
                 }
-            }
-        } catch (e: WeatherNetworkException) {
-            throw e
-        } catch (e: Exception) {
-            throw WeatherNetworkException(e.message ?: "网络请求异常")
+
+                override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {
+                    // 正向地理编码（地址→坐标），此处未使用
+                }
+            })
+            // 搜索 SDK 用 LatLonPoint，非地图 SDK 的 LatLng；200m 查询半径，AMAP 坐标系
+            val query = RegeocodeQuery(LatLonPoint(lat, lng), 200f, GeocodeSearch.AMAP)
+            search.getFromLocationAsyn(query)
         }
-    }
 
     /**
-     * 获取已解密的 API Key。
-     * 与静态地图服务共用同一个高德 Web 服务 Key。
+     * 获取实时天气（WeatherSearchQuery.WEATHER_TYPE_LIVE）。
+     *
+     * @throws WeatherNetworkException 网络请求失败（rCode 1800/1900）
+     * @throws WeatherApiException SDK 业务错误（rCode != 1000 或数据为空）
      */
-    private fun apiKey(): String = SecretManager.getSecret("amap.api.key")
+    private suspend fun searchNowWeather(adcode: String): WeatherNow =
+        suspendCancellableCoroutine { cont ->
+            val search = WeatherSearch(context)
+            search.setOnWeatherSearchListener(object : WeatherSearch.OnWeatherSearchListener {
+                override fun onWeatherLiveSearched(result: LocalWeatherLiveResult?, rCode: Int) {
+                    if (rCode != AMAP_SUCCESS) {
+                        cont.resumeWithException(mapRCode(rCode, "实时天气"))
+                        return
+                    }
+                    if (result == null) {
+                        cont.resumeWithException(WeatherApiException("实时天气结果为空"))
+                        return
+                    }
+                    // LocalWeatherLiveResult 是包装类，需通过 liveResult 获取实际数据
+                    val live = result.liveResult
+                    if (live == null) {
+                        cont.resumeWithException(WeatherApiException("实时天气数据为空"))
+                        return
+                    }
+                    cont.resume(
+                        WeatherNow(
+                            temp = live.temperature ?: "",
+                            text = live.weather ?: "",
+                            windDir = live.windDirection ?: "",
+                            windPower = live.windPower ?: "",
+                            humidity = live.humidity ?: "",
+                            reportTime = live.reportTime ?: ""
+                        )
+                    )
+                }
+
+                override fun onWeatherForecastSearched(result: LocalWeatherForecastResult?, rCode: Int) {
+                    // 预报回调，此处未使用
+                }
+            })
+            search.query = WeatherSearchQuery(adcode, WeatherSearchQuery.WEATHER_TYPE_LIVE)
+            search.searchWeatherAsyn()
+        }
+
+    /**
+     * 获取 4 天预报（WeatherSearchQuery.WEATHER_TYPE_FORECAST）。
+     *
+     * @throws WeatherNetworkException 网络请求失败（rCode 1800/1900）
+     * @throws WeatherApiException SDK 业务错误（rCode != 1000 或 weatherForecast 为空）
+     */
+    private suspend fun searchDailyForecast(adcode: String): List<WeatherDay> =
+        suspendCancellableCoroutine { cont ->
+            val search = WeatherSearch(context)
+            search.setOnWeatherSearchListener(object : WeatherSearch.OnWeatherSearchListener {
+                override fun onWeatherLiveSearched(result: LocalWeatherLiveResult?, rCode: Int) {
+                    // 实时天气回调，此处未使用
+                }
+
+                override fun onWeatherForecastSearched(result: LocalWeatherForecastResult?, rCode: Int) {
+                    if (rCode != AMAP_SUCCESS) {
+                        cont.resumeWithException(mapRCode(rCode, "天气预报"))
+                        return
+                    }
+                    if (result == null) {
+                        cont.resumeWithException(WeatherApiException("天气预报结果为空"))
+                        return
+                    }
+                    // LocalWeatherForecastResult 是包装类，需通过 forecastResult 获取实际数据
+                    val forecast = result.forecastResult
+                    if (forecast == null) {
+                        cont.resumeWithException(WeatherApiException("天气预报数据为空"))
+                        return
+                    }
+                    val casts = forecast.weatherForecast
+                    if (casts.isNullOrEmpty()) {
+                        cont.resumeWithException(WeatherApiException("weatherForecast 为空"))
+                        return
+                    }
+                    val days = casts.map { cast ->
+                        WeatherDay(
+                            date = cast.date ?: "",
+                            week = cast.week ?: "",
+                            dayWeather = cast.dayWeather ?: "",
+                            nightWeather = cast.nightWeather ?: "",
+                            dayTemp = cast.dayTemp ?: "",
+                            nightTemp = cast.nightTemp ?: "",
+                            dayWind = cast.dayWindDirection ?: "",
+                            nightWind = cast.nightWindDirection ?: "",
+                            dayPower = cast.dayWindPower ?: "",
+                            nightPower = cast.nightWindPower ?: ""
+                        )
+                    }
+                    cont.resume(days)
+                }
+            })
+            search.query = WeatherSearchQuery(adcode, WeatherSearchQuery.WEATHER_TYPE_FORECAST)
+            search.searchWeatherAsyn()
+        }
+
+    /**
+     * 将高德 SDK rCode 映射到对应异常。
+     *
+     * rCode 体系：
+     * - 1000：成功
+     * - 1800/1900：网络错误 → [WeatherNetworkException]
+     * - 其他（1001 Key无效、1100 频率限制、2000 结果为空等）→ [WeatherApiException]
+     */
+    private fun mapRCode(rCode: Int, operation: String): Exception {
+        return if (rCode == 1800 || rCode == 1900) {
+            WeatherNetworkException("${operation}失败：网络错误(rCode=$rCode)")
+        } else {
+            WeatherApiException("${operation}失败：rCode=$rCode")
+        }
+    }
 
     companion object {
-        // 高德 Web 服务 API 基础 URL
-        private const val WEATHER_BASE_URL = "https://restapi.amap.com/v3/weather/weatherInfo"
-        private const val REGEO_BASE_URL = "https://restapi.amap.com/v3/geocode/regeo"
+        /** 高德 SDK 成功码 */
+        private const val AMAP_SUCCESS = 1000
     }
 }
 
 /**
- * API Key 未配置：构建时未注入 AMAP_API_KEY secret（local.properties 缺失或为空）。
- * 此时所有高德 API 请求都会返回 INVALID_USER_KEY，无需发出网络请求。
+ * API Key 未配置：构建时未注入 AMAP_SDK_KEY secret（local.properties 缺失或为空）。
+ * 此时 SDK 调用必然失败，无需发起请求。
  */
 class ApiKeyMissingException : Exception("API Key 未配置，请运行 gradle encryptSecrets 生成 secrets.dat")
 
 /**
- * 网络层异常：连接超时、DNS 解析失败、断网、HTTP 非 2xx 等。
+ * 网络层异常：SDK 报告网络错误（rCode 1800/1900）。
  */
 class WeatherNetworkException(message: String) : Exception(message)
 
 /**
- * 高德 API 业务错误：status != "1"，如 Key 无效、配额超限、参数错误等。
- * message 包含高德返回的 info 与 infocode，便于定位。
+ * SDK 业务错误：rCode != 1000，如 Key 无效、配额超限、参数错误、结果为空等。
+ * message 包含操作名与 rCode，便于定位。
  */
 class WeatherApiException(message: String) : Exception(message)

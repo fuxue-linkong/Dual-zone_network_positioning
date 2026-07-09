@@ -33,9 +33,11 @@ permissions:
   contents: read
 
 # 并发控制：同分支新推送取消旧运行（节省额度）
+# 注意：reusable workflow 中 github.workflow 返回 caller 的名字，会与 caller 冲突
+# 解决：group 加固定后缀 '-unit-tests' 区分；被调用时不 cancel（由 caller 控制）
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-unit-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 # 集中环境变量
 env:
