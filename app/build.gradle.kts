@@ -256,16 +256,6 @@ dependencies {
     // 文档：https://lbs.amap.com/api/android-sdk/summary
     implementation("com.amap.api:3dmap:latest.integration")
 
-    // 高德搜索 SDK：提供 WeatherSearch（天气查询）与 GeocodeSearch（逆地理编码），
-    // 替代天气 Web API，复用 AMAP_SDK_KEY，无需单独 Web 服务 Key。
-    //
-    // 使用本地剥离 jar 而非 Maven 依赖：3dmap v10.0.600 与 search v9.7.1 均打包了
-    // 相同的 AMap 核心工具类（com.amap.apis.utils.core.api.AMapUtilCoreApi / NetProxy），
-    // 同时引入会导致 checkDebugDuplicateClasses 失败。此处从 search v9.7.1 jar 中
-    // 剥离这 2 个重复类（保留 3dmap v10 的较新版本），避免冲突。
-    // 剥离后的 jar 位于 app/libs/search-9.7.1.jar，版本固定为 9.7.1，构建可复现。
-    implementation(files("libs/search-9.7.1.jar"))
-
     // WorkManager: 用于日程提醒的每日刷新周期任务
     implementation("androidx.work:work-runtime-ktx:2.10.0")
 
