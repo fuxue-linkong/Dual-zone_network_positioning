@@ -6,6 +6,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.radioarealocator.data.HitokotoApiService
 import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.SettingsStore
 import com.example.radioarealocator.data.location.LocationHelper
@@ -14,11 +15,14 @@ import com.example.radioarealocator.data.reminder.ReminderScheduler
 import com.example.radioarealocator.data.reminder.ReminderSettings
 import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.data.reminder.RepeatMode
+import com.example.radioarealocator.data.satellite.AmsatStatusApiService
 import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
+import com.example.radioarealocator.data.satellite.SatelliteCatalog
 import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatellitePredictor
+import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SourcedTLE
 import com.example.radioarealocator.data.weather.ApiKeyMissingException
 import com.example.radioarealocator.data.weather.WeatherApiException
@@ -36,12 +40,17 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.LocalDate
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val locationHelper = LocationHelper(application)
     private val satelliteDataSource = SatelliteDataSource()
     private val satellitePredictor = SatellitePredictor()
+    // AMSAT 状态独立抓取服务：供状态跟踪器 5 分钟定时拉取，不依赖 TLE 拉取周期
+    private val amsatStatusApi = AmsatStatusApiService()
+    // 卫星状态持续显示跟踪器：96 个 15 分钟时间槽 + 状态延续算法
+    val statusTracker = SatelliteStatusTracker(amsatStatusApi, viewModelScope)
     private val settingsStore = SettingsStore(application)
     private val satelliteCache = SatelliteCacheStore(application)
     private val favoriteStore = FavoriteSatellitesStore(application)
@@ -49,6 +58,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val weatherApiService = WeatherApiService()
     private val weatherStore = WeatherStore(application)
     private val reminderScheduler = ReminderScheduler(application)
+    // 每日一言服务：从 https://v1.hitokoto.cn/ 获取，失败回退本地文案池
+    private val hitokotoApi = HitokotoApiService()
 
     // 跟踪上一次刷新的 Job，避免用户快速多次点击导致并发竞态
     private var refreshJob: Job? = null
@@ -206,7 +217,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _weatherError.value = null
     }
 
+    // ---- 每日一言模块 ----
+
+    /**
+     * 当前展示的每日一言文本。初始化时先填充本地兜底文案，避免空白；
+     * 后台请求 hitokoto 成功后覆盖为网络结果（含来源）。
+     */
+    private val _dailyQuote = mutableStateOf(currentLocalFallbackQuote())
+    val dailyQuote: State<String> = _dailyQuote
+
+    // 记录已获取一言的日期（dayOfYear），同一天内不重复请求
+    private var dailyQuoteDayOfYear: Int = -1
+
+    /**
+     * 刷新每日一言。
+     *
+     * - 同一天内（[dailyQuoteDayOfYear] 匹配）不重复请求，避免频繁调用 API
+     * - 先用本地兜底文案立即填充，后台异步请求网络结果
+     * - 请求成功则更新为 "正文 —— 来源" 格式；失败则保留兜底文案
+     *
+     * 在 [initializeIfNeeded] 末尾调用，应用启动即拉取。
+     */
+    fun refreshDailyQuote() {
+        val today = LocalDate.now()
+        if (dailyQuoteDayOfYear == today.dayOfYear) return
+        dailyQuoteDayOfYear = today.dayOfYear
+
+        viewModelScope.launch {
+            val quote = hitokotoApi.fetchQuote()
+            if (quote != null) {
+                _dailyQuote.value = quote.toDisplayText()
+            }
+            // 失败时保留初始化时填入的本地兜底文案，不额外处理
+        }
+    }
+
     companion object {
+        /**
+         * 本地兜底文案池：网络不可用或请求失败时使用。
+         * 按 dayOfYear 取模轮换，每日一句，保证本地环境下也有变化。
+         */
+        private val DAILY_QUOTES_FALLBACK = listOf(
+            "保持热爱，奔赴山海。",
+            "每一次发射，都是向未知的致敬。",
+            "电波跨越山海，连接每一颗热爱星空的心。",
+            "仰望星空，脚踏实地。",
+            "卫星过境时分，是业余无线电人最美的时刻。",
+            "千里之行，始于足下。",
+            "心之所向，素履以往。"
+        )
+
+        /**
+         * 根据当前日期取本地兜底文案。
+         */
+        private fun currentLocalFallbackQuote(): String {
+            val today = LocalDate.now()
+            return DAILY_QUOTES_FALLBACK[today.dayOfYear % DAILY_QUOTES_FALLBACK.size]
+        }
+
         // 30 分钟自动刷新间隔
         private const val WEATHER_REFRESH_INTERVAL_MS = 30L * 60 * 1000
 
@@ -351,6 +419,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (cached == null || isSatelliteSourceExpired(cached.updatedAt)) {
             refreshSatelliteSourceOnly()
         }
+
+        // 启动 AMSAT 状态定时抓取（5 分钟一次），驱动状态持续显示与延续逻辑
+        statusTracker.start()
+
+        // 拉取每日一言（hitokoto），失败回退本地文案
+        refreshDailyQuote()
     }
 
     fun refreshLocation() {
@@ -528,6 +602,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         // viewModelScope 已会自动取消所有子协程，这里显式取消便于状态归零
         stopContinuousLocationUpdates()
+        statusTracker.stop()
     }
 
     /**
