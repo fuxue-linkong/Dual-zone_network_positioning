@@ -38,13 +38,17 @@ permissions:
 #   * tag 场景：使用 ref_name（tag 名）而非完整 ref，确保不同 tag 互不阻塞
 # - cancel-in-progress: 仅 push 取消旧运行；workflow_call 保留 false 避免中断发布
 #
-# !!! YAML 注意：group 的值必须用双引号包裹 !!!
-# 三元表达式中的 `github.ref_name : github.ref` 含 `: `（冒号+空格），
-# 在未引号的 YAML 标量中会被识别为映射键值分隔符，导致 ScannerError:
-#   mapping values are not allowed here (line 41, column 119)
-# 解决方式：用 `: github.ref` 不带前导空格会破坏 GHA 三元语法，因此整段引号包裹。
+# !!! GHA 表达式注意 !!!
+# GitHub Actions 表达式语法不支持三元运算符 `cond ? a : b`，会报：
+#   Unexpected symbol: '?'. Located at position N within expression
+# 等价写法使用 `&&` / `||` 短路求值：`cond && a || b`
+# （cond 为真时返回 a；a 为真则 || 直接返回 a；cond 为假或 a 为假时返回 b）
+#
+# !!! YAML 注意：group 的值用双引号包裹 !!!
+# 表达式中的 `github.ref_name && github.ref_name || github.ref` 含 `: ` 和特殊字符，
+# 用双引号包裹避免 YAML scanner 误解析为映射键值分隔符。
 concurrency:
-  group: "${{ format('{0}-unit-tests-{1}-{2}', github.workflow, startsWith(github.ref, 'refs/tags/') ? github.ref_name : github.ref, github.event_name) }}"
+  group: "${{ format('{0}-unit-tests-{1}-{2}', github.workflow, startsWith(github.ref, 'refs/tags/') && github.ref_name || github.ref, github.event_name) }}"
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 # 集中环境变量
