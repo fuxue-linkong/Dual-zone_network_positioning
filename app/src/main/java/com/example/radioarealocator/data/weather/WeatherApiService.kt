@@ -279,6 +279,8 @@ class WeatherApiService(private val context: Context) {
      * 2. AMap 控制台 → 应用管理 → 当前 Key → 是否绑定正确的 SHA1 签名指纹
      *    - debug APK：~/.android/debug.keystore 的 SHA1
      *    - release APK：release.keystore 的 SHA1（与 debug 不同！两套都要配）
+     *      本项目 release SHA1：A4:73:9A:C1:9B:69:D8:F7:BB:F3:75:AC:0E:63:7E:D3:29:0D:B2:7C
+     *      本项目包名：com.example.radioarealocator
      * 3. Key 类型应为"Android SDK"，不是"Web 服务"（Web Key 用于 REST API）
      * 4. secrets.dat 是否正确的解密出 amap.sdk.key（看 logcat "SecretManager" 标签）
      */
