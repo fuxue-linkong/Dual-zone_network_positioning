@@ -3,8 +3,11 @@ package com.example.radioarealocator.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -72,16 +76,27 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.LocationResult
+import com.example.radioarealocator.data.satellite.SatelliteCatalog
 import com.example.radioarealocator.data.satellite.SatelliteInfo
+import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SegmentStatus
 import java.time.Duration
@@ -92,14 +107,19 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-// 日期格式化：分两行显示“X月”和“X日”，与时间并排
-private val monthFormatter = DateTimeFormatter.ofPattern("M月")
-private val dayFormatter = DateTimeFormatter.ofPattern("d日")
+// 星期格式化：中文 locale 下返回“周三”等短星期
+private val weekdayFormatter = DateTimeFormatter.ofPattern("E")
 private const val APP_NAME_FONT_SIZE = 32
 private const val LOCAL_TIME_FONT_SIZE = 44
 private const val UTC_FONT_SIZE_SCALE = 0.4f
-// 日期字体相对本地时间的比例：作为时间的伴随信息，略小于时间主显示
-private const val DATE_FONT_SIZE_SCALE = 0.5f
+// 日期字号：星期与“年/月”部分 14sp，“日”部分放大至 20sp 形成视觉重点
+private const val DATE_FONT_SIZE = 14
+private const val DATE_DAY_FONT_SIZE = 20
+
+// 每日一言滚动速度（px/秒），控制在 10-15 范围内
+private const val QUOTE_SCROLL_SPEED_PX_PER_SEC = 12f
+// 滚动到端点后暂停时长（毫秒）
+private const val QUOTE_PAUSE_MS = 2000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -191,7 +211,8 @@ fun MainScreen(
                     weather = viewModel.weather.value,
                     weatherLoading = viewModel.weatherLoading.value,
                     weatherError = viewModel.weatherError.value,
-                    onRefreshWeather = { viewModel.refreshWeather(force = true) }
+                    onRefreshWeather = { viewModel.refreshWeather(force = true) },
+                    dailyQuote = viewModel.dailyQuote.value
                 )
                 selectedTab == 0 && homeSubScreen == 1 -> TopAppBar(
                     title = { Text(stringResource(R.string.home_location)) },
@@ -286,6 +307,7 @@ fun MainScreen(
                     favorites = favorites,
                     onToggleFavorite = viewModel::toggleFavorite,
                     onOpenManagement = { homeSubScreen = 3 },
+                    statusTracker = viewModel.statusTracker,
                     contentPadding = padding
                 )
                 3 -> SatelliteManagementContent(
@@ -338,7 +360,8 @@ private fun HomeHeader(
     weather: com.example.radioarealocator.data.weather.WeatherResult?,
     weatherLoading: Boolean,
     weatherError: String?,
-    onRefreshWeather: () -> Unit
+    onRefreshWeather: () -> Unit,
+    dailyQuote: String
 ) {
     val stateColor = if (uiState.result != null) {
         MaterialTheme.colorScheme.primary
@@ -348,14 +371,22 @@ private fun HomeHeader(
     val appNameSize = APP_NAME_FONT_SIZE.sp
     val localTimeSize = LOCAL_TIME_FONT_SIZE.sp
     val utcSize = (LOCAL_TIME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp
-    val dateSize = (LOCAL_TIME_FONT_SIZE * DATE_FONT_SIZE_SCALE).sp
 
     val zonedNow = now.atZone(ZoneId.systemDefault())
     val localTime = zonedNow.format(timeFormatter)
     val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
-    val dateMonth = zonedNow.format(monthFormatter)
-    val dateDay = zonedNow.format(dayFormatter)
-
+    // 日期：第一行星期几（14sp），第二行“年 月 日”，其中“日”部分放大至 20sp
+    val weekday = zonedNow.format(weekdayFormatter)
+    val dateYearMonth = "${zonedNow.year}年 ${zonedNow.monthValue}月 "
+    val dateDayText = "${zonedNow.dayOfMonth}日"
+    val dateLine = remember(dateYearMonth, dateDayText) {
+        buildAnnotatedString {
+            append(dateYearMonth)
+            withStyle(SpanStyle(fontSize = DATE_DAY_FONT_SIZE.sp)) {
+                append(dateDayText)
+            }
+        }
+    }
     // 下颗即将过境的卫星（AOS 在未来且非当前在境），用于显示过境天气预测
     val nextSatellite = uiState.satellites.firstOrNull {
         !it.isCurrentlyVisible && it.aosTime.isAfter(now)
@@ -410,17 +441,17 @@ private fun HomeHeader(
                     Spacer(modifier = Modifier.weight(1f))
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = dateMonth,
+                            text = weekday,
                             style = TextStyle(
-                                fontSize = dateSize,
+                                fontSize = DATE_FONT_SIZE.sp,
                                 fontWeight = FontWeight.Normal
                             ),
                             color = stateColor
                         )
                         Text(
-                            text = dateDay,
+                            text = dateLine,
                             style = TextStyle(
-                                fontSize = dateSize,
+                                fontSize = DATE_FONT_SIZE.sp,
                                 fontWeight = FontWeight.Normal
                             ),
                             color = stateColor
@@ -436,6 +467,14 @@ private fun HomeHeader(
                         .padding(top = 2.dp),
                     textAlign = TextAlign.Start
                 )
+                // 每日一言：超宽时水平滚动，到端点暂停 2 秒后反向
+                DailyQuoteScroller(
+                    quote = dailyQuote,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                )
             }
             // 天气卡片：位于时间卡片正下方，占满宽度
             WeatherCard(
@@ -447,6 +486,53 @@ private fun HomeHeader(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+/**
+ * 每日一言水平滚动组件。
+ *
+ * 当文本宽度超过容器宽度时，以 [QUOTE_SCROLL_SPEED_PX_PER_SEC] px/秒 速度水平滚动，
+ * 到达端点后暂停 [QUOTE_PAUSE_MS] 再反向滚动，循环往复；文本不超宽时静态居左显示。
+ * 使用 [Animatable] 驱动平滑动画，避免逐帧重组造成的卡顿。
+ */
+@Composable
+private fun DailyQuoteScroller(
+    quote: String,
+    contentColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    if (quote.isBlank()) return
+    var textWidthPx by remember { mutableStateOf(0) }
+    BoxWithConstraints(
+        modifier = modifier.clipToBounds()
+    ) {
+        val containerWidthPx = constraints.maxWidth
+        val scrollRangePx = (textWidthPx - containerWidthPx).coerceAtLeast(0)
+        val offsetAnim = remember(scrollRangePx) { Animatable(0f) }
+        LaunchedEffect(scrollRangePx) {
+            if (scrollRangePx <= 0) return@LaunchedEffect
+            // 单程时长 = 距离 / 速度（秒→毫秒），保证平滑无卡顿
+            val durationMs = (scrollRangePx / QUOTE_SCROLL_SPEED_PX_PER_SEC * 1000)
+                .toInt()
+                .coerceAtLeast(1)
+            while (true) {
+                offsetAnim.animateTo(-scrollRangePx.toFloat(), tween(durationMs))
+                delay(QUOTE_PAUSE_MS)
+                offsetAnim.animateTo(0f, tween(durationMs))
+                delay(QUOTE_PAUSE_MS)
+            }
+        }
+        Text(
+            text = quote,
+            maxLines = 1,
+            softWrap = false,
+            color = contentColor,
+            style = TextStyle(fontSize = 13.sp),
+            modifier = Modifier
+                .offset { IntOffset(offsetAnim.value.roundToInt(), 0) }
+                .onSizeChanged { textWidthPx = it.width }
+        )
     }
 }
 
@@ -497,7 +583,8 @@ private fun HomeListItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            // 提亮 25%（保持色相一致），凸显"定位"/"卫星"两个导航入口卡片
+            containerColor = lerp(MaterialTheme.colorScheme.surface, Color.White, 0.25f),
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
@@ -594,8 +681,13 @@ private fun SatelliteDetailContent(
     favorites: Set<Int>,
     onToggleFavorite: (Int) -> Unit,
     onOpenManagement: () -> Unit,
+    statusTracker: SatelliteStatusTracker,
     contentPadding: PaddingValues
 ) {
+    // 订阅跟踪器状态字典：AMSAT 状态字典变化（5 分钟刷新或跨槽延续）时触发重组，
+    // 使每颗卫星的 isStatusInherited 标记与有效状态值得以及时更新
+    @Suppress("UnusedVariable")
+    val statusEntries = statusTracker.statusMap.value
     val filteredSatellites = remember(uiState.satellites, filter, favorites) {
         uiState.satellites.applyFilter(filter, favorites)
     }
@@ -690,11 +782,18 @@ private fun SatelliteDetailContent(
                     items = filteredSatellites,
                     key = { it.catalogNumber }
                 ) { sat ->
+                    // 查询状态跟踪器：获取实时状态值与延续标记。
+                    // 跟踪器无该卫星记录时（首次抓取前或长期无报告）回退到卫星源附带的初始状态
+                    val amsatName = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER[sat.catalogNumber]
+                    val statusQuery = if (amsatName != null) statusTracker.queryStatus(amsatName) else null
+                    val effectiveStatus = statusQuery?.status?.takeIf { it.isNotBlank() } ?: sat.status
+                    val isInherited = statusQuery?.isInherited ?: false
                     SatelliteItem(
-                        satellite = sat,
+                        satellite = sat.copy(status = effectiveStatus),
                         isFavorite = sat.catalogNumber in favorites,
                         onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
                         nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L,
+                        isStatusInherited = isInherited,
                         statusSegments = uiState.segmentStatuses[sat.catalogNumber]
                     )
                 }
@@ -1596,6 +1695,7 @@ private fun SatelliteItem(
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
     nowMillis: Long = 0L,
+    isStatusInherited: Boolean = false,
     statusSegments: List<SegmentStatus>? = null
 ) {
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
@@ -1725,7 +1825,7 @@ private fun SatelliteItem(
                     SourceChip(source = satellite.source)
                 }
                 if (satellite.status.isNotEmpty()) {
-                    StatusChip(status = satellite.status)
+                    StatusChip(status = satellite.status, isStatusInherited = isStatusInherited)
                 }
                 if (satellite.modes.isEmpty()) {
                     ModeChip(mode = stringResource(R.string.mode_unknown))
@@ -1834,14 +1934,16 @@ private fun SourceChip(source: String) {
 }
 
 @Composable
-private fun StatusChip(status: String) {
-    val displayText = when (status) {
+private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
+    val baseText = when (status) {
         "Heard" -> stringResource(R.string.status_heard)
         "Telemetry Only" -> stringResource(R.string.status_telemetry_only)
         "Not Heard" -> stringResource(R.string.status_not_heard)
         "Crew Active" -> stringResource(R.string.status_crew_active)
         else -> status
     }
+    // 延续状态：追加右侧小星号标识，便于用户识别"非本时段实时报告"
+    val displayText = if (isStatusInherited) "$baseText *" else baseText
     val (bgColor, contentColor) = when (status) {
         "Heard" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
         "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
@@ -1849,7 +1951,10 @@ private fun StatusChip(status: String) {
         "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(text = displayText, bgColor = bgColor, contentColor = contentColor)
+    // 延续状态：降低 15% 透明度，与实时状态形成视觉层级区分
+    val finalBg = if (isStatusInherited) bgColor.copy(alpha = 0.85f) else bgColor
+    val finalContent = if (isStatusInherited) contentColor.copy(alpha = 0.85f) else contentColor
+    Chip(text = displayText, bgColor = finalBg, contentColor = finalContent)
 }
 
 /**
