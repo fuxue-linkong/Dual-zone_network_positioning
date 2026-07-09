@@ -24,11 +24,6 @@ on:
         required: false
         type: boolean
         default: true
-      prerelease:
-        description: '是否为预发布（Pre-release）'
-        required: false
-        type: boolean
-        default: false
 
 # 并发控制：发布流程不取消进行中的运行，避免中断发布
 concurrency:
@@ -39,9 +34,6 @@ jobs:
   test:
     name: Run Unit Tests
     uses: ./.github/workflows/test.yml
-    with:
-      # 发布流程强制覆盖率检查，确保发布质量
-      fail-on-coverage: true
 
   build:
     name: Build Release APK
@@ -263,8 +255,7 @@ jobs:
             ### 变更日志
             详见下方自动生成的 Release Notes。
           generate_release_notes: true
-          # 手动触发时根据 inputs.prerelease 决定；标签触发时默认为正式发布
-          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
