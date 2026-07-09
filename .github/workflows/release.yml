@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: true
+      prerelease:
+        description: '是否为预发布（Pre-release）'
+        required: false
+        type: boolean
+        default: false
 
 # 并发控制：发布流程不取消进行中的运行，避免中断发布
 concurrency:
@@ -258,7 +263,8 @@ jobs:
             ### 变更日志
             详见下方自动生成的 Release Notes。
           generate_release_notes: true
-          prerelease: false
+          # 手动触发时根据 inputs.prerelease 决定；标签触发时默认为正式发布
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
