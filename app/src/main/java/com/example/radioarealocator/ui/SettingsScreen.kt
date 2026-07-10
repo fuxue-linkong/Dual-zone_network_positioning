@@ -57,6 +57,8 @@ fun SettingsScreen(
     onClearBackground: () -> Unit,
     cardOpacity: Int,
     onCardOpacityChange: (Int) -> Unit,
+    backgroundOpacity: Int,
+    onBackgroundOpacityChange: (Int) -> Unit,
     onAboutClick: () -> Unit,
     reminderSettings: ReminderSettings,
     onUpdateReminderSettings: (ReminderSettings) -> Unit,
@@ -211,6 +213,41 @@ fun SettingsScreen(
                         Slider(
                             value = cardOpacity.toFloat(),
                             onValueChange = { onCardOpacityChange(it.toInt()) },
+                            valueRange = 0f..100f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        )
+                        HorizontalDividerLight()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.background_opacity),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.background_opacity_desc),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.background_opacity_format, backgroundOpacity),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = backgroundOpacity.toFloat(),
+                            onValueChange = { onBackgroundOpacityChange(it.toInt()) },
                             valueRange = 0f..100f,
                             modifier = Modifier
                                 .fillMaxWidth()

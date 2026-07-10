@@ -340,6 +340,8 @@ fun MainScreen(
                     onClearBackground = { viewModel.setBackgroundUri(null) },
                     cardOpacity = viewModel.cardOpacity.value,
                     onCardOpacityChange = { viewModel.setCardOpacity(it) },
+                    backgroundOpacity = viewModel.backgroundOpacity.value,
+                    onBackgroundOpacityChange = { viewModel.setBackgroundOpacity(it) },
                     onAboutClick = { showAbout = true },
                     reminderSettings = viewModel.reminderSettings.value,
                     onUpdateReminderSettings = viewModel::updateReminderSettings,

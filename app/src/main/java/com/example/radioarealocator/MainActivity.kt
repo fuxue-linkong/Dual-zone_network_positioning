@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val backgroundUri by viewModel.backgroundUri
             val cardOpacity by viewModel.cardOpacity
+            val backgroundOpacity by viewModel.backgroundOpacity
 
             RadioAreaLocatorTheme(backgroundUri = backgroundUri) {
                 // 设置了背景图时，按用户透明度设置衰减卡片整体不透明度；未设置时保持完全不透明
@@ -80,7 +82,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             // 背景图层（含 scrim 遮罩，保证内容可读）
-                            BackgroundLayer(uri = backgroundUri)
+                            BackgroundLayer(
+                                uri = backgroundUri,
+                                backgroundOpacity = backgroundOpacity
+                            )
 
                             // 前景内容
                             MainScreen(
@@ -115,7 +120,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun BackgroundLayer(uri: Uri?) {
+    private fun BackgroundLayer(uri: Uri?, backgroundOpacity: Int) {
         if (uri == null) {
             // 未设置背景图：用 surface 色填充，保持原视觉
             Box(
@@ -125,6 +130,10 @@ class MainActivity : ComponentActivity() {
             )
             return
         }
+        // 背景图不透明度：0 完全隐藏（图片不可见），100 完全显示（无遮罩）
+        val bgAlpha = backgroundOpacity.coerceIn(0, 100) / 100f
+        // scrim 反向缩放：不透明度越高，遮罩越淡；0.82 为最大遮罩强度
+        val scrimAlpha = (1f - bgAlpha) * 0.82f
         val context = LocalContext.current
         var bitmap by remember(uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
         LaunchedEffect(uri) {
@@ -154,15 +163,17 @@ class MainActivity : ComponentActivity() {
             Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(bgAlpha),
                 contentScale = ContentScale.Crop
             )
         }
-        // 半透明 scrim：使用 surface 色叠 80% 透明度，既保留背景图轮廓又保证文字对比
+        // 半透明 scrim：随背景不透明度反向衰减，不透明度 100 时无遮罩，0 时最大遮罩保证文字可读
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = scrimAlpha))
         )
     }
 

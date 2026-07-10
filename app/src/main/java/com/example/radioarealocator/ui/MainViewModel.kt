@@ -410,6 +410,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settingsStore.cardOpacity = clamped
     }
 
+    // 背景图不透明度（0~100），仅在设置了背景图时生效
+    private val _backgroundOpacity = mutableStateOf(settingsStore.backgroundOpacity)
+    val backgroundOpacity: State<Int> = _backgroundOpacity
+
+    /**
+     * 设置背景图不透明度并持久化，自动钳制到 0~100。
+     */
+    fun setBackgroundOpacity(value: Int) {
+        val clamped = value.coerceIn(0, 100)
+        _backgroundOpacity.value = clamped
+        settingsStore.backgroundOpacity = clamped
+    }
+
     val hasLocationPermission: Boolean
         get() = locationHelper.hasPermission()
 

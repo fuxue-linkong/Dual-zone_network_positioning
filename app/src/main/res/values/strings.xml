@@ -74,6 +74,9 @@
     <string name="card_opacity">卡片透明度</string>
     <string name="card_opacity_desc">设置背景图后生效，0 为全透明，100 为全不透明</string>
     <string name="card_opacity_format">%1$d%%</string>
+    <string name="background_opacity">背景图不透明度</string>
+    <string name="background_opacity_desc">设置背景图后生效，0 为完全隐藏，100 为完全显示</string>
+    <string name="background_opacity_format">%1$d%%</string>
     <string name="home_location">定位</string>
     <string name="home_location_desc">查看当前位置及 CQ/ITU/梅登兰德分区</string>
     <string name="home_satellite">卫星</string>
