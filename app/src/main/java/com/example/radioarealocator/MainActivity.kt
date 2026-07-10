@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import com.example.radioarealocator.data.reminder.ReminderNotificationHelper
 import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.ui.MainScreen
 import com.example.radioarealocator.ui.MainViewModel
+import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import com.example.radioarealocator.ui.theme.RadioAreaLocatorTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -66,21 +68,26 @@ class MainActivity : ComponentActivity() {
         viewModel.startWeatherAutoRefresh()
         setContent {
             val backgroundUri by viewModel.backgroundUri
+            val cardOpacity by viewModel.cardOpacity
 
             RadioAreaLocatorTheme(backgroundUri = backgroundUri) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Transparent
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // 背景图层（含 scrim 遮罩，保证内容可读）
-                        BackgroundLayer(uri = backgroundUri)
+                // 设置了背景图时，按用户透明度设置衰减卡片整体不透明度；未设置时保持完全不透明
+                val cardAlpha = if (backgroundUri != null) cardOpacity / 100f else 1f
+                CompositionLocalProvider(LocalCardAlpha provides cardAlpha) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // 背景图层（含 scrim 遮罩，保证内容可读）
+                            BackgroundLayer(uri = backgroundUri)
 
-                        // 前景内容
-                        MainScreen(
-                            viewModel = viewModel,
-                            onRequestPermission = ::requestLocationPermission
-                        )
+                            // 前景内容
+                            MainScreen(
+                                viewModel = viewModel,
+                                onRequestPermission = ::requestLocationPermission
+                            )
+                        }
                     }
                 }
             }

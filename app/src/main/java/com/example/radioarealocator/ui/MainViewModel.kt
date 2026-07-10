@@ -397,6 +397,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settingsStore.backgroundUri = uri?.toString()
     }
 
+    // 卡片透明度（0~100），仅在设置了背景图时生效
+    private val _cardOpacity = mutableStateOf(settingsStore.cardOpacity)
+    val cardOpacity: State<Int> = _cardOpacity
+
+    /**
+     * 设置卡片透明度并持久化，自动钳制到 0~100。
+     */
+    fun setCardOpacity(value: Int) {
+        val clamped = value.coerceIn(0, 100)
+        _cardOpacity.value = clamped
+        settingsStore.cardOpacity = clamped
+    }
+
     val hasLocationPermission: Boolean
         get() = locationHelper.hasPermission()
 

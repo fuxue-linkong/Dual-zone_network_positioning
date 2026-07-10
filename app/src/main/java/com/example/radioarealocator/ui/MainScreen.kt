@@ -75,6 +75,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -99,6 +100,7 @@ import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SegmentStatus
+import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -337,6 +339,8 @@ fun MainScreen(
                         )
                     },
                     onClearBackground = { viewModel.setBackgroundUri(null) },
+                    cardOpacity = viewModel.cardOpacity.value,
+                    onCardOpacityChange = { viewModel.setCardOpacity(it) },
                     onAboutClick = { showAbout = true },
                     reminderSettings = viewModel.reminderSettings.value,
                     onUpdateReminderSettings = viewModel::updateReminderSettings,
@@ -420,6 +424,7 @@ private fun HomeHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .alpha(LocalCardAlpha.current)
                     .clip(RoundedCornerShape(16.dp))
                     .background(stateColor.copy(alpha = 0.12f))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -581,6 +586,7 @@ private fun HomeListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(LocalCardAlpha.current)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             // 提亮 25%（保持色相一致），凸显"定位"/"卫星"两个导航入口卡片
@@ -824,7 +830,9 @@ private fun SatelliteManagementContent(
     ) {
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(LocalCardAlpha.current),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -939,7 +947,9 @@ private fun SatelliteManagementItem(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(LocalCardAlpha.current),
         colors = CardDefaults.cardColors(
             containerColor = if (isFavorite) {
                 MaterialTheme.colorScheme.tertiaryContainer
@@ -1023,7 +1033,9 @@ private fun SatelliteActionCard(
     val zoneId = remember { ZoneId.systemDefault() }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(LocalCardAlpha.current),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -1147,7 +1159,9 @@ private fun LocationStatusCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(LocalCardAlpha.current),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -1284,7 +1298,9 @@ private fun LocationStatusCard(
 @Composable
 private fun ZoneInfoCard(result: LocationResult) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(LocalCardAlpha.current),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -1669,7 +1685,9 @@ private val FILTER_MODE_OPTIONS = listOf(
 @Composable
 private fun SatellitePlaceholderCard(content: @Composable () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(LocalCardAlpha.current),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -1729,6 +1747,7 @@ private fun SatelliteItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(LocalCardAlpha.current)
             .then(
                 if (isFavorite) {
                     Modifier.border(

@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -33,6 +34,7 @@ import com.example.radioarealocator.R
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.weather.WeatherResult
 import com.example.radioarealocator.data.weather.mapWeatherIcon
+import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -79,6 +81,7 @@ fun WeatherCard(
 
     Column(
         modifier = modifier
+            .alpha(LocalCardAlpha.current)
             .clip(RoundedCornerShape(16.dp))
             .background(stateColor.copy(alpha = 0.12f))
             .padding(horizontal = 14.dp, vertical = 8.dp)

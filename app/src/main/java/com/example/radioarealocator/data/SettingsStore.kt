@@ -21,6 +21,16 @@ class SettingsStore(context: Context) {
         }
 
     /**
+     * 卡片透明度（0~100）。0 完全透明，100 完全不透明。
+     * 仅在设置了背景图时生效。默认 100。
+     */
+    var cardOpacity: Int
+        get() = prefs.getInt(KEY_CARD_OPACITY, 100).coerceIn(0, 100)
+        set(value) {
+            prefs.edit().putInt(KEY_CARD_OPACITY, value.coerceIn(0, 100)).apply()
+        }
+
+    /**
      * 卫星 TLE 数据来源："ALL" / "CT" / "SNOGS"。默认 ALL。
      */
     var satelliteSource: String
@@ -57,6 +67,7 @@ class SettingsStore(context: Context) {
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
         private const val KEY_BACKGROUND_URI = "background_uri"
+        private const val KEY_CARD_OPACITY = "card_opacity"
         private const val KEY_SATELLITE_SOURCE = "satellite_source"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"

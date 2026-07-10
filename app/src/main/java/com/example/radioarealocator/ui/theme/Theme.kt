@@ -15,6 +15,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,14 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+
+/**
+ * 卡片整体透明度系数（0f~1f）。默认 1f（完全不透明）。
+ *
+ * 仅在设置了背景图时由上层（[com.example.radioarealocator.MainActivity]）下调，
+ * 使卡片整体半透明以透出背景图。卡片通过 `Modifier.alpha(LocalCardAlpha.current)` 应用。
+ */
+val LocalCardAlpha = compositionLocalOf<Float> { 1f }
 
 private val LightColorScheme = lightColorScheme(
     primary = md_theme_light_primary,
