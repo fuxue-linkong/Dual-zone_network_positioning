@@ -22,7 +22,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -81,9 +80,8 @@ fun WeatherCard(
 
     Column(
         modifier = modifier
-            .alpha(LocalCardAlpha.current)
             .clip(RoundedCornerShape(16.dp))
-            .background(stateColor.copy(alpha = 0.12f))
+            .background(stateColor.copy(alpha = 0.12f * LocalCardAlpha.current))
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         when {

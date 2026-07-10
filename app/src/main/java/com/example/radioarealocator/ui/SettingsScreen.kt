@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -96,10 +95,9 @@ fun SettingsScreen(
         item {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -132,10 +130,9 @@ fun SettingsScreen(
         item {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -236,10 +233,9 @@ fun SettingsScreen(
         item {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -267,10 +263,9 @@ private fun ReminderSettingsCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .alpha(LocalCardAlpha.current),
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {

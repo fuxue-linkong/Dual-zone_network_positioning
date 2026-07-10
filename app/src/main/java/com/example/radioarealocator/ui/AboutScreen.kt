@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -96,10 +95,9 @@ fun AboutScreen(
         ) {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
@@ -139,10 +137,9 @@ fun AboutScreen(
             // 维护者列表
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -185,10 +182,9 @@ fun AboutScreen(
 
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -206,10 +202,9 @@ fun AboutScreen(
 
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(LocalCardAlpha.current),
+                    .fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {

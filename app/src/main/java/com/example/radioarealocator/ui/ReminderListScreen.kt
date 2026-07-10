@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -117,13 +116,12 @@ private fun ReminderItemRow(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .alpha(LocalCardAlpha.current),
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (item.enabled) {
-                MaterialTheme.colorScheme.surface
+                MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f * LocalCardAlpha.current)
             },
             contentColor = MaterialTheme.colorScheme.onSurface
         )

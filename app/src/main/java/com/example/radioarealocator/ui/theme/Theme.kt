@@ -27,10 +27,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * 卡片整体透明度系数（0f~1f）。默认 1f（完全不透明）。
+ * 卡片背景透明度系数（0f~1f）。默认 1f（完全不透明）。
  *
  * 仅在设置了背景图时由上层（[com.example.radioarealocator.MainActivity]）下调，
- * 使卡片整体半透明以透出背景图。卡片通过 `Modifier.alpha(LocalCardAlpha.current)` 应用。
+ * 使卡片背景半透明以透出背景图，而卡片内的文字/图标保持完全不透明。
+ * 卡片通过 `containerColor.copy(alpha = LocalCardAlpha.current)` 应用到背景色。
  */
 val LocalCardAlpha = compositionLocalOf<Float> { 1f }
 
