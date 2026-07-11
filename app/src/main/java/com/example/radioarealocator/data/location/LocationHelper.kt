@@ -186,6 +186,9 @@ class LocationHelper(private val context: Context) {
     private suspend fun fetchFusedLastLocation(errors: MutableList<String>): Location? {
         return try {
             withTimeout(1_500) { requestFusedLastLocation() }
+        } catch (e: TimeoutCancellationException) {
+            errors.add("Fused最近位置: 超时")
+            null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -202,6 +205,9 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestFusedCurrentLocation(priority) }
+        } catch (e: TimeoutCancellationException) {
+            errors.add("$name: 超时")
+            null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -216,6 +222,9 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestSingleFusedUpdate() }
+        } catch (e: TimeoutCancellationException) {
+            errors.add("Fused单次更新: 超时")
+            null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -230,6 +239,9 @@ class LocationHelper(private val context: Context) {
     ): Location? {
         return try {
             withTimeout(timeoutMs) { requestLocationManagerLocation() }
+        } catch (e: TimeoutCancellationException) {
+            errors.add("系统定位: 超时")
+            null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

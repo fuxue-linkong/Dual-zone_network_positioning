@@ -1,5 +1,6 @@
 package com.example.radioarealocator.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -54,6 +55,8 @@ class HitokotoApiService {
                 val body = response.body?.string() ?: return@withContext null
                 parseQuote(body)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }

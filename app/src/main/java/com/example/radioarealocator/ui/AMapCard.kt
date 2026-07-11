@@ -180,7 +180,7 @@ fun AMapCard(
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = String.format("%.4f, %.4f", latitude, longitude),
+                text = String.format(java.util.Locale.US, "%.4f, %.4f", latitude, longitude),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

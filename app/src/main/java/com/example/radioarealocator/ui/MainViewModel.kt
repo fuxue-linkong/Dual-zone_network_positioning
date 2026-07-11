@@ -235,13 +235,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _dailyQuote = mutableStateOf(currentLocalFallbackQuote())
     val dailyQuote: State<String> = _dailyQuote
 
-    // 记录已获取一言的日期（dayOfYear），同一天内不重复请求（持久化，进程重启后仍有效）
-    private var dailyQuoteDayOfYear: Int = settingsStore.dailyQuoteDayOfYear
+    // 记录已获取一言的日期（epoch day），同一天内不重复请求（持久化，进程重启后仍有效）
+    private var dailyQuoteEpochDay: Long = settingsStore.dailyQuoteEpochDay
 
     /**
      * 刷新每日一言。
      *
-     * - 同一天内（[dailyQuoteDayOfYear] 匹配）不重复请求，避免频繁调用 API
+     * - 同一天内（[dailyQuoteEpochDay] 匹配）不重复请求，避免频繁调用 API
      * - 先用本地兜底文案立即填充，后台异步请求网络结果
      * - 请求成功则更新为 "正文 —— 来源" 格式；失败则保留兜底文案
      *
@@ -249,17 +249,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun refreshDailyQuote() {
         val today = LocalDate.now()
-        if (dailyQuoteDayOfYear == today.dayOfYear) return
+        if (dailyQuoteEpochDay == today.toEpochDay()) return
 
         viewModelScope.launch {
             val quote = hitokotoApi.fetchQuote()
             if (quote != null) {
                 _dailyQuote.value = quote.toDisplayText()
-                dailyQuoteDayOfYear = today.dayOfYear
-                settingsStore.dailyQuoteDayOfYear = dailyQuoteDayOfYear
+                dailyQuoteEpochDay = today.toEpochDay()
+                settingsStore.dailyQuoteEpochDay = dailyQuoteEpochDay
             }
             // 失败时保留初始化时填入的本地兜底文案，不额外处理；
-            // 不更新 dailyQuoteDayOfYear，确保下次调用仍可重试
+            // 不更新 dailyQuoteEpochDay，确保下次调用仍可重试
         }
     }
 

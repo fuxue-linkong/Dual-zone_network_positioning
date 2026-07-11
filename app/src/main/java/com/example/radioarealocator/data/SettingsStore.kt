@@ -76,14 +76,14 @@ class SettingsStore(context: Context) {
         prefs.contains(KEY_LAST_LAT) && prefs.contains(KEY_LAST_LON)
 
     /**
-     * 每日一言最近一次成功获取的 dayOfYear。
+     * 每日一言最近一次成功获取的日期（epoch day）。
      * 避免进程重启后同一天内重复请求 hitokoto API。
      * -1 表示从未获取。
      */
-    var dailyQuoteDayOfYear: Int
-        get() = prefs.getInt(KEY_DAILY_QUOTE_DOY, -1)
+    var dailyQuoteEpochDay: Long
+        get() = prefs.getLong(KEY_DAILY_QUOTE_EPOCH_DAY, -1L)
         set(value) {
-            prefs.edit().putInt(KEY_DAILY_QUOTE_DOY, value).apply()
+            prefs.edit().putLong(KEY_DAILY_QUOTE_EPOCH_DAY, value).apply()
         }
 
     companion object {
@@ -94,6 +94,6 @@ class SettingsStore(context: Context) {
         private const val KEY_SATELLITE_SOURCE = "satellite_source"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"
-        private const val KEY_DAILY_QUOTE_DOY = "daily_quote_doy"
+        private const val KEY_DAILY_QUOTE_EPOCH_DAY = "daily_quote_epoch_day"
     }
 }

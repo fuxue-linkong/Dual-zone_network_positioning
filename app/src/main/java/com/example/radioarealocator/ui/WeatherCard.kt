@@ -342,7 +342,7 @@ private fun InitialState(
 /**
  * 格式化温度：保留一位小数 + 单位。
  *
- * 和风 API 返回的 temp 可能是 "25" 或 "25.3"，统一格式化为 "25.0°C"。
+ * 高德 API 返回的 temp 可能是 "25" 或 "25.3"，统一格式化为 "25.0°C"。
  */
 private fun formatTemperature(temp: String): String {
     val value = temp.toDoubleOrNull() ?: return "--"

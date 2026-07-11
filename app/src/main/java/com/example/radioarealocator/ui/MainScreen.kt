@@ -1976,7 +1976,7 @@ private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
 @Composable
 private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
     if (segments.isNullOrEmpty()) return
-    val today = remember { SatelliteStatusSegmenter.dateOf(Instant.now()) }
+    val today = SatelliteStatusSegmenter.dateOf(Instant.now())
     val daySegments = remember(segments, today) {
         SatelliteStatusSegmenter.segmentsForDate(segments, today)
             .ifEmpty { segments.takeLast(4) }

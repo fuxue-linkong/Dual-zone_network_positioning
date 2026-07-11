@@ -8,6 +8,7 @@ import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
 import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatellitePredictor
+import kotlinx.coroutines.CancellationException
 import java.time.Duration
 import java.time.Instant
 
@@ -121,6 +122,8 @@ class ReminderRefreshWorker(
             scheduler.scheduleAll(reminderStore.loadItems(), settings)
 
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             // 失败不阻塞下次执行
             Result.retry()
