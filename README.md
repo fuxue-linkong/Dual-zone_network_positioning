@@ -8,7 +8,7 @@
 
 并基于当前位置预测近期过境的业余无线电卫星。
 
-如有 bug 请在议题中提出，或者发我的 QQ（3252647738@qq.com）/outlook 邮箱（fuxuelingkong@outlook.com）
+如有 bug 请在议题中提出，或者发我的 outlook 邮箱（fuxuelingkong@outlook.com）
 
 也可以向我提出功能需求（能力有限，不一定能实现）
 
