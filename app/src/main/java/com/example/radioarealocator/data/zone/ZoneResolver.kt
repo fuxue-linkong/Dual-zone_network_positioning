@@ -86,10 +86,8 @@ object ZoneResolver {
         add(ZoneRegion(26.0, 37.0, 60.0, 78.0, cqZone = 21, ituZone = 40))     // 巴基斯坦/阿富汗
 
         // 东亚
-        add(ZoneRegion(18.0, 54.0, 97.0, 146.0, cqZone = 24, ituZone = 44))
-        add(ZoneRegion(18.0, 54.0, 100.0, 123.0, cqZone = 24, ituZone = 44))   // 中国东部
+        add(ZoneRegion(18.0, 54.0, 97.0, 122.0, cqZone = 24, ituZone = 44))    // 中国
         add(ZoneRegion(20.0, 46.0, 122.0, 146.0, cqZone = 25, ituZone = 45))   // 日本/韩国
-        add(ZoneRegion(18.0, 26.0, 105.0, 121.0, cqZone = 24, ituZone = 44))   // 华南/台湾/香港
         add(ZoneRegion(35.0, 43.0, 128.0, 146.0, cqZone = 25, ituZone = 45))   // 日本
 
         // 东南亚/大洋洲

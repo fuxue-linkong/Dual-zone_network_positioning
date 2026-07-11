@@ -106,7 +106,10 @@ class WeatherApiService {
         val province = addrComponent.optString("province")
         val cityName = if (city.isNotEmpty()) city else province
 
-        if (cityName.isEmpty()) throw WeatherApiException("城市名为空") else return Pair(adcode, cityName)
+        if (cityName.isEmpty()) {
+            throw WeatherApiException("城市名为空")
+        }
+        return Pair(adcode, cityName)
     }
 
     /**

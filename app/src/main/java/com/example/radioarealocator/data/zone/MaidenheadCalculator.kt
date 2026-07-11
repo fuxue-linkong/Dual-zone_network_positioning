@@ -14,9 +14,17 @@ object MaidenheadCalculator {
         require(latitude in -90.0..90.0) { "纬度必须在 -90 到 90 之间" }
         require(longitude in -180.0..180.0) { "经度必须在 -180 到 180 之间" }
 
-        // 处理边界：180.0 / 90.0 应落入最后一个 subsquare，否则会被错误地映射为起始边界
-        val safeLon = if (longitude >= 180.0) 180.0 - 1e-9 else longitude
-        val safeLat = if (latitude >= 90.0) 90.0 - 1e-9 else latitude
+        // 处理边界：±180.0 / ±90.0 应落入最后一个 subsquare，否则会被错误地映射为起始边界
+        val safeLon = when {
+            longitude >= 180.0 -> 180.0 - 1e-9
+            longitude <= -180.0 -> -180.0 + 1e-9
+            else -> longitude
+        }
+        val safeLat = when {
+            latitude >= 90.0 -> 90.0 - 1e-9
+            latitude <= -90.0 -> -90.0 + 1e-9
+            else -> latitude
+        }
 
         val adjustedLon = safeLon + 180.0
         val adjustedLat = safeLat + 90.0

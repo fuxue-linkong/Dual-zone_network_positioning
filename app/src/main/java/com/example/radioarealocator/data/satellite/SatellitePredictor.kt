@@ -10,7 +10,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.Date
+import java.util.TimeZone
 
 /**
  * 基于 predict4java 计算卫星过境信息。
@@ -37,8 +39,10 @@ class SatellitePredictor {
         if (sourcedTles.isEmpty()) return@withContext emptyList()
 
         val groundStation = GroundStationPosition(latitude, longitude, altitude)
-        val now = Date()
-        val searchEnd = Date(now.time + hoursAhead * 60L * 60L * 1000L)
+        // 使用 UTC 时区确保与卫星轨道计算的一致性
+        val utcNow = Instant.now()
+        val now = Date.from(utcNow)
+        val searchEnd = Date.from(utcNow.plusSeconds(hoursAhead * 60L * 60L))
 
         // 并行预测每颗卫星的过境：每颗卫星的 SGP4/SDP4 计算是独立的，
         // 使用 async + awaitAll 充分利用多核 CPU，相比串行 mapNotNull 显著降低总耗时。

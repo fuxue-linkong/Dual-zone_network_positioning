@@ -23,7 +23,8 @@ enum class BjtSegment(val startHour: Int, val endHour: Int, val label: String) {
     companion object {
         /** 按 BJT 小时（0-23）返回所属时段。 */
         fun ofHour(bjtHour: Int): BjtSegment {
-            val idx = (bjtHour / 6).coerceIn(0, 3)
+            val normalized = ((bjtHour % 24) + 24) % 24  // 处理负数和超过23的情况
+            val idx = (normalized / 6).coerceIn(0, 3)
             return values()[idx]
         }
     }
