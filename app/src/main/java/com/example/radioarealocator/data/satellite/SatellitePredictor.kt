@@ -106,11 +106,19 @@ class SatellitePredictor {
             // 只取预测窗口内的过境
             if (nextPass.startTime.after(searchEnd)) return null
 
+            // 在境卫星的 AOS 已过去（nextPass.startTime < now），
+            // 用当前时间近似 AOS，避免 UI 显示错误的过去时间。
+            val aosInstant = if (isCurrentlyVisible && nextPass.startTime.before(now)) {
+                now.toInstant()
+            } else {
+                nextPass.startTime.toInstant()
+            }
+
             SatelliteInfo(
                 name = tle.name.trim().ifEmpty { tle.catnum.toString() },
                 catalogNumber = tle.catnum,
                 modes = modes,
-                aosTime = nextPass.startTime.toInstant(),
+                aosTime = aosInstant,
                 losTime = nextPass.endTime.toInstant(),
                 maxElevation = nextPass.maxEl,
                 aosAzimuth = nextPass.aosAzimuth,

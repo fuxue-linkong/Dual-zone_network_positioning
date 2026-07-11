@@ -52,6 +52,8 @@ class WeatherStore(context: Context) {
     fun isCacheValid(maxAgeMillis: Long = CACHE_DURATION_MS): Boolean {
         val ts = prefs.getLong(KEY_FETCH_TIME_ONLY, -1L)
         if (ts < 0) return false
+        val hasData = prefs.contains(KEY_DATA)
+        if (!hasData) return false
         val age = System.currentTimeMillis() - ts
         return age < maxAgeMillis
     }

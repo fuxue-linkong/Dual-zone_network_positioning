@@ -250,15 +250,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshDailyQuote() {
         val today = LocalDate.now()
         if (dailyQuoteDayOfYear == today.dayOfYear) return
-        dailyQuoteDayOfYear = today.dayOfYear
 
         viewModelScope.launch {
             val quote = hitokotoApi.fetchQuote()
             if (quote != null) {
                 _dailyQuote.value = quote.toDisplayText()
+                dailyQuoteDayOfYear = today.dayOfYear
                 settingsStore.dailyQuoteDayOfYear = dailyQuoteDayOfYear
             }
-            // 失败时保留初始化时填入的本地兜底文案，不额外处理
+            // 失败时保留初始化时填入的本地兜底文案，不额外处理；
+            // 不更新 dailyQuoteDayOfYear，确保下次调用仍可重试
         }
     }
 

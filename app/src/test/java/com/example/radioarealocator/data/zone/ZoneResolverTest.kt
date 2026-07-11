@@ -100,4 +100,37 @@ class ZoneResolverTest {
             assertEquals("mismatch at ($lat, $lon)", expected, actual)
         }
     }
+
+    @Test
+    fun `boundary longitude 40 belongs to europe not russia`() {
+        val europe = ZoneResolver.resolve(55.0, 40.0)
+        assertEquals(14, europe.cqZone)
+        assertEquals(27, europe.ituZone)
+
+        val russia = ZoneResolver.resolve(55.0, 41.0)
+        assertEquals(16, russia.cqZone)
+        assertEquals(30, russia.ituZone)
+    }
+
+    @Test
+    fun `polar boundaries are still matched`() {
+        val russiaPacific = ZoneResolver.resolve(75.0, 180.0)
+        assertEquals(16, russiaPacific.cqZone)
+
+        val northAmericaPolar = ZoneResolver.resolve(35.0, -180.0)
+        assertEquals(5, northAmericaPolar.cqZone)
+    }
+
+    @Test
+    fun `no mans land at boundaries`() {
+        val boundaryLongitudes = listOf(-180.0, -170.0, -100.0, -30.0, 0.0, 40.0, 100.0, 180.0)
+        val boundaryLatitudes = listOf(-85.0, -50.0, 0.0, 30.0, 55.0, 70.0, 85.0)
+        for (lon in boundaryLongitudes) {
+            for (lat in boundaryLatitudes) {
+                val info = ZoneResolver.resolve(lat, lon)
+                assertTrue("No zone at ($lat, $lon)", info.cqZone in 1..40)
+                assertTrue("No ITU zone at ($lat, $lon)", info.ituZone in 1..90)
+            }
+        }
+    }
 }

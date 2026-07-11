@@ -88,7 +88,7 @@ class WeatherApiService {
      */
     private suspend fun fetchAdcode(lat: Double, lng: Double, key: String): Pair<String, String> {
         // 高德 API location 参数格式：经度,纬度（lng,lat）
-        val location = String.format("%.6f,%.6f", lng, lat)
+        val location = String.format(java.util.Locale.US, "%.6f,%.6f", lng, lat)
         val url = "$REGEO_BASE_URL?location=$location&key=$key"
         val response = executeRequest(url)
         val json = JSONObject(response)

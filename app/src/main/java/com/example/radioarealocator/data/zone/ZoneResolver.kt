@@ -20,8 +20,16 @@ object ZoneResolver {
         val cqZone: Int,
         val ituZone: Int
     ) {
+        /**
+         * 左开右闭区间 (min, max]：边界点归属上限区域。
+         * 极值边界（-180 / -90）作为闭区间下限包含，确保对蹟点仍可命中。
+         */
         fun contains(lat: Double, lon: Double): Boolean {
-            return lat in minLat..maxLat && lon in minLon..maxLon
+            val latOk = if (minLat <= -90.0) lat >= minLat && lat <= maxLat
+                        else lat > minLat && lat <= maxLat
+            val lonOk = if (minLon <= -180.0) lon >= minLon && lon <= maxLon
+                        else lon > minLon && lon <= maxLon
+            return latOk && lonOk
         }
     }
 
