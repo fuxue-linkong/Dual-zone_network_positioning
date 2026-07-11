@@ -38,16 +38,21 @@ class WeatherStore(context: Context) {
      * 保存天气数据到缓存。
      */
     fun save(result: WeatherResult) {
-        prefs.edit().putString(KEY_DATA, toJson(result)).apply()
+        prefs.edit()
+            .putString(KEY_DATA, toJson(result))
+            .putLong(KEY_FETCH_TIME_ONLY, result.fetchTimeMillis)
+            .apply()
     }
 
     /**
      * 判断缓存是否有效（存在且未过期）。
+     * 优先读取独立存储的时间戳，避免解析完整 JSON。
      * @param maxAgeMillis 最大缓存时间（毫秒），默认 30 分钟
      */
     fun isCacheValid(maxAgeMillis: Long = CACHE_DURATION_MS): Boolean {
-        val data = load() ?: return false
-        val age = System.currentTimeMillis() - data.fetchTimeMillis
+        val ts = prefs.getLong(KEY_FETCH_TIME_ONLY, -1L)
+        if (ts < 0) return false
+        val age = System.currentTimeMillis() - ts
         return age < maxAgeMillis
     }
 
@@ -55,7 +60,7 @@ class WeatherStore(context: Context) {
      * 清除缓存。
      */
     fun clearCache() {
-        prefs.edit().remove(KEY_DATA).apply()
+        prefs.edit().remove(KEY_DATA).remove(KEY_FETCH_TIME_ONLY).apply()
     }
 
     // ---- JSON 序列化/反序列化 ----
@@ -136,6 +141,7 @@ class WeatherStore(context: Context) {
         private const val KEY_DATA = "weather_data"
         private const val KEY_CITY = "city"
         private const val KEY_FETCH_TIME = "fetch_time"
+        private const val KEY_FETCH_TIME_ONLY = "fetch_time_only"
         private const val CACHE_DURATION_MS = 30L * 60 * 1000
     }
 }

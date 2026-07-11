@@ -207,7 +207,7 @@ class SatelliteDataSource {
                 }
             }
             if (tles.isEmpty()) {
-                throw IOException("SatNOGS 无我们关心的卫星数据")
+                return emptyList()
             }
             return tles
         }

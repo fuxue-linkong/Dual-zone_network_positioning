@@ -2012,7 +2012,7 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
         "Not Heard" -> stringResource(R.string.status_not_heard)
         "Crew Active" -> stringResource(R.string.status_crew_active)
         null -> stringResource(R.string.status_no_data)
-        else -> segment.status ?: ""
+        else -> segment.status
     }
     val bgColor = when (segment.status) {
         "Heard" -> MaterialTheme.colorScheme.primaryContainer

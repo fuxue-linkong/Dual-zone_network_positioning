@@ -37,7 +37,7 @@
 ## 系统要求
 
 - Android 8.0（API 26）及以上
-- targetSdk 36
+- targetSdk 37
 
 ## 许可证
 

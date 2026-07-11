@@ -25,7 +25,7 @@ enum class BjtSegment(val startHour: Int, val endHour: Int, val label: String) {
         fun ofHour(bjtHour: Int): BjtSegment {
             val normalized = ((bjtHour % 24) + 24) % 24  // 处理负数和超过23的情况
             val idx = (normalized / 6).coerceIn(0, 3)
-            return values()[idx]
+            return entries[idx]
         }
     }
 }
@@ -104,7 +104,7 @@ object SatelliteStatusSegmenter {
         val grid = mutableListOf<SegmentStatus>()
         var d = start
         while (!d.isAfter(end)) {
-            for (seg in BjtSegment.values()) {
+            for (seg in BjtSegment.entries) {
                 val reps = byKey[Pair(d, seg)].orEmpty()
                 grid.add(SegmentStatus(d, seg, reduce(reps), carriedOver = false, reps.size))
             }
