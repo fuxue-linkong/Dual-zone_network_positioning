@@ -158,15 +158,6 @@ fun MainScreen(
         }
     }
 
-    // 时钟状态，每秒刷新
-    var now by remember { mutableStateOf(Instant.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = Instant.now()
-            delay(1000)
-        }
-    }
-
     // 背景图选择器（Photo Picker）
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -208,7 +199,6 @@ fun MainScreen(
             when {
                 selectedTab == 0 && homeSubScreen == 0 -> HomeHeader(
                     uiState = uiState,
-                    now = now,
                     weather = viewModel.weather.value,
                     weatherLoading = viewModel.weatherLoading.value,
                     weatherError = viewModel.weatherError.value,
@@ -361,13 +351,21 @@ fun MainScreen(
 @Composable
 private fun HomeHeader(
     uiState: MainUiState,
-    now: Instant,
     weather: com.example.radioarealocator.data.weather.WeatherResult?,
     weatherLoading: Boolean,
     weatherError: String?,
     onRefreshWeather: () -> Unit,
     dailyQuote: String
 ) {
+    // 时钟状态，每秒刷新 —— 仅 HomeHeader 内部持有，避免 1s tick 触发整个 MainScreen 重组
+    var now by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = Instant.now()
+            delay(1000)
+        }
+    }
+
     val stateColor = if (uiState.result != null) {
         MaterialTheme.colorScheme.primary
     } else {

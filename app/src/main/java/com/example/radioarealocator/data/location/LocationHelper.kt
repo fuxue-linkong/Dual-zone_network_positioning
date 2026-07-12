@@ -140,8 +140,8 @@ class LocationHelper(private val context: Context) {
      * @param minDistanceM 最小位移阈值（米），小于此距离的变化不上报
      */
     fun locationUpdates(
-        intervalMs: Long = 5_000L,
-        minDistanceM: Float = 0f
+        intervalMs: Long = 10_000L,
+        minDistanceM: Float = 10f
     ): Flow<Location> = callbackFlow {
         if (!hasPermission()) {
             close(SecurityException("缺少定位权限"))
