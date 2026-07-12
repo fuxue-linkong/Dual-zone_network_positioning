@@ -77,6 +77,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var segmentStatusFetchedAt: Instant? = null
     // 持续位置监听 Job：在首次成功定位后启动，自动跟踪设备位置变化
     private var locationUpdatesJob: Job? = null
+
+    // 卫星过境预测结果缓存：避免同一坐标在短时间内重复执行 CPU 密集的 SGP4 计算。
+    // 缓存有效期 15 分钟（PREDICTION_CACHE_TTL），坐标偏移超过 0.001° 时视为新位置需重新预测。
+    private var cachedPredictionSatellites: List<SatelliteInfo>? = null
+    private var cachedPredictionLat: Double = Double.NaN
+    private var cachedPredictionLon: Double = Double.NaN
+    private var cachedPredictionTime: Instant? = null
     // 地址解析去抖 Job：位置频繁变化时延后解析地址，避免 Geocoder 被密集调用
     private var addressDebounceJob: Job? = null
     private var initialized = false
@@ -822,12 +829,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         longitude: Double
     ) {
         try {
+            // 检查预测结果缓存：同一坐标（±0.001°）+ 15 分钟内有效 → 跳过 SGP4 计算
+            val cached = cachedPredictionSatellites
+            val cachedTime = cachedPredictionTime
+            if (cached != null && cachedTime != null &&
+                Math.abs(latitude - cachedPredictionLat) < 0.001 &&
+                Math.abs(longitude - cachedPredictionLon) < 0.001 &&
+                java.time.Duration.between(cachedTime, Instant.now()).toMinutes() < 15
+            ) {
+                _uiState.value = _uiState.value.copy(
+                    isSatelliteLoading = false,
+                    satellites = cached,
+                    cachedTles = tles,
+                    satelliteError = null,
+                    lastSatelliteUpdateTime = cachedTime
+                )
+                return
+            }
+
             _uiState.value = _uiState.value.copy(isSatelliteLoading = true)
             val satellites = satellitePredictor.predictUpcomingPasses(
                 sourcedTles = tles,
                 latitude = latitude,
                 longitude = longitude
             )
+            // 更新预测缓存
+            cachedPredictionSatellites = satellites
+            cachedPredictionLat = latitude
+            cachedPredictionLon = longitude
+            cachedPredictionTime = Instant.now()
+
             _uiState.value = _uiState.value.copy(
                 isSatelliteLoading = false,
                 satellites = satellites,

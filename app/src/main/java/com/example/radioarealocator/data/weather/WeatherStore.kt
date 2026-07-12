@@ -21,14 +21,24 @@ class WeatherStore(context: Context) {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // 进程级内存缓存：避免 isCacheValid() 每次重新解析 JSON
+    @Volatile
+    private var cachedResult: WeatherResult? = null
+    @Volatile
+    private var cacheLoaded: Boolean = false
+
     /**
      * 读取缓存的天气数据。
      * @return 缓存数据或 null（无缓存或解析失败）
      */
     fun load(): WeatherResult? {
+        if (cacheLoaded) return cachedResult
         val json = prefs.getString(KEY_DATA, null) ?: return null
         return try {
-            parseJson(json)
+            parseJson(json).also {
+                cachedResult = it
+                cacheLoaded = true
+            }
         } catch (_: Exception) {
             null
         }
@@ -42,6 +52,8 @@ class WeatherStore(context: Context) {
             .putString(KEY_DATA, toJson(result))
             .putLong(KEY_FETCH_TIME_ONLY, result.fetchTimeMillis)
             .apply()
+        cachedResult = result
+        cacheLoaded = true
     }
 
     /**
@@ -63,6 +75,8 @@ class WeatherStore(context: Context) {
      */
     fun clearCache() {
         prefs.edit().remove(KEY_DATA).remove(KEY_FETCH_TIME_ONLY).apply()
+        cachedResult = null
+        cacheLoaded = false
     }
 
     // ---- JSON 序列化/反序列化 ----
