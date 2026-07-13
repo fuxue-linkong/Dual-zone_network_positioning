@@ -26,6 +26,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Slider
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -179,6 +181,7 @@ fun SettingsScreen(
                                 }
                             }
                         },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable(onClick = onPickBackground)
                     )
                     // 仅在已设置背景图时显示卡片透明度调节
@@ -285,6 +288,7 @@ fun SettingsScreen(
                             contentDescription = null
                         )
                     },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable(onClick = onAboutClick)
                 )
             }
@@ -343,7 +347,8 @@ private fun ReminderSettingsCard(
                         checked = settings.enabled,
                         onCheckedChange = { onUpdate(settings.copy(enabled = it)) }
                     )
-                }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
 
             // 仅在启用时显示详细配置
@@ -375,7 +380,8 @@ private fun ReminderSettingsCard(
                             checked = settings.soundEnabled,
                             onCheckedChange = { onUpdate(settings.copy(soundEnabled = it)) }
                         )
-                    }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
                 HorizontalDividerLight()
@@ -389,7 +395,8 @@ private fun ReminderSettingsCard(
                             checked = settings.vibrationEnabled,
                             onCheckedChange = { onUpdate(settings.copy(vibrationEnabled = it)) }
                         )
-                    }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
                 HorizontalDividerLight()
@@ -405,6 +412,7 @@ private fun ReminderSettingsCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable(onClick = onOpenList)
                 )
             }
@@ -439,6 +447,7 @@ private fun LeadTimeRow(
                 )
             }
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { expanded = true }
     )
     DropdownMenu(
@@ -486,6 +495,7 @@ private fun RepeatModeRow(
                 )
             }
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { expanded = true }
     )
     DropdownMenu(
@@ -564,6 +574,6 @@ private fun SourceDropdown(
 private fun HorizontalDividerLight() {
     androidx.compose.material3.HorizontalDivider(
         modifier = Modifier.padding(vertical = 4.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f * LocalCardAlpha.current)
     )
 }
