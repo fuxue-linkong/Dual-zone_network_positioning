@@ -223,14 +223,21 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
 
           # 2. 提取签名指纹用于一致性对比
+          #    keytool 在不同平台输出格式可能为 "SHA1:" 或 "SHA-1:"，用正则兼容
           echo ""
           echo "=== Signature fingerprint ==="
-          FINGERPRINT_SHA1=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA1:" | head -1 | awk '{print $2}')
-          FINGERPRINT_SHA256=$(keytool -printcert -jarfile "$APK_PATH" | grep "SHA256:" | head -1 | awk '{print $2}')
+          FINGERPRINT_SHA1=$(keytool -printcert -jarfile "$APK_PATH" | grep -E "SHA-?1:" | head -1 | awk '{print $NF}')
+          FINGERPRINT_SHA256=$(keytool -printcert -jarfile "$APK_PATH" | grep -E "SHA-?256:" | head -1 | awk '{print $NF}')
           echo "SHA-1:   $FINGERPRINT_SHA1"
           echo "SHA-256: $FINGERPRINT_SHA256"
 
-          # 3. 将指纹写入文件，作为 artifact 上传供后续对比
+          # 3. 验证指纹提取成功
+          if [ -z "$FINGERPRINT_SHA1" ] || [ -z "$FINGERPRINT_SHA256" ]; then
+            echo "::warning::Fingerprint extraction failed. Dumping raw keytool output for debugging:"
+            keytool -printcert -jarfile "$APK_PATH" || true
+          fi
+
+          # 4. 将指纹写入文件，作为 artifact 上传供后续对比
           mkdir -p signing-report
           cat > signing-report/signature-fingerprint.txt <<EOF
           RadioAreaLocator Release APK Signature Fingerprint
