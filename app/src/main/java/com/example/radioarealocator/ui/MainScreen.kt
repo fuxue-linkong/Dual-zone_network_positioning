@@ -1,10 +1,18 @@
 package com.example.radioarealocator.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -121,6 +129,10 @@ private const val DATE_DAY_FONT_SIZE = 20
 private const val QUOTE_SCROLL_SPEED_PX_PER_SEC = 12f
 // 滚动到端点后暂停时长（毫秒）
 private const val QUOTE_PAUSE_MS = 2000L
+// 子页面切换动画时长（毫秒）：前进/返回滑入滑出统一时长
+private const val NAV_ANIM_DURATION_MS = 300
+// 关于页淡入淡出动画时长（毫秒）
+private const val ABOUT_ANIM_DURATION_MS = 250
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,16 +200,21 @@ fun MainScreen(
         }
     }
 
-    if (showAbout) {
-        AboutScreen(onBackClick = { showAbout = false })
-        return
-    }
-
+    // 用 Box 叠加：底层是主 Scaffold，顶层是 AboutScreen 浮层。
+    // AboutScreen 通过淡入淡出过渡显示，避免瞬时硬切。
+    // navKey 同时驱动 TopAppBar Crossfade 与主内容区 AnimatedContent，保证视觉同步。
+    val navKey = Triple(selectedTab, homeSubScreen, settingsSubScreen)
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
-            when {
-                selectedTab == 0 && homeSubScreen == 0 -> HomeHeader(
+            Crossfade(
+                targetState = navKey,
+                animationSpec = tween(NAV_ANIM_DURATION_MS),
+                label = "TopBarCrossfade"
+            ) { (tab, home, settings) ->
+                when {
+                tab == 0 && home == 0 -> HomeHeader(
                     uiState = uiState,
                     weather = viewModel.weather.value,
                     weatherLoading = viewModel.weatherLoading.value,
@@ -205,7 +222,7 @@ fun MainScreen(
                     onRefreshWeather = { viewModel.refreshWeather(force = true) },
                     dailyQuote = viewModel.dailyQuote.value
                 )
-                selectedTab == 0 && homeSubScreen == 1 -> TopAppBar(
+                tab == 0 && home == 1 -> TopAppBar(
                     title = { Text(stringResource(R.string.home_location)) },
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
@@ -216,7 +233,7 @@ fun MainScreen(
                         }
                     }
                 )
-                selectedTab == 0 && homeSubScreen == 3 -> TopAppBar(
+                tab == 0 && home == 3 -> TopAppBar(
                     title = { Text(stringResource(R.string.satellite_management)) },
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 2 }) {
@@ -227,7 +244,7 @@ fun MainScreen(
                         }
                     }
                 )
-                selectedTab == 0 && homeSubScreen == 2 -> TopAppBar(
+                tab == 0 && home == 2 -> TopAppBar(
                     title = { Text(stringResource(R.string.home_satellite)) },
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
@@ -238,7 +255,7 @@ fun MainScreen(
                         }
                     }
                 )
-                selectedTab == 1 && settingsSubScreen == 1 -> TopAppBar(
+                tab == 1 && settings == 1 -> TopAppBar(
                     title = { Text(stringResource(R.string.reminder_list_title)) },
                     navigationIcon = {
                         IconButton(onClick = { settingsSubScreen = 0 }) {
@@ -252,6 +269,7 @@ fun MainScreen(
                 else -> TopAppBar(
                     title = { Text(stringResource(R.string.settings)) }
                 )
+                }
             }
         },
         snackbarHost = {
@@ -274,73 +292,112 @@ fun MainScreen(
             }
         }
     ) { padding ->
-        if (selectedTab == 0) {
-            when (homeSubScreen) {
-                0 -> HomeListContent(
-                    onLocationClick = { homeSubScreen = 1 },
-                    onSatelliteClick = { homeSubScreen = 2 },
-                    contentPadding = padding
-                )
-                1 -> LocationDetailContent(
-                    uiState = uiState,
-                    hasLocationPermission = viewModel.hasLocationPermission,
-                    onRequestPermission = onRequestPermission,
-                    onRefresh = { viewModel.refreshLocation() },
-                    onDismissError = { viewModel.dismissError() },
-                    contentPadding = padding
-                )
-                2 -> SatelliteDetailContent(
-                    uiState = uiState,
-                    filter = viewModel.satelliteFilter.value,
-                    onFilterChange = viewModel::updateSatelliteFilter,
-                    onGetLocation = { viewModel.refreshLocationOnly() },
-                    onUpdateSource = { viewModel.refreshSatelliteSourceOnly() },
-                    favorites = favorites,
-                    onToggleFavorite = viewModel::toggleFavorite,
-                    onOpenManagement = { homeSubScreen = 3 },
-                    statusTracker = viewModel.statusTracker,
-                    contentPadding = padding
-                )
-                3 -> SatelliteManagementContent(
-                    uiState = uiState,
-                    favorites = favorites,
-                    onToggleFavorite = viewModel::toggleFavorite,
-                    contentPadding = padding
-                )
-            }
-        } else {
-            // 设置 tab：根据 settingsSubScreen 切换主页 / 提醒列表
-            if (settingsSubScreen == 1) {
-                ReminderListScreen(
-                    items = viewModel.reminderItems.value,
-                    onToggleEnabled = viewModel::setReminderItemEnabled,
-                    onDelete = viewModel::deleteReminderItem,
-                    contentPadding = padding
-                )
+        // navKey 已在外层声明。深度比较：targetDepth >= initialDepth 视为前进（右入左出），否则视为返回（左入右出）。
+        AnimatedContent(
+            targetState = navKey,
+            transitionSpec = {
+                // initialState/targetState 由 AnimatedContentTransitionScope 提供
+                val initialDepth = if (initialState.first == 0) initialState.second else 10 + initialState.third
+                val targetDepth = if (targetState.first == 0) targetState.second else 10 + targetState.third
+                val forward = targetDepth >= initialDepth
+                val enter = if (forward) {
+                    slideInHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> fullWidth } +
+                        fadeIn(animationSpec = tween(NAV_ANIM_DURATION_MS))
+                } else {
+                    slideInHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> -fullWidth } +
+                        fadeIn(animationSpec = tween(NAV_ANIM_DURATION_MS))
+                }
+                val exit = if (forward) {
+                    slideOutHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> -fullWidth } +
+                        fadeOut(animationSpec = tween(NAV_ANIM_DURATION_MS))
+                } else {
+                    slideOutHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> fullWidth } +
+                        fadeOut(animationSpec = tween(NAV_ANIM_DURATION_MS))
+                }
+                enter togetherWith exit
+            },
+            contentKey = { it },
+            label = "MainNavTransition"
+        ) { (tab, home, settings) ->
+            if (tab == 0) {
+                when (home) {
+                    0 -> HomeListContent(
+                        onLocationClick = { homeSubScreen = 1 },
+                        onSatelliteClick = { homeSubScreen = 2 },
+                        contentPadding = padding
+                    )
+                    1 -> LocationDetailContent(
+                        uiState = uiState,
+                        hasLocationPermission = viewModel.hasLocationPermission,
+                        onRequestPermission = onRequestPermission,
+                        onRefresh = { viewModel.refreshLocation() },
+                        onDismissError = { viewModel.dismissError() },
+                        contentPadding = padding
+                    )
+                    2 -> SatelliteDetailContent(
+                        uiState = uiState,
+                        filter = viewModel.satelliteFilter.value,
+                        onFilterChange = viewModel::updateSatelliteFilter,
+                        onGetLocation = { viewModel.refreshLocationOnly() },
+                        onUpdateSource = { viewModel.refreshSatelliteSourceOnly() },
+                        favorites = favorites,
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onOpenManagement = { homeSubScreen = 3 },
+                        statusTracker = viewModel.statusTracker,
+                        contentPadding = padding
+                    )
+                    3 -> SatelliteManagementContent(
+                        uiState = uiState,
+                        favorites = favorites,
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        contentPadding = padding
+                    )
+                }
             } else {
-                SettingsScreen(
-                    satelliteSource = viewModel.satelliteSource.value,
-                    onSourceSelected = { viewModel.setSatelliteSource(it) },
-                    backgroundUri = viewModel.backgroundUri.value,
-                    onPickBackground = {
-                        pickBackgroundLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    onClearBackground = { viewModel.setBackgroundUri(null) },
-                    cardOpacity = viewModel.cardOpacity.value,
-                    onCardOpacityChange = { viewModel.setCardOpacity(it) },
-                    backgroundOpacity = viewModel.backgroundOpacity.value,
-                    onBackgroundOpacityChange = { viewModel.setBackgroundOpacity(it) },
-                    onAboutClick = { showAbout = true },
-                    reminderSettings = viewModel.reminderSettings.value,
-                    onUpdateReminderSettings = viewModel::updateReminderSettings,
-                    onOpenReminderList = { settingsSubScreen = 1 },
-                    contentPadding = padding
-                )
+                // 设置 tab：根据 settingsSubScreen 切换主页 / 提醒列表
+                if (settings == 1) {
+                    ReminderListScreen(
+                        items = viewModel.reminderItems.value,
+                        onToggleEnabled = viewModel::setReminderItemEnabled,
+                        onDelete = viewModel::deleteReminderItem,
+                        contentPadding = padding
+                    )
+                } else {
+                    SettingsScreen(
+                        satelliteSource = viewModel.satelliteSource.value,
+                        onSourceSelected = { viewModel.setSatelliteSource(it) },
+                        backgroundUri = viewModel.backgroundUri.value,
+                        onPickBackground = {
+                            pickBackgroundLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onClearBackground = { viewModel.setBackgroundUri(null) },
+                        cardOpacity = viewModel.cardOpacity.value,
+                        onCardOpacityChange = { viewModel.setCardOpacity(it) },
+                        backgroundOpacity = viewModel.backgroundOpacity.value,
+                        onBackgroundOpacityChange = { viewModel.setBackgroundOpacity(it) },
+                        onAboutClick = { showAbout = true },
+                        reminderSettings = viewModel.reminderSettings.value,
+                        onUpdateReminderSettings = viewModel::updateReminderSettings,
+                        onOpenReminderList = { settingsSubScreen = 1 },
+                        contentPadding = padding
+                    )
+                }
             }
         }
     }
+
+    // 关于页作为顶层覆盖，淡入淡出过渡。
+    // visible=false 时 AnimatedVisibility 仍会播放 exit 动画，期间 AboutScreen 在最上层覆盖。
+    AnimatedVisibility(
+        visible = showAbout,
+        enter = fadeIn(animationSpec = tween(ABOUT_ANIM_DURATION_MS)),
+        exit = fadeOut(animationSpec = tween(ABOUT_ANIM_DURATION_MS))
+    ) {
+        AboutScreen(onBackClick = { showAbout = false })
+    }
+    }  // Box 闭合
 }
 
 /**
