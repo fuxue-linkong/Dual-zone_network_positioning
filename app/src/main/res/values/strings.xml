@@ -128,4 +128,41 @@
     <string name="map_load_failed">地图加载失败</string>
     <string name="map_network_error">网络不可用或 API Key 无效</string>
     <string name="map_center_marker">当前位置</string>
+
+    <!-- CW练习模块 -->
+    <string name="cw_practice">CW练习</string>
+    <string name="cw_practice_desc">摩尔斯电码练习工具</string>
+    <string name="free_practice">自由练习</string>
+    <string name="free_practice_desc">自主选择练习内容和参数</string>
+    <string name="tutorial_practice">教程练习</string>
+    <string name="tutorial_practice_desc">结构化的分步练习指导</string>
+    <string name="wpm">速度 (WPM)</string>
+    <string name="frequency">音调频率 (Hz)</string>
+    <string name="character_set">字符集</string>
+    <string name="letters">字母</string>
+    <string name="numbers">数字</string>
+    <string name="symbols">符号</string>
+    <string name="custom">自定义</string>
+    <string name="practice_length">练习长度</string>
+    <string name="practice_duration">练习时长 (分钟)</string>
+    <string name="play_mode">播放模式</string>
+    <string name="continuous">连续</string>
+    <string name="interval">间隔</string>
+    <string name="start_practice">开始练习</string>
+    <string name="stop_practice">停止练习</string>
+    <string name="pause_practice">暂停练习</string>
+    <string name="resume_practice">继续练习</string>
+    <string name="check_results">检查结果</string>
+    <string name="accuracy">准确率</string>
+    <string name="total_practice_time">总练习时长</string>
+    <string name="current_speed">当前速度</string>
+    <string name="koch_course">Koch课程</string>
+    <string name="code_group">字符组练习</string>
+    <string name="callsign_training">呼号训练</string>
+    <string name="text_training">文本训练</string>
+    <string name="lesson">课程</string>
+    <string name="progress">进度</string>
+    <string name="completed">已完成</string>
+    <string name="in_progress">进行中</string>
+    <string name="not_started">未开始</string>
 </resources>

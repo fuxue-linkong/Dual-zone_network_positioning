@@ -94,6 +94,7 @@ fun encryptSecretsData(plaintext: String): ByteArray {
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
     jacoco
 }
 
@@ -274,6 +275,14 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Room 数据库
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // 图表库
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }
 
 // ══════════════════════════════════════════════════════════════════════════
