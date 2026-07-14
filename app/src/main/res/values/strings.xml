@@ -179,4 +179,6 @@
     <string name="morsecode_empty_input">请输入内容</string>
     <string name="morsecode_copy">复制</string>
     <string name="morsecode_copied">已复制</string>
+    <string name="morsecode_codec">摩斯电码编解码</string>
+    <string name="morsecode_codec_desc">文本书写与摩斯电码的相互转换</string>
 </resources>

@@ -109,8 +109,9 @@ import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SegmentStatus
 import com.example.radioarealocator.ui.cw.CWPracticeScreen
 import com.example.radioarealocator.ui.cw.FreePracticeSettingsScreen
-import com.example.radioarealocator.ui.cw.TutorialListScreen
+import com.example.radioarealocator.ui.cw.MorseCodeScreen
 import com.example.radioarealocator.ui.cw.PracticeScreen
+import com.example.radioarealocator.ui.cw.TutorialListScreen
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import java.time.Duration
 import java.time.Instant
@@ -269,6 +270,7 @@ fun MainScreen(
                         1 -> stringResource(R.string.free_practice)
                         2 -> stringResource(R.string.tutorial_practice)
                         3 -> stringResource(R.string.practice)
+                        4 -> stringResource(R.string.morsecode_title)
                         else -> stringResource(R.string.cw_practice)
                     }) },
                     navigationIcon = {
@@ -384,6 +386,7 @@ fun MainScreen(
                             onBackClick = { homeSubScreen = 0 },
                             onFreePracticeClick = { cwSubScreen = 1 },
                             onTutorialClick = { cwSubScreen = 2 },
+                            onMorseCodeClick = { cwSubScreen = 4 },
                             contentPadding = padding
                         )
                         1 -> FreePracticeSettingsScreen(
@@ -409,6 +412,14 @@ fun MainScreen(
                             onResumePractice = { viewModel.resumeCWPractice() },
                             onStopPractice = { viewModel.stopCWPractice() },
                             onCheckResults = { viewModel.checkCWResults() },
+                            contentPadding = padding
+                        )
+                        4 -> MorseCodeScreen(
+                            bgPage = MaterialTheme.colorScheme.background,
+                            bgCard = MaterialTheme.colorScheme.surface,
+                            primaryColor = MaterialTheme.colorScheme.primary,
+                            textPrimary = MaterialTheme.colorScheme.onSurface,
+                            textSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                             contentPadding = padding
                         )
                     }

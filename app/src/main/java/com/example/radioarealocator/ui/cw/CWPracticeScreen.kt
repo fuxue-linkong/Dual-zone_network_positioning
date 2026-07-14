@@ -37,6 +37,7 @@ fun CWPracticeScreen(
     onBackClick: () -> Unit,
     onFreePracticeClick: () -> Unit,
     onTutorialClick: () -> Unit,
+    onMorseCodeClick: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -58,6 +59,13 @@ fun CWPracticeScreen(
                 title = stringResource(R.string.tutorial_practice),
                 description = stringResource(R.string.tutorial_practice_desc),
                 onClick = onTutorialClick
+            )
+        }
+        item {
+            CWPracticeListItem(
+                title = stringResource(R.string.morsecode_codec),
+                description = stringResource(R.string.morsecode_codec_desc),
+                onClick = onMorseCodeClick
             )
         }
     }
