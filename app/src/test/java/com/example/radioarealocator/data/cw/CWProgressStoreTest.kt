@@ -28,11 +28,9 @@ class CWProgressStoreTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        // 使用内存数据库，每个测试独立、不落盘
         db = Room.inMemoryDatabaseBuilder(context, CWProgressDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        // 重置 Room 单例，避免测试间数据污染
         val field = CWProgressDatabase::class.java.getDeclaredField("INSTANCE")
         field.isAccessible = true
         field.set(null, null)
@@ -71,7 +69,7 @@ class CWProgressStoreTest {
         assertEquals(1, all[0].lessonId)
         assertEquals(0.9f, all[0].accuracy, 0.001f)
         assertEquals(20, all[0].wpm)
-        assertTrue(all[0].id > 0) // autoGenerate ID
+        assertTrue(all[0].id > 0)
     }
 
     @Test

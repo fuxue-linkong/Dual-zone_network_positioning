@@ -29,7 +29,6 @@ class CWSettingsStoreTest {
     @After
     fun tearDown() {
         tempFile.delete()
-        // 清理 DataStore 生成的 .preferences_pb 文件（可能有重命名）
         tempFile.parentFile?.listFiles { _, name ->
             name.startsWith("test_cw_settings")
         }?.forEach { it.delete() }
@@ -86,7 +85,6 @@ class CWSettingsStoreTest {
         val result = store.settingsFlow.first()
         assertEquals(20, result.wpm)
         assertEquals(800, result.frequency)
-        // 未修改的字段应保持默认值
         assertEquals(CharacterSet.LETTERS, result.characterSet)
         assertEquals(100, result.practiceLength)
         assertEquals(5, result.practiceDuration)
@@ -97,7 +95,6 @@ class CWSettingsStoreTest {
     fun `settingsFlow persists across new store instances`() = runBlocking {
         store.updateSettings(CWSettings(wpm = 35, frequency = 500))
 
-        // 创建新的 Store 实例，模拟应用重启
         val newStore = CWSettingsStore.createForTest(dataStore)
         val result = newStore.settingsFlow.first()
 
