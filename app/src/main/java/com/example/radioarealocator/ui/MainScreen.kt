@@ -396,6 +396,10 @@ fun MainScreen(
                             contentPadding = padding
                         )
                         2 -> TutorialListScreen(
+                            onLessonClick = { lessonId ->
+                                viewModel.generateTutorialText(lessonId)
+                                cwSubScreen = 3
+                            },
                             contentPadding = padding
                         )
                         3 -> PracticeScreen(
