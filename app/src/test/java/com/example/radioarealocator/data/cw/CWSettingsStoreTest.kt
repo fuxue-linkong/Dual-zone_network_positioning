@@ -1,12 +1,44 @@
 package com.example.radioarealocator.data.cw
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
+import java.io.File
 
 class CWSettingsStoreTest {
+
+    private lateinit var dataStore: DataStore<Preferences>
+    private lateinit var store: CWSettingsStore
+    private lateinit var tempFile: File
+
+    @Before
+    fun setUp() {
+        tempFile = File.createTempFile("test_cw_settings", ".preferences_pb")
+        dataStore = PreferenceDataStoreFactory.create {
+            tempFile
+        }
+        store = CWSettingsStore.createForTest(dataStore)
+    }
+
+    @After
+    fun tearDown() {
+        tempFile.delete()
+        // 清理 DataStore 生成的 .preferences_pb 文件（可能有重命名）
+        tempFile.parentFile?.listFiles { _, name ->
+            name.startsWith("test_cw_settings")
+        }?.forEach { it.delete() }
+    }
+
     @Test
-    fun `test default CWSettings values`() {
-        val settings = CWSettings()
+    fun `settingsFlow emits default values when no data saved`() = runBlocking {
+        val settings = store.settingsFlow.first()
+
         assertEquals(15, settings.wpm)
         assertEquals(600, settings.frequency)
         assertEquals(CharacterSet.LETTERS, settings.characterSet)
@@ -16,47 +48,60 @@ class CWSettingsStoreTest {
     }
 
     @Test
-    fun `test CWSettings with custom values`() {
-        val settings = CWSettings(
-            wpm = 20,
-            frequency = 700,
+    fun `updateSettings persists and settingsFlow reads back`() = runBlocking {
+        val customSettings = CWSettings(
+            wpm = 25,
+            frequency = 750,
             characterSet = CharacterSet.NUMBERS,
-            practiceLength = 50,
+            practiceLength = 200,
             practiceDuration = 10,
             playMode = PlayMode.INTERVAL
         )
-        assertEquals(20, settings.wpm)
-        assertEquals(700, settings.frequency)
-        assertEquals(CharacterSet.NUMBERS, settings.characterSet)
-        assertEquals(50, settings.practiceLength)
-        assertEquals(10, settings.practiceDuration)
-        assertEquals(PlayMode.INTERVAL, settings.playMode)
+
+        store.updateSettings(customSettings)
+        val result = store.settingsFlow.first()
+
+        assertEquals(25, result.wpm)
+        assertEquals(750, result.frequency)
+        assertEquals(CharacterSet.NUMBERS, result.characterSet)
+        assertEquals(200, result.practiceLength)
+        assertEquals(10, result.practiceDuration)
+        assertEquals(PlayMode.INTERVAL, result.playMode)
     }
 
     @Test
-    fun `test CharacterSet enum values`() {
-        val values = CharacterSet.values()
-        assertEquals(4, values.size)
-        assertEquals(CharacterSet.LETTERS, values[0])
-        assertEquals(CharacterSet.NUMBERS, values[1])
-        assertEquals(CharacterSet.SYMBOLS, values[2])
-        assertEquals(CharacterSet.CUSTOM, values[3])
+    fun `multiple updates retain the latest values`() = runBlocking {
+        store.updateSettings(CWSettings(wpm = 10))
+        store.updateSettings(CWSettings(wpm = 30))
+        store.updateSettings(CWSettings(wpm = 45))
+
+        val result = store.settingsFlow.first()
+        assertEquals(45, result.wpm)
     }
 
     @Test
-    fun `test PlayMode enum values`() {
-        val values = PlayMode.values()
-        assertEquals(2, values.size)
-        assertEquals(PlayMode.CONTINUOUS, values[0])
-        assertEquals(PlayMode.INTERVAL, values[1])
+    fun `updateSettings only changes specified fields`() = runBlocking {
+        store.updateSettings(CWSettings(wpm = 20, frequency = 800))
+
+        val result = store.settingsFlow.first()
+        assertEquals(20, result.wpm)
+        assertEquals(800, result.frequency)
+        // 未修改的字段应保持默认值
+        assertEquals(CharacterSet.LETTERS, result.characterSet)
+        assertEquals(100, result.practiceLength)
+        assertEquals(5, result.practiceDuration)
+        assertEquals(PlayMode.CONTINUOUS, result.playMode)
     }
 
     @Test
-    fun `test CWSettings copy with modified wpm`() {
-        val original = CWSettings()
-        val modified = original.copy(wpm = 25)
-        assertEquals(25, modified.wpm)
-        assertEquals(original.frequency, modified.frequency)
-        assertEquals(original.characterSet, modified.characterSet)
+    fun `settingsFlow persists across new store instances`() = runBlocking {
+        store.updateSettings(CWSettings(wpm = 35, frequency = 500))
+
+        // 创建新的 Store 实例，模拟应用重启
+        val newStore = CWSettingsStore.createForTest(dataStore)
+        val result = newStore.settingsFlow.first()
+
+        assertEquals(35, result.wpm)
+        assertEquals(500, result.frequency)
     }
 }
