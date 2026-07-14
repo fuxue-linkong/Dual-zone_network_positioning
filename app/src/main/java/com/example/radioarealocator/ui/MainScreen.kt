@@ -107,6 +107,7 @@ import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SegmentStatus
+import com.example.radioarealocator.ui.cw.CWPracticeScreen
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import java.time.Duration
 import java.time.Instant
@@ -148,6 +149,8 @@ fun MainScreen(
     var homeSubScreen by rememberSaveable { mutableIntStateOf(0) }
     // 设置 tab 下的子页面：0=设置主页, 1=提醒列表
     var settingsSubScreen by rememberSaveable { mutableIntStateOf(0) }
+    // CW 练习子页面：0=主页, 1=自由练习设置, 2=教程列表, 3=练习页面
+    var cwSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
@@ -189,12 +192,13 @@ fun MainScreen(
 
     BackHandler(
         enabled = showAbout ||
-            (selectedTab == 0 && homeSubScreen != 0) ||
+            (selectedTab == 0 && (homeSubScreen != 0 || cwSubScreen != 0)) ||
             (selectedTab == 1 && settingsSubScreen != 0)
     ) {
         when {
             showAbout -> showAbout = false
             selectedTab == 0 && homeSubScreen == 3 -> homeSubScreen = 2
+            selectedTab == 0 && cwSubScreen != 0 -> cwSubScreen = 0
             selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
             selectedTab == 1 && settingsSubScreen != 0 -> settingsSubScreen = 0
         }
@@ -246,6 +250,17 @@ fun MainScreen(
                 )
                 tab == 0 && home == 2 -> TopAppBar(
                     title = { Text(stringResource(R.string.home_satellite)) },
+                    navigationIcon = {
+                        IconButton(onClick = { homeSubScreen = 0 }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    }
+                )
+                tab == 0 && home == 4 -> TopAppBar(
+                    title = { Text(stringResource(R.string.cw_practice)) },
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
                             Icon(
@@ -324,6 +339,7 @@ fun MainScreen(
                     0 -> HomeListContent(
                         onLocationClick = { homeSubScreen = 1 },
                         onSatelliteClick = { homeSubScreen = 2 },
+                        onCWPracticeClick = { homeSubScreen = 4 },
                         contentPadding = padding
                     )
                     1 -> LocationDetailContent(
@@ -350,6 +366,12 @@ fun MainScreen(
                         uiState = uiState,
                         favorites = favorites,
                         onToggleFavorite = viewModel::toggleFavorite,
+                        contentPadding = padding
+                    )
+                    4 -> CWPracticeScreen(
+                        onBackClick = { homeSubScreen = 0 },
+                        onFreePracticeClick = { cwSubScreen = 1 },
+                        onTutorialClick = { cwSubScreen = 2 },
                         contentPadding = padding
                     )
                 }
@@ -603,6 +625,7 @@ private fun DailyQuoteScroller(
 private fun HomeListContent(
     onLocationClick: () -> Unit,
     onSatelliteClick: () -> Unit,
+    onCWPracticeClick: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -626,6 +649,14 @@ private fun HomeListContent(
                 description = stringResource(R.string.home_satellite_desc),
                 badgeChar = "卫",
                 onClick = onSatelliteClick
+            )
+        }
+        item {
+            HomeListItem(
+                title = stringResource(R.string.cw_practice),
+                description = stringResource(R.string.cw_practice_desc),
+                badgeChar = "CW",
+                onClick = onCWPracticeClick
             )
         }
     }
