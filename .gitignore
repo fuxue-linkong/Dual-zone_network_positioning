@@ -19,3 +19,7 @@ signing-report/
 *.txt
 *.png
 ui.xml
+/.codex
+/.kotlin
+/.trae
+
