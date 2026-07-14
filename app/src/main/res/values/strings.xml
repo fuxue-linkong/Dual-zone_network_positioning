@@ -165,4 +165,6 @@
     <string name="completed">已完成</string>
     <string name="in_progress">进行中</string>
     <string name="not_started">未开始</string>
+    <string name="generate_text">生成练习文本</string>
+    <string name="practice">练习</string>
 </resources>

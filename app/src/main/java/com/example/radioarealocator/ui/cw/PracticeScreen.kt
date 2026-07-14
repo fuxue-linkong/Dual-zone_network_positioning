@@ -31,6 +31,7 @@ fun PracticeScreen(
     isPaused: Boolean,
     accuracy: Float,
     onUserInputChange: (String) -> Unit,
+    onGenerateText: () -> Unit,
     onStartPractice: () -> Unit,
     onPausePractice: () -> Unit,
     onResumePractice: () -> Unit,
@@ -65,6 +66,15 @@ fun PracticeScreen(
                 text = "摩尔斯电码: $morseCode",
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+
+        item {
+            Button(
+                onClick = onGenerateText,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.generate_text))
+            }
         }
 
         item {

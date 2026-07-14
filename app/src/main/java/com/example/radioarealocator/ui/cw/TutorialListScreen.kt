@@ -32,10 +32,15 @@ data class TutorialLesson(
 
 @Composable
 fun TutorialListScreen(
-    lessons: List<TutorialLesson>,
-    onLessonClick: (Int) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val lessons = listOf(
+        TutorialLesson(1, "Koch课程", "使用Koch方法学习摩尔斯电码", 0.0f),
+        TutorialLesson(2, "字符组练习", "练习特定字符组合", 0.0f),
+        TutorialLesson(3, "呼号训练", "练习业余无线电呼号", 0.0f),
+        TutorialLesson(4, "文本训练", "练习完整文本", 0.0f)
+    )
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -46,7 +51,7 @@ fun TutorialListScreen(
         items(lessons) { lesson ->
             TutorialLessonItem(
                 lesson = lesson,
-                onClick = { onLessonClick(lesson.id) }
+                onClick = { /* TODO: 实现课程点击 */ }
             )
         }
     }

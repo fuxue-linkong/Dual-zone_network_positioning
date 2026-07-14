@@ -108,6 +108,9 @@ import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SegmentStatus
 import com.example.radioarealocator.ui.cw.CWPracticeScreen
+import com.example.radioarealocator.ui.cw.FreePracticeSettingsScreen
+import com.example.radioarealocator.ui.cw.TutorialListScreen
+import com.example.radioarealocator.ui.cw.PracticeScreen
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import java.time.Duration
 import java.time.Instant
@@ -207,7 +210,7 @@ fun MainScreen(
     // 用 Box 叠加：底层是主 Scaffold，顶层是 AboutScreen 浮层。
     // AboutScreen 通过淡入淡出过渡显示，避免瞬时硬切。
     // navKey 同时驱动 TopAppBar Crossfade 与主内容区 AnimatedContent，保证视觉同步。
-    val navKey = Triple(selectedTab, homeSubScreen, settingsSubScreen)
+    val navKey = listOf(selectedTab, homeSubScreen, settingsSubScreen, cwSubScreen)
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -216,7 +219,8 @@ fun MainScreen(
                 targetState = navKey,
                 animationSpec = tween(NAV_ANIM_DURATION_MS),
                 label = "TopBarCrossfade"
-            ) { (tab, home, settings) ->
+            ) { key ->
+                val tab = key[0]; val home = key[1]; val settings = key[2]; val cw = key[3]
                 when {
                 tab == 0 && home == 0 -> HomeHeader(
                     uiState = uiState,
@@ -260,9 +264,15 @@ fun MainScreen(
                     }
                 )
                 tab == 0 && home == 4 -> TopAppBar(
-                    title = { Text(stringResource(R.string.cw_practice)) },
+                    title = { Text(when (cw) {
+                        0 -> stringResource(R.string.cw_practice)
+                        1 -> stringResource(R.string.free_practice)
+                        2 -> stringResource(R.string.tutorial_practice)
+                        3 -> stringResource(R.string.practice)
+                        else -> stringResource(R.string.cw_practice)
+                    }) },
                     navigationIcon = {
-                        IconButton(onClick = { homeSubScreen = 0 }) {
+                        IconButton(onClick = { if (cw == 0) homeSubScreen = 0 else cwSubScreen = 0 }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.back)
@@ -312,8 +322,8 @@ fun MainScreen(
             targetState = navKey,
             transitionSpec = {
                 // initialState/targetState 由 AnimatedContentTransitionScope 提供
-                val initialDepth = if (initialState.first == 0) initialState.second else 10 + initialState.third
-                val targetDepth = if (targetState.first == 0) targetState.second else 10 + targetState.third
+                val initialDepth = if (initialState[0] == 0) initialState[1] else 10 + initialState[2]
+                val targetDepth = if (targetState[0] == 0) targetState[1] else 10 + targetState[2]
                 val forward = targetDepth >= initialDepth
                 val enter = if (forward) {
                     slideInHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> fullWidth } +
@@ -333,7 +343,8 @@ fun MainScreen(
             },
             contentKey = { it },
             label = "MainNavTransition"
-        ) { (tab, home, settings) ->
+        ) { key ->
+            val tab = key[0]; val home = key[1]; val settings = key[2]; val cw = key[3]
             if (tab == 0) {
                 when (home) {
                     0 -> HomeListContent(
@@ -368,12 +379,39 @@ fun MainScreen(
                         onToggleFavorite = viewModel::toggleFavorite,
                         contentPadding = padding
                     )
-                    4 -> CWPracticeScreen(
-                        onBackClick = { homeSubScreen = 0 },
-                        onFreePracticeClick = { cwSubScreen = 1 },
-                        onTutorialClick = { cwSubScreen = 2 },
-                        contentPadding = padding
-                    )
+                    4 -> when (cw) {
+                        0 -> CWPracticeScreen(
+                            onBackClick = { homeSubScreen = 0 },
+                            onFreePracticeClick = { cwSubScreen = 1 },
+                            onTutorialClick = { cwSubScreen = 2 },
+                            contentPadding = padding
+                        )
+                        1 -> FreePracticeSettingsScreen(
+                            settings = viewModel.cwSettings.value,
+                            onSettingsChange = { viewModel.updateCWSettings(it) },
+                            onStartPractice = { cwSubScreen = 3 },
+                            contentPadding = padding
+                        )
+                        2 -> TutorialListScreen(
+                            contentPadding = padding
+                        )
+                        3 -> PracticeScreen(
+                            currentText = viewModel.cwCurrentText.value,
+                            morseCode = viewModel.cwMorseCode.value,
+                            userInput = viewModel.cwUserInput.value,
+                            isPlaying = viewModel.cwIsPlaying.value,
+                            isPaused = viewModel.cwIsPaused.value,
+                            accuracy = viewModel.cwAccuracy.value,
+                            onUserInputChange = { viewModel.updateCWUserInput(it) },
+                            onGenerateText = { viewModel.generateCWPracticeText() },
+                            onStartPractice = { viewModel.startCWPractice() },
+                            onPausePractice = { viewModel.pauseCWPractice() },
+                            onResumePractice = { viewModel.resumeCWPractice() },
+                            onStopPractice = { viewModel.stopCWPractice() },
+                            onCheckResults = { viewModel.checkCWResults() },
+                            contentPadding = padding
+                        )
+                    }
                 }
             } else {
                 // 设置 tab：根据 settingsSubScreen 切换主页 / 提醒列表

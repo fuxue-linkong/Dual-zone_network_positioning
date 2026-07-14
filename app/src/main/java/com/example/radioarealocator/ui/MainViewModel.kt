@@ -32,6 +32,13 @@ import com.example.radioarealocator.data.weather.WeatherApiService
 import com.example.radioarealocator.data.weather.WeatherNetworkException
 import com.example.radioarealocator.data.weather.WeatherResult
 import com.example.radioarealocator.data.weather.WeatherStore
+import com.example.radioarealocator.data.cw.CWProgress
+import com.example.radioarealocator.data.cw.CWProgressStore
+import com.example.radioarealocator.data.cw.CWSettings
+import com.example.radioarealocator.data.cw.CWSettingsStore
+import com.example.radioarealocator.data.cw.CharacterSet
+import com.example.radioarealocator.data.cw.MorseCodeGenerator
+import com.example.radioarealocator.data.cw.MorseCodePlayer
 import com.example.radioarealocator.data.zone.ZoneResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +73,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // 每日一言服务：从 https://v1.hitokoto.cn/ 获取，失败回退本地文案池
     private val hitokotoApi = HitokotoApiService()
 
+    // ---- CW练习模块 ----
+    private val cwSettingsStore = CWSettingsStore(application)
+    private val cwProgressStore = CWProgressStore(application)
+    private val cwGenerator = MorseCodeGenerator()
+    private val cwPlayer = MorseCodePlayer()
+
     // 跟踪上一次刷新的 Job，避免用户快速多次点击导致并发竞态
     private var refreshJob: Job? = null
     private var locationOnlyJob: Job? = null
@@ -90,6 +103,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = mutableStateOf(MainUiState())
     val uiState: State<MainUiState> = _uiState
+
+    // CW练习状态
+    private val _cwSettings = mutableStateOf(CWSettings())
+    val cwSettings: State<CWSettings> = _cwSettings
+
+    private val _cwCurrentText = mutableStateOf("")
+    val cwCurrentText: State<String> = _cwCurrentText
+
+    private val _cwMorseCode = mutableStateOf("")
+    val cwMorseCode: State<String> = _cwMorseCode
+
+    private val _cwUserInput = mutableStateOf("")
+    val cwUserInput: State<String> = _cwUserInput
+
+    private val _cwIsPlaying = mutableStateOf(false)
+    val cwIsPlaying: State<Boolean> = _cwIsPlaying
+
+    private val _cwIsPaused = mutableStateOf(false)
+    val cwIsPaused: State<Boolean> = _cwIsPaused
+
+    private val _cwAccuracy = mutableStateOf(0f)
+    val cwAccuracy: State<Float> = _cwAccuracy
 
     // 卫星数据来源设置："ALL" / "CT" / "SNOGS"，从本地恢复
     private val _satelliteSource = mutableStateOf(settingsStore.satelliteSource)
@@ -930,6 +965,89 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    // ---- CW练习方法 ----
+
+    fun updateCWSettings(settings: CWSettings) {
+        _cwSettings.value = settings
+        viewModelScope.launch {
+            cwSettingsStore.updateSettings(settings)
+        }
+    }
+
+    fun generateCWPracticeText() {
+        val settings = _cwSettings.value
+        val text = cwGenerator.generateRandomCharacters(settings.characterSet, settings.practiceLength)
+        _cwCurrentText.value = text
+        _cwMorseCode.value = cwGenerator.toMorseCode(text)
+    }
+
+    fun startCWPractice() {
+        if (_cwIsPlaying.value) return
+
+        _cwIsPlaying.value = true
+        _cwIsPaused.value = false
+        _cwUserInput.value = ""
+
+        val settings = _cwSettings.value
+        cwPlayer.playMorseCode(
+            morseCode = _cwMorseCode.value,
+            wpm = settings.wpm,
+            frequency = settings.frequency,
+            playMode = settings.playMode,
+            onComplete = {
+                _cwIsPlaying.value = false
+            }
+        )
+    }
+
+    fun pauseCWPractice() {
+        if (!_cwIsPlaying.value) return
+        _cwIsPaused.value = true
+        cwPlayer.pause()
+    }
+
+    fun resumeCWPractice() {
+        if (!_cwIsPlaying.value || !_cwIsPaused.value) return
+        _cwIsPaused.value = false
+        cwPlayer.resume()
+    }
+
+    fun stopCWPractice() {
+        _cwIsPlaying.value = false
+        _cwIsPaused.value = false
+        cwPlayer.stop()
+    }
+
+    fun updateCWUserInput(input: String) {
+        _cwUserInput.value = input
+    }
+
+    fun checkCWResults() {
+        val currentText = _cwCurrentText.value
+        val userInput = _cwUserInput.value
+
+        if (currentText.isEmpty() || userInput.isEmpty()) {
+            _cwAccuracy.value = 0f
+            return
+        }
+
+        val correctCount = currentText.zip(userInput).count { (a, b) -> a == b }
+        val accuracy = correctCount.toFloat() / currentText.length.toFloat() * 100f
+        _cwAccuracy.value = accuracy
+
+        viewModelScope.launch {
+            val progress = CWProgress(
+                courseId = 0,
+                lessonId = 0,
+                completedAt = System.currentTimeMillis(),
+                accuracy = accuracy,
+                wpm = _cwSettings.value.wpm,
+                duration = _cwSettings.value.practiceDuration
+            )
+            cwProgressStore.insertProgress(progress)
+        }
     }
 }
 
