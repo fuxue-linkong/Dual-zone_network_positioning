@@ -1,13 +1,14 @@
 package com.example.radioarealocator.data.weather
 
 import com.example.radioarealocator.data.crypto.SecretManager
-import com.example.radioarealocator.data.network.HttpClientProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 /**
  * 高德天气 API 封装。
@@ -27,7 +28,10 @@ import org.json.JSONObject
  */
 class WeatherApiService {
 
-    private val client = HttpClientProvider.client
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     /**
      * 完整天气数据获取流程：

@@ -138,6 +138,8 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
         var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
         LaunchedEffect(uri) {
+            // 回收旧 Bitmap 的 native 内存，避免等待 GC（GC 不感知 native 分配）
+            bitmap?.recycle()
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
                     // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
@@ -160,8 +162,13 @@ class MainActivity : ComponentActivity() {
                 }.getOrNull()
             }
         }
-        // composable 销毁时不再手动 recycle——旧 Bitmap 由 GC 自动回收，
-        // 避免 DisposableEffect 与 LaunchedEffect 之间的竞态导致 use-after-recycle。
+        // composable 销毁时回收当前 Bitmap 的 native 内存。
+        // URI 切换时的回收由 LaunchedEffect(uri) 处理（先 recycle 旧的再加载新的）。
+        DisposableEffect(Unit) {
+            onDispose {
+                bitmap?.recycle()
+            }
+        }
         bitmap?.let { bmp ->
             Image(
                 bitmap = bmp.asImageBitmap(),

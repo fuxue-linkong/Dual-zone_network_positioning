@@ -1,15 +1,16 @@
 package com.example.radioarealocator.data.satellite
 
-import com.example.radioarealocator.data.network.HttpClientProvider
 import com.github.amsacode.predict4java.TLE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * 协程安全的 [runCatching]：捕获异常时重新抛出 [CancellationException]，
@@ -55,7 +56,10 @@ data class SourcedTLE(
  */
 class SatelliteDataSource {
 
-    private val client = HttpClientProvider.client
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val amsatStatusApi = AmsatStatusApiService()
 

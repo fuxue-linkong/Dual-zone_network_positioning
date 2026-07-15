@@ -339,10 +339,11 @@ class LocationHelper(private val context: Context) {
 
     private suspend fun requestLocationManagerLocation(): Location =
         suspendCancellableCoroutine { continuation ->
-            val resumed = java.util.concurrent.atomic.AtomicBoolean(false)
+            var resumed = false
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
-                    if (!resumed.compareAndSet(false, true)) return
+                    if (resumed) return
+                    resumed = true
                     removeListener(this)
                     continuation.resume(location)
                 }
@@ -372,9 +373,8 @@ class LocationHelper(private val context: Context) {
                 }
 
                 if (providers.isEmpty()) {
-                    if (resumed.compareAndSet(false, true)) {
-                        continuation.resumeWithException(Exception("系统未开启任何定位源"))
-                    }
+                    resumed = true
+                    continuation.resumeWithException(Exception("系统未开启任何定位源"))
                     return@suspendCancellableCoroutine
                 }
 
@@ -388,9 +388,8 @@ class LocationHelper(private val context: Context) {
                         null
                     }
                     if (last != null) {
-                        if (resumed.compareAndSet(false, true)) {
-                            continuation.resume(last)
-                        }
+                        resumed = true
+                        continuation.resume(last)
                         return@suspendCancellableCoroutine
                     }
                 }

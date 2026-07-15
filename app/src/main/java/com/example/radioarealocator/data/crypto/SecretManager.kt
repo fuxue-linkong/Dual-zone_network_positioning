@@ -88,8 +88,8 @@ object SecretManager {
     private const val SHARD_C_SALT = "R4d10_Ar34_L0c8t0r_2026_Salt"
 
     // 解密后的密钥缓存（进程内存中，进程结束即消失）
-    @Volatile private var secrets: Map<String, String> = emptyMap()
-    @Volatile private var initialized = false
+    private var secrets: Map<String, String> = emptyMap()
+    private var initialized = false
 
     /**
      * 初始化：读取并解密 assets/secrets.dat。
