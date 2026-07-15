@@ -399,7 +399,10 @@ fun MainScreen(
                         0 -> CWPracticeScreen(
                             onBackClick = { homeSubScreen = 0 },
                             onFreePracticeClick = { cwSubScreen = 1 },
-                            onTutorialClick = { cwSubScreen = 2 },
+                            onTutorialClick = {
+                                viewModel.loadAllCourseProgress()
+                                cwSubScreen = 2
+                            },
                             onMorseCodeClick = { cwSubScreen = 4 },
                             contentPadding = padding
                         )
@@ -426,6 +429,7 @@ fun MainScreen(
                             accuracy = viewModel.cwAccuracy.value,
                             courseTitle = viewModel.currentCourseTitle.value,
                             lessonInfo = viewModel.currentLessonInfo.value,
+                            isTutorialMode = viewModel.currentCourseId.value > 0,
                             onUserInputChange = { viewModel.updateCWUserInput(it) },
                             onGenerateText = { viewModel.generateCWPracticeText() },
                             onStartPractice = { viewModel.startCWPractice() },
