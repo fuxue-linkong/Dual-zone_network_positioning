@@ -32,11 +32,11 @@ object MaidenheadCalculator {
         val fieldLon = floor(adjustedLon / (LON_RANGE / 18)).toInt().coerceAtMost(17)
         val fieldLat = floor(adjustedLat / (LAT_RANGE / 18)).toInt().coerceAtMost(17)
 
-        val squareLon = floor((adjustedLon % (LON_RANGE / 18)) / (LON_RANGE / 18 / 10)).toInt()
-        val squareLat = floor((adjustedLat % (LAT_RANGE / 18)) / (LAT_RANGE / 18 / 10)).toInt()
+        val squareLon = floor((adjustedLon % (LON_RANGE / 18)) / (LON_RANGE / 18 / 10)).toInt().coerceIn(0, 9)
+        val squareLat = floor((adjustedLat % (LAT_RANGE / 18)) / (LAT_RANGE / 18 / 10)).toInt().coerceIn(0, 9)
 
-        val subsquareLon = floor((adjustedLon % (LON_RANGE / 18 / 10)) / (LON_RANGE / 18 / 10 / 24)).toInt()
-        val subsquareLat = floor((adjustedLat % (LAT_RANGE / 18 / 10)) / (LAT_RANGE / 18 / 10 / 24)).toInt()
+        val subsquareLon = floor((adjustedLon % (LON_RANGE / 18 / 10)) / (LON_RANGE / 18 / 10 / 24)).toInt().coerceIn(0, 23)
+        val subsquareLat = floor((adjustedLat % (LAT_RANGE / 18 / 10)) / (LAT_RANGE / 18 / 10 / 24)).toInt().coerceIn(0, 23)
 
         return buildString {
             append(('A' + fieldLon))

@@ -67,6 +67,8 @@ class WeatherStore(context: Context) {
         val hasData = prefs.contains(KEY_DATA)
         if (!hasData) return false
         val age = System.currentTimeMillis() - ts
+        // 系统时钟回退时 age 为负，视为缓存失效，避免永不过期
+        if (age < 0) return false
         return age < maxAgeMillis
     }
 

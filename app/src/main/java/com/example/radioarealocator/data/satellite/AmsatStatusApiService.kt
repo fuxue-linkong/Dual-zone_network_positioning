@@ -119,11 +119,7 @@ class AmsatStatusApiService {
             val item = arr.optJSONObject(i) ?: continue
             val timeStr = item.optString("reported_time", "").trim()
             if (timeStr.isEmpty()) continue
-            val time = try {
-                Instant.parse(timeStr)
-            } catch (_: Exception) {
-                continue
-            }
+            val time = parseReportedTime(timeStr) ?: continue
             val report = item.optString("report", "").trim()
             if (report.isEmpty()) continue
             result.add(
@@ -172,6 +168,25 @@ class AmsatStatusApiService {
 
         return bestStatus.map { (name, pair) ->
             SatelliteStatusReport(name, pair.first, reportTime)
+        }
+    }
+
+    /**
+     * 解析 AMSAT 报告时间戳。优先按 ISO-8601（Instant.parse），
+     * 失败时回退 "yyyy-MM-dd HH:mm:ss"（UTC）格式，两者均失败返回 null。
+     */
+    private fun parseReportedTime(timeStr: String): Instant? {
+        return try {
+            Instant.parse(timeStr)
+        } catch (_: Exception) {
+            try {
+                java.time.LocalDateTime.parse(
+                    timeStr,
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                ).toInstant(java.time.ZoneOffset.UTC)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 

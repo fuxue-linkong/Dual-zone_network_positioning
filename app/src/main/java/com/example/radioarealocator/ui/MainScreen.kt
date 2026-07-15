@@ -687,7 +687,7 @@ private fun DailyQuoteScroller(
             style = TextStyle(fontSize = 13.sp),
             modifier = Modifier
                 .offset { IntOffset(offsetAnim.value.roundToInt(), 0) }
-                .onSizeChanged { textWidthPx = it.width }
+                .onSizeChanged { if (it.width != textWidthPx) textWidthPx = it.width }
         )
     }
 }

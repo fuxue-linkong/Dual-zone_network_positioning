@@ -102,6 +102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var cachedPredictionTime: Instant? = null
     // 地址解析去抖 Job：位置频繁变化时延后解析地址，避免 Geocoder 被密集调用
     private var addressDebounceJob: Job? = null
+    private var weatherAutoRefreshJob: Job? = null
     private var initialized = false
 
     private val _uiState = mutableStateOf(MainUiState())
@@ -254,7 +255,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 在 MainActivity 的 onCreate 中调用一次即可。
      */
     fun startWeatherAutoRefresh() {
-        viewModelScope.launch {
+        // Activity 重建（如旋转屏幕）会重复调用，Job 守卫防止启动多个刷新循环
+        if (weatherAutoRefreshJob?.isActive == true) return
+        weatherAutoRefreshJob = viewModelScope.launch {
             while (true) {
                 if (_uiState.value.result != null) {
                     refreshWeather(force = false)

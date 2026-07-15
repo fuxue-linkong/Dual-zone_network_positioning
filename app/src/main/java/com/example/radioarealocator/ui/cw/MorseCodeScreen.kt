@@ -72,17 +72,28 @@ private val morseMap = mapOf(
 private val reverseMorseMap = morseMap.entries.associate { (k, v) -> v to k }
 
 private fun encode(text: String): String {
+    // 字符间单空格，词间 " / "，保证 encode→decode 可往返还原词间空格
     return text.uppercase()
-        .filter { it in morseMap }
-        .map { morseMap[it]!! }
-        .joinToString("   ")
+        .split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+        .joinToString(" / ") { word ->
+            word.filter { it in morseMap }
+                .map { morseMap[it]!! }
+                .joinToString(" ")
+        }
 }
 
 private fun decode(morse: String): String {
-    return morse.split("\\s+".toRegex())
-        .filter { it.isNotEmpty() }
-        .mapNotNull { reverseMorseMap[it] }
-        .joinToString("")
+    return morse.trim()
+        .split("/")
+        .joinToString(" ") { word ->
+            word.trim()
+                .split(Regex("\\s+"))
+                .filter { it.isNotEmpty() }
+                .mapNotNull { reverseMorseMap[it] }
+                .joinToString("")
+        }
+        .trim()
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

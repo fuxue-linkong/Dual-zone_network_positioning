@@ -127,7 +127,7 @@ class MorseCodeGenerator {
     fun getTutorialContent(courseId: Int, lessonId: Int, length: Int = 25): String {
         return when (courseId) {
             1 -> generateKochLesson(lessonId, length)
-            2 -> generateCharacterGroups(3, length / 4)
+            2 -> generateCharacterGroups(3, maxOf(1, length / 4))
             3 -> generateCallsigns(maxOf(1, length / 6))
             4 -> generateCWText(maxOf(1, length / 50))
             else -> generateKochLesson(1, length)

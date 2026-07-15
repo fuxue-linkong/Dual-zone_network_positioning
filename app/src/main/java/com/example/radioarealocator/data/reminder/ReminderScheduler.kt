@@ -40,8 +40,10 @@ class ReminderScheduler(private val context: Context) {
             return false
         }
 
-        // 计算触发时间（AOS - leadMinutes），转换为毫秒
-        val triggerAtMillis = item.aosTimeMillis - settings.leadMinutes * 60L * 1000L
+        // 计算触发时间（AOS - leadMinutes），转换为毫秒。
+        // leadMinutes 钳制在 [0, 1440]，防止 SharedPreferences 异常值导致乘法溢出
+        val leadMinutesSafe = settings.leadMinutes.coerceIn(0, 1440)
+        val triggerAtMillis = item.aosTimeMillis - leadMinutesSafe * 60L * 1000L
         val now = System.currentTimeMillis()
         if (triggerAtMillis <= now) {
             // 触发时间已过去，不调度
