@@ -413,6 +413,7 @@ fun MainScreen(
                                 viewModel.generateTutorialText(lessonId)
                                 cwSubScreen = 3
                             },
+                            courseProgress = viewModel.courseProgress.value,
                             contentPadding = padding
                         )
                         3 -> PracticeScreen(
@@ -422,6 +423,8 @@ fun MainScreen(
                             isPlaying = viewModel.cwIsPlaying.value,
                             isPaused = viewModel.cwIsPaused.value,
                             accuracy = viewModel.cwAccuracy.value,
+                            courseTitle = viewModel.currentCourseTitle.value,
+                            lessonInfo = viewModel.currentLessonInfo.value,
                             onUserInputChange = { viewModel.updateCWUserInput(it) },
                             onGenerateText = { viewModel.generateCWPracticeText() },
                             onStartPractice = { viewModel.startCWPractice() },

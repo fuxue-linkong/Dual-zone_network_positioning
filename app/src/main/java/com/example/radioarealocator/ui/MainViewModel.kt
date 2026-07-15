@@ -47,6 +47,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -983,18 +986,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cwMorseCode.value = cwGenerator.toMorseCode(text)
     }
 
-    fun generateTutorialText(lessonId: Int) {
-        val text = when (lessonId) {
-            1 -> cwGenerator.generateRandomCharacters(CharacterSet.LETTERS, 20)
-            2 -> cwGenerator.generateRandomCharacters(CharacterSet.NUMBERS, 20)
-            3 -> "BG1ABC"
-            4 -> "CQ CQ CQ DE BG1ABC"
-            else -> cwGenerator.generateRandomCharacters(CharacterSet.LETTERS, 20)
-        }
-        _cwCurrentText.value = text
-        _cwMorseCode.value = cwGenerator.toMorseCode(text)
-    }
-
     fun startCWPractice() {
         if (_cwIsPlaying.value) return
 
@@ -1051,15 +1042,107 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val progress = CWProgress(
-                courseId = 0,
-                lessonId = 0,
+                courseId = _currentCourseId.value,
+                lessonId = _currentLessonId.value,
                 completedAt = System.currentTimeMillis(),
                 accuracy = accuracy,
                 wpm = _cwSettings.value.wpm,
                 duration = _cwSettings.value.practiceDuration
             )
             cwProgressStore.insertProgress(progress)
+
+            // 更新课程进度
+            if (accuracy >= 80f) { // 80%以上算通过
+                advanceCourseProgress()
+            }
         }
+    }
+
+    // ---- 课程进度跟踪 ----
+
+    private val _currentCourseId = MutableStateFlow(0)
+    val currentCourseId: StateFlow<Int> = _currentCourseId.asStateFlow()
+
+    private val _currentLessonId = MutableStateFlow(0)
+    val currentLessonId: StateFlow<Int> = _currentLessonId.asStateFlow()
+
+    private val _currentCourseTitle = MutableStateFlow("")
+    val currentCourseTitle: StateFlow<String> = _currentCourseTitle.asStateFlow()
+
+    private val _currentLessonInfo = MutableStateFlow("")
+    val currentLessonInfo: StateFlow<String> = _currentLessonInfo.asStateFlow()
+
+    private val _courseProgress = MutableStateFlow<Map<Int, Float>>(emptyMap())
+    val courseProgress: StateFlow<Map<Int, Float>> = _courseProgress.asStateFlow()
+
+    private val courseNames = mapOf(
+        1 to "Koch课程",
+        2 to "字符组练习",
+        3 to "呼号训练",
+        4 to "文本训练"
+    )
+
+    fun generateTutorialText(lessonId: Int) {
+        _currentCourseId.value = lessonId
+        _currentLessonId.value = 1
+        _currentCourseTitle.value = courseNames[lessonId] ?: "教程练习"
+
+        val text = cwGenerator.getTutorialContent(courseId = lessonId, lessonId = 1, length = 25)
+        _cwCurrentText.value = text
+        _cwMorseCode.value = cwGenerator.toMorseCode(text)
+
+        updateLessonInfo()
+    }
+
+    private fun updateLessonInfo() {
+        val courseId = _currentCourseId.value
+        val lessonId = _currentLessonId.value
+
+        _currentLessonInfo.value = when (courseId) {
+            1 -> "Koch课程 第${lessonId}课 - 学习字符: ${cwGenerator.getKochLessonChars(lessonId)}"
+            2 -> "字符组练习 第${lessonId}组 - 3字符组合"
+            3 -> "呼号训练 第${lessonId}组 - 10个呼号"
+            4 -> "文本训练 第${lessonId}组 - CW通联文本"
+            else -> ""
+        }
+    }
+
+    private fun advanceCourseProgress() {
+        val courseId = _currentCourseId.value
+        val lessonId = _currentLessonId.value
+
+        val maxLessons = when (courseId) {
+            1 -> 26 // Koch课程26个字符
+            2, 3, 4 -> 10 // 其他课程10组
+            else -> 1
+        }
+
+        if (lessonId < maxLessons) {
+            _currentLessonId.value = lessonId + 1
+            val text = cwGenerator.getTutorialContent(
+                courseId = courseId,
+                lessonId = lessonId + 1,
+                length = 25
+            )
+            _cwCurrentText.value = text
+            _cwMorseCode.value = cwGenerator.toMorseCode(text)
+            updateLessonInfo()
+        }
+
+        // 更新总进度
+        val newProgress = (lessonId.toFloat() / maxLessons).coerceIn(0f, 1f)
+        _courseProgress.value = _courseProgress.value.toMutableMap().apply {
+            put(courseId, newProgress)
+        }
+    }
+
+    fun resetCourseProgress(courseId: Int) {
+        _currentCourseId.value = courseId
+        _currentLessonId.value = 1
+        _courseProgress.value = _courseProgress.value.toMutableMap().apply {
+            put(courseId, 0f)
+        }
+        generateTutorialText(courseId)
     }
 }
 
