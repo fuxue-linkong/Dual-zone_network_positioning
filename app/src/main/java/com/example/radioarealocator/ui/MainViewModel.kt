@@ -890,11 +890,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _uiState.value = _uiState.value.copy(isSatelliteLoading = true)
-            val satellites = satellitePredictor.predictUpcomingPasses(
-                sourcedTles = tles,
-                latitude = latitude,
-                longitude = longitude
-            )
+            val satellites = withContext(Dispatchers.Default) {
+                satellitePredictor.predictUpcomingPasses(
+                    sourcedTles = tles,
+                    latitude = latitude,
+                    longitude = longitude
+                )
+            }
             // 更新预测缓存
             cachedPredictionSatellites = satellites
             cachedPredictionLat = latitude

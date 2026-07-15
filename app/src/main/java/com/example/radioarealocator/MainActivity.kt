@@ -17,7 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -138,8 +137,9 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
         var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
         LaunchedEffect(uri) {
-            // 回收旧 Bitmap 的 native 内存，避免等待 GC（GC 不感知 native 分配）
-            bitmap?.recycle()
+            // 不手动 recycle：RenderThread 可能仍在绘制旧 Bitmap，手动回收会导致
+            // use-after-free / double-recycle 崩溃。API 26+ Bitmap 由
+            // NativeAllocationRegistry 跟踪，GC 可正确回收 native 内存。
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
                     // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
@@ -160,13 +160,6 @@ class MainActivity : ComponentActivity() {
                         android.graphics.BitmapFactory.decodeStream(input, null, opts)
                     }
                 }.getOrNull()
-            }
-        }
-        // composable 销毁时回收当前 Bitmap 的 native 内存。
-        // URI 切换时的回收由 LaunchedEffect(uri) 处理（先 recycle 旧的再加载新的）。
-        DisposableEffect(Unit) {
-            onDispose {
-                bitmap?.recycle()
             }
         }
         bitmap?.let { bmp ->

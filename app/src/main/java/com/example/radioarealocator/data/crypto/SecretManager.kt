@@ -88,8 +88,8 @@ object SecretManager {
     private const val SHARD_C_SALT = "R4d10_Ar34_L0c8t0r_2026_Salt"
 
     // 解密后的密钥缓存（进程内存中，进程结束即消失）
-    private var secrets: Map<String, String> = emptyMap()
-    private var initialized = false
+    @Volatile private var secrets: Map<String, String> = emptyMap()
+    @Volatile private var initialized = false
 
     /**
      * 初始化：读取并解密 assets/secrets.dat。
@@ -100,17 +100,20 @@ object SecretManager {
      */
     fun init(context: Context) {
         if (initialized) return
-        try {
-            val masterKey = assembleMasterKey(context.packageName)
-            val encrypted = context.assets.open(ASSET_NAME).use { it.readBytes() }
-            val plaintext = decrypt(encrypted, masterKey)
-            val json = JSONObject(plaintext)
-            secrets = json.keys().asSequence().associateWith { json.optString(it) }
-        } catch (e: Exception) {
-            // 解密失败：密钥缓存保持空 map，调用方通过 [getSecret] 获取空字符串
-            secrets = emptyMap()
+        synchronized(this) {
+            if (initialized) return
+            try {
+                val masterKey = assembleMasterKey(context.packageName)
+                val encrypted = context.assets.open(ASSET_NAME).use { it.readBytes() }
+                val plaintext = decrypt(encrypted, masterKey)
+                val json = JSONObject(plaintext)
+                secrets = json.keys().asSequence().associateWith { json.optString(it) }
+            } catch (e: Exception) {
+                // 解密失败：密钥缓存保持空 map，调用方通过 [getSecret] 获取空字符串
+                secrets = emptyMap()
+            }
+            initialized = true
         }
-        initialized = true
     }
 
     /**
@@ -137,7 +140,7 @@ object SecretManager {
 
     /** AES-256-GCM 解密 secrets.dat。 */
     private fun decrypt(encrypted: ByteArray, key: ByteArray): String {
-        require(encrypted.size > 8) { "secrets.dat 文件过短" }
+        require(encrypted.size >= 4 + 4 + GCM_IV_LENGTH + GCM_TAG_LENGTH_BITS / 8) { "secrets.dat 文件过短" }
         // 校验 magic
         val magic = String(encrypted, 0, 4, Charsets.US_ASCII)
         require(magic == MAGIC) { "secrets.dat magic 不匹配: $magic" }

@@ -18,15 +18,19 @@ class MorseCodePlayer {
         playMode: PlayMode,
         onComplete: () -> Unit
     ) {
-        if (isPlaying) return
+        synchronized(lock) {
+            if (isPlaying) return
+            isPlaying = true
+            isPaused = false
+        }
 
-        isPlaying = true
-        isPaused = false
+        val safeWpm = wpm.coerceIn(1, 100)
+        val safeFrequency = frequency.coerceIn(100, 4000)
 
         Thread {
             var completedNormally = false
             try {
-                val dotDuration = 1200.0 / wpm // 毫秒
+                val dotDuration = 1200.0 / safeWpm // 毫秒
                 val dashDuration = dotDuration * 3
                 val symbolGap = dotDuration
                 val charGap = dotDuration * 3
@@ -65,13 +69,14 @@ class MorseCodePlayer {
                 for (char in morseCode) {
                     if (!isPlaying) break
 
-                    while (isPaused) {
+                    while (isPaused && isPlaying) {
                         Thread.sleep(100)
                     }
+                    if (!isPlaying) break
 
                     when (char) {
-                        '.' -> playTone(dotDuration.toInt(), frequency, sampleRate)
-                        '-' -> playTone(dashDuration.toInt(), frequency, sampleRate)
+                        '.' -> playTone(dotDuration.toInt(), safeFrequency, sampleRate)
+                        '-' -> playTone(dashDuration.toInt(), safeFrequency, sampleRate)
                         ' ' -> Thread.sleep(charGap.toLong())
                         '/' -> Thread.sleep(wordGap.toLong())
                     }
@@ -85,8 +90,8 @@ class MorseCodePlayer {
                     }
                 }
 
-                onComplete()
                 completedNormally = true
+                onComplete()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -94,8 +99,9 @@ class MorseCodePlayer {
                 if (!completedNormally) {
                     try { onComplete() } catch (_: Exception) {}
                 }
+                // AudioTrack 仅由播放线程自身释放，避免与 stop() 竞态导致 use-after-release
                 synchronized(lock) {
-                    audioTrack?.release()
+                    try { audioTrack?.release() } catch (_: Exception) {}
                     audioTrack = null
                 }
             }
@@ -112,6 +118,7 @@ class MorseCodePlayer {
         }
 
         val track = synchronized(lock) { audioTrack }
+        if (!isPlaying) return
         track?.write(samples, 0, samples.size)
     }
 
@@ -132,9 +139,14 @@ class MorseCodePlayer {
     fun stop() {
         isPlaying = false
         isPaused = false
+        // 不在此处 release：release 仅由播放线程在 finally 中执行，
+        // 这里通过 pause + flush 让阻塞中的 write() 尽快返回
         synchronized(lock) {
-            audioTrack?.release()
-            audioTrack = null
+            try {
+                audioTrack?.pause()
+                audioTrack?.flush()
+            } catch (_: IllegalStateException) {
+            }
         }
     }
 

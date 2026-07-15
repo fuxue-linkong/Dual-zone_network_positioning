@@ -8,6 +8,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 
 /**
@@ -56,10 +58,14 @@ class SatelliteStatusTracker(
 
     private var refreshJob: Job? = null
 
+    // 串行化 refresh：防止定时循环与 refreshOnce 并发执行时丢失更新（lost update）
+    private val refreshMutex = Mutex()
+
     /**
      * 启动 5 分钟定时抓取。首次立即执行一次，之后按 [REFRESH_INTERVAL_MS] 循环。
      * 重复调用安全（已在运行时直接返回）。
      */
+    @Synchronized
     fun start() {
         if (refreshJob?.isActive == true) return
         refreshJob = scope.launch {
@@ -74,6 +80,7 @@ class SatelliteStatusTracker(
     /**
      * 停止定时抓取。
      */
+    @Synchronized
     fun stop() {
         refreshJob?.cancel()
         refreshJob = null
@@ -92,15 +99,17 @@ class SatelliteStatusTracker(
             val currentSlot = absoluteSlot()
             // 合并策略：保留未在新报告中出现的旧卫星（沿用其状态），
             // 新报告中出现的卫星覆盖为当前槽的实时状态
-            val merged = _statusMap.value.toMutableMap()
-            reports.forEach { report ->
-                merged[report.name] = SatelliteStatusEntry(
-                    status = report.status,
-                    reportTime = report.reportTime,
-                    absoluteSlot = currentSlot
-                )
+            refreshMutex.withLock {
+                val merged = _statusMap.value.toMutableMap()
+                reports.forEach { report ->
+                    merged[report.name] = SatelliteStatusEntry(
+                        status = report.status,
+                        reportTime = report.reportTime,
+                        absoluteSlot = currentSlot
+                    )
+                }
+                _statusMap.value = merged
             }
-            _statusMap.value = merged
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
