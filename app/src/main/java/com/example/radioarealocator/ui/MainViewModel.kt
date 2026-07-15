@@ -685,6 +685,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // viewModelScope 已会自动取消所有子协程，这里显式取消便于状态归零
         stopContinuousLocationUpdates()
         statusTracker.stop()
+        cwPlayer.stop()
     }
 
     /**
@@ -980,6 +981,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun generateCWPracticeText() {
+        _currentCourseId.value = 0
+        _currentLessonId.value = 0
         val settings = _cwSettings.value
         val text = cwGenerator.generateRandomCharacters(settings.characterSet, settings.practiceLength)
         _cwCurrentText.value = text
@@ -988,6 +991,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startCWPractice() {
         if (_cwIsPlaying.value) return
+        if (_cwMorseCode.value.isEmpty()) return
 
         _cwIsPlaying.value = true
         _cwIsPaused.value = false
@@ -1110,6 +1114,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun advanceCourseProgress() {
         val courseId = _currentCourseId.value
         val lessonId = _currentLessonId.value
+
+        if (courseId <= 0) return
 
         val maxLessons = when (courseId) {
             1 -> 26 // Koch课程26个字符

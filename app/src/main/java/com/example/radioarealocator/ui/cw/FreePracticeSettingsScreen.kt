@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -119,17 +121,43 @@ fun FreePracticeSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { onSettingsChange(settings.copy(playMode = PlayMode.CONTINUOUS)) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.continuous))
+                if (settings.playMode == PlayMode.CONTINUOUS) {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.continuous))
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onSettingsChange(settings.copy(playMode = PlayMode.CONTINUOUS)) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.continuous))
+                    }
                 }
-                Button(
-                    onClick = { onSettingsChange(settings.copy(playMode = PlayMode.INTERVAL)) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.interval))
+                if (settings.playMode == PlayMode.INTERVAL) {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.interval))
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onSettingsChange(settings.copy(playMode = PlayMode.INTERVAL)) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.interval))
+                    }
                 }
             }
         }

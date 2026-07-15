@@ -30,6 +30,27 @@ class MorseCodeGeneratorTest {
     }
 
     @Test
+    fun `test generate random characters NUMBERS`() {
+        val result = generator.generateRandomCharacters(CharacterSet.NUMBERS, 20)
+        assertEquals(20, result.length)
+        assertTrue(result.all { it in "0123456789" })
+    }
+
+    @Test
+    fun `test generate random characters SYMBOLS`() {
+        val result = generator.generateRandomCharacters(CharacterSet.SYMBOLS, 15)
+        assertEquals(15, result.length)
+        assertTrue(result.all { it in ".,?!-/()" })
+    }
+
+    @Test
+    fun `test generate random characters CUSTOM`() {
+        val result = generator.generateRandomCharacters(CharacterSet.CUSTOM, 30)
+        assertEquals(30, result.length)
+        assertTrue(result.all { it in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" })
+    }
+
+    @Test
     fun `test toMorseCode handles empty string`() {
         val result = generator.toMorseCode("")
         assertEquals("", result)
@@ -56,24 +77,24 @@ class MorseCodeGeneratorTest {
     }
 
     @Test
-    fun `test generateKochLesson lesson 1 contains only K and M`() {
-        // Koch课程第1课只包含K和M
+    fun `test generateKochLesson lesson 1 contains only K`() {
+        // Koch课程第1课只包含K
         val result = generator.generateKochLesson(1, 100)
-        assertTrue(result.all { it == 'K' || it == 'M' })
+        assertTrue(result.all { it == 'K' })
     }
 
     @Test
-    fun `test generateKochLesson lesson 2 contains K M U`() {
-        // Koch课程第2课包含K, M, U
+    fun `test generateKochLesson lesson 2 contains K M only`() {
+        // Koch课程第2课包含K, M
         val result = generator.generateKochLesson(2, 100)
-        assertTrue(result.all { it in "KMU" })
+        assertTrue(result.all { it in "KM" })
     }
 
     @Test
-    fun `test generateKochLesson lesson 3 contains K M U R E`() {
-        // Koch课程第3课包含K, M, U, R, E
+    fun `test generateKochLesson lesson 3 contains K M U`() {
+        // Koch课程第3课包含K, M, U
         val result = generator.generateKochLesson(3, 100)
-        assertTrue(result.all { it in "KMURE" })
+        assertTrue(result.all { it in "KMU" })
     }
 
     @Test
@@ -82,6 +103,7 @@ class MorseCodeGeneratorTest {
         val result = generator.generateKochLesson(30, 10)
         assertNotNull(result)
         assertEquals(10, result.length)
+        assertTrue(result.all { it in "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X" })
     }
 
     @Test
@@ -90,6 +112,7 @@ class MorseCodeGeneratorTest {
         val result = generator.generateKochLesson(0, 10)
         assertNotNull(result)
         assertEquals(10, result.length)
+        assertTrue(result.all { it == 'K' })
     }
 
     @Test
@@ -207,7 +230,7 @@ class MorseCodeGeneratorTest {
     fun `test getTutorialContent courseId 1 returns Koch lesson`() {
         val result = generator.getTutorialContent(1, 1, 20)
         assertEquals(20, result.length)
-        assertTrue(result.all { it in "KM" })
+        assertTrue(result.all { it == 'K' })
     }
 
     @Test
