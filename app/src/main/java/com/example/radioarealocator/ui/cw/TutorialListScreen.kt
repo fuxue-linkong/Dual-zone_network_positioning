@@ -32,6 +32,7 @@ data class TutorialLesson(
 
 @Composable
 fun TutorialListScreen(
+    onLessonClick: (Int) -> Unit,
     contentPadding: PaddingValues
 ) {
     val lessons = listOf(
@@ -51,7 +52,7 @@ fun TutorialListScreen(
         items(lessons) { lesson ->
             TutorialLessonItem(
                 lesson = lesson,
-                onClick = { /* TODO: 实现课程点击 */ }
+                onClick = { onLessonClick(lesson.id) }
             )
         }
     }

@@ -202,7 +202,10 @@ fun MainScreen(
         when {
             showAbout -> showAbout = false
             selectedTab == 0 && homeSubScreen == 3 -> homeSubScreen = 2
-            selectedTab == 0 && cwSubScreen != 0 -> cwSubScreen = 0
+            selectedTab == 0 && cwSubScreen != 0 -> {
+                if (cwSubScreen == 3) viewModel.stopCWPractice()
+                cwSubScreen = if (cwSubScreen == 3) 2 else 0
+            }
             selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
             selectedTab == 1 && settingsSubScreen != 0 -> settingsSubScreen = 0
         }
@@ -274,7 +277,14 @@ fun MainScreen(
                         else -> stringResource(R.string.cw_practice)
                     }) },
                     navigationIcon = {
-                        IconButton(onClick = { if (cw == 0) homeSubScreen = 0 else cwSubScreen = 0 }) {
+                        IconButton(onClick = {
+                            if (cw == 0) homeSubScreen = 0
+                            else if (cw == 3) {
+                                viewModel.stopCWPractice()
+                                cwSubScreen = 2
+                            }
+                            else cwSubScreen = 0
+                        }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.back)
@@ -312,7 +322,10 @@ fun MainScreen(
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = {
+                        if (selectedTab == 0 && cwSubScreen == 3) viewModel.stopCWPractice()
+                        selectedTab = 1
+                    },
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.settings)) }
                 )

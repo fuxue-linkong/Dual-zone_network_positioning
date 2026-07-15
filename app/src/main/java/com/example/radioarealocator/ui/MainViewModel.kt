@@ -983,6 +983,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cwMorseCode.value = cwGenerator.toMorseCode(text)
     }
 
+    fun generateTutorialText(lessonId: Int) {
+        val text = when (lessonId) {
+            1 -> cwGenerator.generateRandomCharacters(CharacterSet.LETTERS, 20)
+            2 -> cwGenerator.generateRandomCharacters(CharacterSet.NUMBERS, 20)
+            3 -> "BG1ABC"
+            4 -> "CQ CQ CQ DE BG1ABC"
+            else -> cwGenerator.generateRandomCharacters(CharacterSet.LETTERS, 20)
+        }
+        _cwCurrentText.value = text
+        _cwMorseCode.value = cwGenerator.toMorseCode(text)
+    }
+
     fun startCWPractice() {
         if (_cwIsPlaying.value) return
 
