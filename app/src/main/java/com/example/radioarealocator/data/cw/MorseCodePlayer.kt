@@ -3,6 +3,8 @@ package com.example.radioarealocator.data.cw
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import kotlin.math.sin
 
 class MorseCodePlayer {
@@ -10,6 +12,7 @@ class MorseCodePlayer {
     @Volatile private var isPlaying = false
     @Volatile private var isPaused = false
     private var audioTrack: AudioTrack? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun playMorseCode(
         morseCode: String,
@@ -26,7 +29,7 @@ class MorseCodePlayer {
         Thread {
             var completedNormally = false
             try {
-                val dotDuration = 1200.0 / wpm // 毫秒
+                val dotDuration = 1200.0 / wpm
                 val dashDuration = dotDuration * 3
                 val symbolGap = dotDuration
                 val charGap = dotDuration * 3
@@ -85,14 +88,17 @@ class MorseCodePlayer {
                     }
                 }
 
-                onComplete()
                 completedNormally = true
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 isPlaying = false
                 if (!completedNormally) {
-                    try { onComplete() } catch (_: Exception) {}
+                    try {
+                        mainHandler.post { onComplete() }
+                    } catch (_: Exception) {}
+                } else {
+                    mainHandler.post { onComplete() }
                 }
                 synchronized(lock) {
                     audioTrack?.release()
@@ -103,16 +109,28 @@ class MorseCodePlayer {
     }
 
     private fun playTone(durationMs: Int, frequency: Int, sampleRate: Int) {
+        if (!isPlaying) return
+
         val numSamples = durationMs * sampleRate / 1000
         val samples = ShortArray(numSamples)
+        val fadeInSamples = (sampleRate * 0.005).toInt().coerceAtMost(numSamples / 2)
+        val fadeOutSamples = fadeInSamples
 
         for (i in 0 until numSamples) {
             val t = i.toDouble() / sampleRate
-            samples[i] = (sin(2.0 * Math.PI * frequency * t) * Short.MAX_VALUE).toInt().toShort()
+            var amplitude = sin(2.0 * Math.PI * frequency * t)
+            if (i < fadeInSamples) {
+                amplitude *= i.toDouble() / fadeInSamples
+            } else if (i >= numSamples - fadeOutSamples) {
+                amplitude *= (numSamples - 1 - i).toDouble() / fadeOutSamples
+            }
+            samples[i] = (amplitude * Short.MAX_VALUE).toInt().toShort()
         }
 
-        val track = synchronized(lock) { audioTrack }
-        track?.write(samples, 0, samples.size)
+        synchronized(lock) {
+            if (!isPlaying) return
+            audioTrack?.write(samples, 0, samples.size)
+        }
     }
 
     fun pause() {

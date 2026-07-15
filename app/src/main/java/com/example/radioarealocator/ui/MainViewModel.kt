@@ -253,8 +253,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 启动天气定时刷新任务（每 30 分钟）。
      * 在 MainActivity 的 onCreate 中调用一次即可。
      */
+    private var weatherRefreshJob: Job? = null
+
     fun startWeatherAutoRefresh() {
-        viewModelScope.launch {
+        if (weatherRefreshJob?.isActive == true) return
+        weatherRefreshJob = viewModelScope.launch {
             while (true) {
                 if (_uiState.value.result != null) {
                     refreshWeather(force = false)

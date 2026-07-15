@@ -1,12 +1,11 @@
 package com.example.radioarealocator.data
 
+import com.example.radioarealocator.data.network.HttpClientProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 /**
  * 一言数据。
@@ -37,10 +36,7 @@ data class HitokotoQuote(
  */
 class HitokotoApiService {
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClientProvider.client
 
     /**
      * 获取一条一言。失败（网络错误、响应非法、正文为空）时返回 null。

@@ -72,12 +72,23 @@ class ReminderScheduler(private val context: Context) {
 
         try {
             // Android 12+ 要求 SCHEDULE_EXACT_ALARM 或 USE_EXACT_ALARM 权限
-            // setExactAndAllowWhileIdle 在 Doze 下仍能唤醒
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent
-            )
+            // 先主动检查权限状态，避免不必要的 SecurityException
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+                !alarmManager.canScheduleExactAlarms()
+            ) {
+                // 用户未授予精确闹钟权限，直接使用非精确模式
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            }
         } catch (_: SecurityException) {
             // 用户未授予精确闹钟权限，回退到非精确闹钟
             alarmManager.setAndAllowWhileIdle(

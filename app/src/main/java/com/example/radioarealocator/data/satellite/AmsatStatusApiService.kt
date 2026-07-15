@@ -1,8 +1,8 @@
 package com.example.radioarealocator.data.satellite
 
+import com.example.radioarealocator.data.network.HttpClientProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
@@ -10,7 +10,6 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 /**
  * 单条卫星状态报告（summary 聚合），含报告时间戳（UTC，精确到分钟）。
@@ -37,10 +36,7 @@ data class SatelliteStatusReport(
  */
 class AmsatStatusApiService {
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClientProvider.client
 
     /**
      * 获取过去 [hours] 小时内所有卫星的状态报告列表（summary 聚合）。
@@ -116,7 +112,15 @@ class AmsatStatusApiService {
             val time = try {
                 Instant.parse(timeStr)
             } catch (_: Exception) {
-                continue
+                // 回退：尝试 "yyyy-MM-dd HH:mm:ss" 格式（AMSAT API 可能返回非标准格式）
+                try {
+                    java.time.LocalDateTime.parse(
+                        timeStr,
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    ).atZone(java.time.ZoneOffset.UTC).toInstant()
+                } catch (_: Exception) {
+                    continue
+                }
             }
             val report = item.optString("report", "").trim()
             if (report.isEmpty()) continue

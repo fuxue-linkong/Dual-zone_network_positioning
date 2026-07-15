@@ -184,14 +184,30 @@ fun MainScreen(
     ) { uri ->
         if (uri != null) {
             // 尝试获取持久化读取权限；Photo Picker 在 Android 13+ 上的 URI 通常是临时的，
-            // 但低版本回退到 ACTION_OPEN_DOCUMENT 时此处会成功。失败也无碍——本次会话仍可读取。
-            runCatching {
+            // 但低版本回退到 ACTION_OPEN_DOCUMENT 时此处会成功。
+            val persisted = runCatching {
                 context.contentResolver.takePersistableUriPermission(
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
+            }.isSuccess
+
+            if (persisted) {
+                viewModel.setBackgroundUri(uri)
+            } else {
+                // 权限获取失败（Photo Picker 临时 URI）：复制到应用内部存储以确保持久化
+                val copied = runCatching {
+                    val input = context.contentResolver.openInputStream(uri) ?: return@runCatching false
+                    val file = java.io.File(context.filesDir, "background.jpg")
+                    input.use { src -> file.outputStream().use { dst -> src.copyTo(dst) } }
+                    viewModel.setBackgroundUri(android.net.Uri.fromFile(file))
+                    true
+                }.getOrDefault(false)
+                if (!copied) {
+                    // 复制也失败，仍使用本次会话可用的临时 URI
+                    viewModel.setBackgroundUri(uri)
+                }
             }
-            viewModel.setBackgroundUri(uri)
         }
     }
 

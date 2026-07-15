@@ -263,7 +263,7 @@ dependencies {
 
     // 高德地图 SDK：3D地图（含缩放手势、Marker、控件）
     // 文档：https://lbs.amap.com/api/android-sdk/summary
-    implementation("com.amap.api:3dmap:latest.integration")
+    implementation("com.amap.api:3dmap:10.0.600")
 
     // WorkManager: 用于日程提醒的每日刷新周期任务
     implementation("androidx.work:work-runtime-ktx:2.10.0")
