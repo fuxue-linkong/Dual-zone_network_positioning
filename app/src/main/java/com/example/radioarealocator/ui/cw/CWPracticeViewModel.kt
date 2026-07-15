@@ -139,11 +139,13 @@ class CWPracticeViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
-        // 大小写不敏感比较：忽略大小写差异，只要字符本身匹配即判定正确
+        // 大小写不敏感比较：忽略大小写差异，只要字符本身匹配即判定正确。
+        // 分母取两者较长长度，多输入/少输入的字符均计为错误
         val correctCount = currentText.zip(userInput).count { (a, b) -> 
             a.equals(b, ignoreCase = true) 
         }
-        val accuracy = correctCount.toFloat() / currentText.length.toFloat() * 100f
+        val maxLen = maxOf(currentText.length, userInput.length)
+        val accuracy = correctCount.toFloat() / maxLen.toFloat() * 100f
         _accuracy.value = accuracy
 
         // 保存进度

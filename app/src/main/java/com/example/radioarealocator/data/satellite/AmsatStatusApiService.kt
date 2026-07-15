@@ -2,9 +2,10 @@ package com.example.radioarealocator.data.satellite
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
+import com.example.radioarealocator.data.network.HttpClientProvider
 import okhttp3.Request
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
@@ -37,7 +38,8 @@ data class SatelliteStatusReport(
  */
 class AmsatStatusApiService {
 
-    private val client = OkHttpClient.Builder()
+    // 基于共享单例派生：共享连接池/线程池，仅覆盖本服务的超时配置
+    private val client = HttpClientProvider.client.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
@@ -107,7 +109,11 @@ class AmsatStatusApiService {
      */
     private fun parseReports(json: String): List<AmsatStatusReport> {
         // sat_info.php 直接返回 JSON 数组（非 { "data": [...] } 包装）
-        val arr = JSONArray(json)
+        val arr = try {
+            JSONArray(json)
+        } catch (e: JSONException) {
+            throw IOException("AMSAT sat_info 响应不是有效 JSON: ${e.message}")
+        }
         val result = mutableListOf<AmsatStatusReport>()
         for (i in 0 until arr.length()) {
             val item = arr.optJSONObject(i) ?: continue
@@ -141,7 +147,11 @@ class AmsatStatusApiService {
     private fun parseSummaryReports(json: String): List<SatelliteStatusReport> {
         // 抓取时刻（UTC，截断到分钟）作为本轮所有状态记录的确认时间
         val reportTime = Instant.now().truncatedTo(ChronoUnit.MINUTES)
-        val root = JSONObject(json)
+        val root = try {
+            JSONObject(json)
+        } catch (e: JSONException) {
+            throw IOException("AMSAT summary 响应不是有效 JSON: ${e.message}")
+        }
         val data = root.optJSONArray("data") ?: return emptyList()
 
         // 同一 name 可能出现多条记录（不同状态），按 report_count 取最多的

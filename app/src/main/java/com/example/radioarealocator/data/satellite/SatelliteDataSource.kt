@@ -6,7 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
+import com.example.radioarealocator.data.network.HttpClientProvider
 import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
@@ -56,7 +56,8 @@ data class SourcedTLE(
  */
 class SatelliteDataSource {
 
-    private val client = OkHttpClient.Builder()
+    // 基于共享单例派生：共享连接池/线程池，仅覆盖本服务的超时配置
+    private val client = HttpClientProvider.client.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()

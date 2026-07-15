@@ -36,11 +36,20 @@ class CWSettingsStore private constructor(
         CWSettings(
             wpm = preferences[wpmKey] ?: 15,
             frequency = preferences[frequencyKey] ?: 600,
-            characterSet = CharacterSet.valueOf(preferences[characterSetKey] ?: "LETTERS"),
+            characterSet = enumValueOrDefault(preferences[characterSetKey], CharacterSet.LETTERS),
             practiceLength = preferences[practiceLengthKey] ?: 100,
             practiceDuration = preferences[practiceDurationKey] ?: 5,
-            playMode = PlayMode.valueOf(preferences[playModeKey] ?: "CONTINUOUS")
+            playMode = enumValueOrDefault(preferences[playModeKey], PlayMode.CONTINUOUS)
         )
+    }
+
+    private inline fun <reified T : Enum<T>> enumValueOrDefault(name: String?, default: T): T {
+        if (name == null) return default
+        return try {
+            enumValueOf<T>(name)
+        } catch (_: IllegalArgumentException) {
+            default
+        }
     }
 
     suspend fun updateSettings(settings: CWSettings) {

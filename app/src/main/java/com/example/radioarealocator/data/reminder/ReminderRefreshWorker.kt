@@ -124,9 +124,16 @@ class ReminderRefreshWorker(
             Result.success()
         } catch (e: CancellationException) {
             throw e
+        } catch (e: SecurityException) {
+            // 权限类错误属永久失败，重试无意义，避免浪费后台执行配额
+            Result.failure()
         } catch (e: Exception) {
-            // 失败不阻塞下次执行
-            Result.retry()
+            // 临时性错误（网络等）：有限次重试，超过阈值放弃等待下个周期
+            if (runAttemptCount >= MAX_RETRY_ATTEMPTS) {
+                Result.failure()
+            } else {
+                Result.retry()
+            }
         }
     }
 
@@ -135,5 +142,10 @@ class ReminderRefreshWorker(
      */
     private fun isCacheExpired(updatedAt: Instant): Boolean {
         return Duration.between(updatedAt, Instant.now()).toHours() >= 24
+    }
+
+    companion object {
+        /** 单次调度内的最大重试次数，超过则等待下个 24 小时周期 */
+        private const val MAX_RETRY_ATTEMPTS = 3
     }
 }

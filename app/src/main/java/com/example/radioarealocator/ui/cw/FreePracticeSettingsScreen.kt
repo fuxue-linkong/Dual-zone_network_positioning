@@ -26,6 +26,7 @@ import com.example.radioarealocator.R
 import com.example.radioarealocator.data.cw.CharacterSet
 import com.example.radioarealocator.data.cw.CWSettings
 import com.example.radioarealocator.data.cw.PlayMode
+import kotlin.math.roundToInt
 
 @Composable
 fun FreePracticeSettingsScreen(
@@ -49,9 +50,9 @@ fun FreePracticeSettingsScreen(
             )
             Slider(
                 value = settings.wpm.toFloat(),
-                onValueChange = { onSettingsChange(settings.copy(wpm = it.toInt())) },
+                onValueChange = { onSettingsChange(settings.copy(wpm = it.roundToInt())) },
                 valueRange = 5f..50f,
-                steps = 45
+                steps = 44
             )
             Text(text = "${settings.wpm} WPM")
         }
@@ -64,9 +65,9 @@ fun FreePracticeSettingsScreen(
             )
             Slider(
                 value = settings.frequency.toFloat(),
-                onValueChange = { onSettingsChange(settings.copy(frequency = it.toInt())) },
+                onValueChange = { onSettingsChange(settings.copy(frequency = it.roundToInt())) },
                 valueRange = 400f..800f,
-                steps = 400
+                steps = 399
             )
             Text(text = "${settings.frequency} Hz")
         }
@@ -89,9 +90,9 @@ fun FreePracticeSettingsScreen(
             )
             Slider(
                 value = settings.practiceLength.toFloat(),
-                onValueChange = { onSettingsChange(settings.copy(practiceLength = it.toInt())) },
+                onValueChange = { onSettingsChange(settings.copy(practiceLength = it.roundToInt())) },
                 valueRange = 10f..500f,
-                steps = 49
+                steps = 48
             )
             Text(text = "${settings.practiceLength} 字符")
         }
@@ -104,9 +105,9 @@ fun FreePracticeSettingsScreen(
             )
             Slider(
                 value = settings.practiceDuration.toFloat(),
-                onValueChange = { onSettingsChange(settings.copy(practiceDuration = it.toInt())) },
+                onValueChange = { onSettingsChange(settings.copy(practiceDuration = it.roundToInt())) },
                 valueRange = 1f..30f,
-                steps = 29
+                steps = 28
             )
             Text(text = "${settings.practiceDuration} 分钟")
         }

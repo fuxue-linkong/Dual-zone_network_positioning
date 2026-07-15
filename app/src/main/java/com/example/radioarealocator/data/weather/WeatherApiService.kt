@@ -1,12 +1,14 @@
 package com.example.radioarealocator.data.weather
 
 import com.example.radioarealocator.data.crypto.SecretManager
+import com.example.radioarealocator.data.network.HttpClientProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
+import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -28,7 +30,8 @@ import java.util.concurrent.TimeUnit
  */
 class WeatherApiService {
 
-    private val client = OkHttpClient.Builder()
+    // 基于共享单例派生：共享连接池/线程池，仅覆盖本服务的超时配置
+    private val client = HttpClientProvider.client.newBuilder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
@@ -47,6 +50,11 @@ class WeatherApiService {
      * @throws WeatherApiException 高德 API 返回业务错误（Key 无效、配额超限等）
      */
     suspend fun fetchWeather(latitude: Double, longitude: Double): WeatherResult {
+        if (!latitude.isFinite() || !longitude.isFinite() ||
+            latitude !in -90.0..90.0 || longitude !in -180.0..180.0
+        ) {
+            throw WeatherApiException("无效坐标: $latitude,$longitude")
+        }
         val key = apiKey()
         if (key.isBlank()) {
             // API Key 为空：通常是构建时未注入 secret（如 GHA 缺少 AMAP_API_KEY），
@@ -89,9 +97,9 @@ class WeatherApiService {
     private suspend fun fetchAdcode(lat: Double, lng: Double, key: String): Pair<String, String> {
         // 高德 API location 参数格式：经度,纬度（lng,lat）
         val location = String.format(java.util.Locale.US, "%.6f,%.6f", lng, lat)
-        val url = "$REGEO_BASE_URL?location=$location&key=$key"
+        val url = buildUrl(REGEO_BASE_URL, mapOf("location" to location, "key" to key))
         val response = executeRequest(url)
-        val json = JSONObject(response)
+        val json = parseJson(response)
         checkApiStatus(json)
         val regeocode = json.optJSONObject("regeocode")
             ?: throw WeatherApiException("regeo 响应缺少 regeocode 字段")
@@ -124,9 +132,9 @@ class WeatherApiService {
      * @throws WeatherApiException 高德 API 返回 status!=1 或数据为空
      */
     private suspend fun fetchNowWeather(adcode: String, key: String): WeatherNow {
-        val url = "$WEATHER_BASE_URL?city=$adcode&key=$key&extensions=base"
+        val url = buildUrl(WEATHER_BASE_URL, mapOf("city" to adcode, "key" to key, "extensions" to "base"))
         val response = executeRequest(url)
-        val json = JSONObject(response)
+        val json = parseJson(response)
         checkApiStatus(json)
 
         val livesArr = json.optJSONArray("lives")
@@ -157,9 +165,9 @@ class WeatherApiService {
      * @throws WeatherApiException 高德 API 返回 status!=1 或数据为空
      */
     private suspend fun fetchDailyForecast(adcode: String, key: String): List<WeatherDay> {
-        val url = "$WEATHER_BASE_URL?city=$adcode&key=$key&extensions=all"
+        val url = buildUrl(WEATHER_BASE_URL, mapOf("city" to adcode, "key" to key, "extensions" to "all"))
         val response = executeRequest(url)
-        val json = JSONObject(response)
+        val json = parseJson(response)
         checkApiStatus(json)
 
         val forecastsArr = json.optJSONArray("forecasts")
@@ -196,6 +204,27 @@ class WeatherApiService {
             val info = json.optString("info", "未知错误")
             val infocode = json.optString("infocode", "")
             throw WeatherApiException("$info(${infocode})")
+        }
+    }
+
+    /**
+     * 构建带 query 参数的 URL，参数值自动 URL 编码，避免特殊字符破坏 URL 结构。
+     */
+    private fun buildUrl(base: String, params: Map<String, String>): String {
+        val builder = base.toHttpUrl().newBuilder()
+        params.forEach { (name, value) -> builder.addQueryParameter(name, value) }
+        return builder.build().toString()
+    }
+
+    /**
+     * 安全解析 JSON 响应体。服务器返回 200 但 Body 非 JSON（如代理劫持页）时，
+     * 转换为 [WeatherApiException] 而非让 JSONException 直接传播。
+     */
+    private fun parseJson(response: String): JSONObject {
+        return try {
+            JSONObject(response)
+        } catch (e: JSONException) {
+            throw WeatherApiException("响应不是有效 JSON: ${e.message}")
         }
     }
 

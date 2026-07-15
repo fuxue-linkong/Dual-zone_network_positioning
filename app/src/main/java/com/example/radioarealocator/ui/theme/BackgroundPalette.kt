@@ -23,22 +23,36 @@ object BackgroundPalette {
      */
     suspend fun extractColors(context: Context, uri: Uri): PaletteSwatches? = withContext(Dispatchers.IO) {
         runCatching {
+            // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use { input ->
-                val bitmap = BitmapFactory.decodeStream(input) ?: return@use null
-                // 大图缩放以加快 Palette 计算
-                val scaled = if (bitmap.width > 256) {
+                BitmapFactory.decodeStream(input, null, bounds)
+            }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+
+            var sampleSize = 1
+            while (bounds.outWidth / sampleSize > 512 || bounds.outHeight / sampleSize > 512) {
+                sampleSize *= 2
+            }
+            val opts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use { input ->
+                BitmapFactory.decodeStream(input, null, opts)
+            } ?: return@runCatching null
+
+            var scaled: android.graphics.Bitmap? = null
+            try {
+                scaled = if (bitmap.width > 256) {
                     val ratio = 256f / bitmap.width
                     android.graphics.Bitmap.createScaledBitmap(
                         bitmap,
                         256,
                         (bitmap.height * ratio).toInt().coerceAtLeast(1),
                         true
-                    ).also { if (it != bitmap) bitmap.recycle() }
+                    )
                 } else bitmap
                 val palette = Palette.from(scaled).generate()
-                scaled.recycle()
                 // dominantSwatch 几乎总有值；为空则视为提取失败
-                val dominant = palette.dominantSwatch ?: return@use null
+                val dominant = palette.dominantSwatch ?: return@runCatching null
                 PaletteSwatches(
                     primary = palette.vibrantSwatch?.rgb
                         ?: palette.mutedSwatch?.rgb
@@ -57,6 +71,10 @@ object BackgroundPalette {
                         ?: palette.mutedSwatch?.bodyTextColor
                         ?: dominant.bodyTextColor
                 )
+            } finally {
+                // 异常路径也确保回收，避免 native 内存泄漏
+                if (scaled != null && scaled !== bitmap) scaled.recycle()
+                bitmap.recycle()
             }
         }.getOrNull()
     }

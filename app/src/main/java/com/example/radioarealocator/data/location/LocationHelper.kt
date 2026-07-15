@@ -312,9 +312,13 @@ class LocationHelper(private val context: Context) {
                     setMaxUpdateDelayMillis(2000L)
                 }.build()
 
+                // 防止批量回调 / failure 回调与 onLocationResult 竞争导致二次 resume 崩溃
+                val resumed = java.util.concurrent.atomic.AtomicBoolean(false)
+
                 val callback = object : com.google.android.gms.location.LocationCallback() {
                     override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
                         fusedClient.removeLocationUpdates(this)
+                        if (!resumed.compareAndSet(false, true)) return
                         result.lastLocation?.let {
                             continuation.resume(it)
                         } ?: continuation.resumeWithException(NullPointerException("定位返回空值"))
@@ -326,6 +330,7 @@ class LocationHelper(private val context: Context) {
                     callback,
                     Looper.getMainLooper()
                 ).addOnFailureListener { exception ->
+                    if (!resumed.compareAndSet(false, true)) return@addOnFailureListener
                     continuation.resumeWithException(exception)
                 }
 
@@ -339,11 +344,11 @@ class LocationHelper(private val context: Context) {
 
     private suspend fun requestLocationManagerLocation(): Location =
         suspendCancellableCoroutine { continuation ->
-            var resumed = false
+            // 协程体与 listener 回调可能在不同线程执行，用 AtomicBoolean 防二次 resume
+            val resumed = java.util.concurrent.atomic.AtomicBoolean(false)
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
-                    if (resumed) return
-                    resumed = true
+                    if (!resumed.compareAndSet(false, true)) return
                     removeListener(this)
                     continuation.resume(location)
                 }
@@ -373,8 +378,9 @@ class LocationHelper(private val context: Context) {
                 }
 
                 if (providers.isEmpty()) {
-                    resumed = true
-                    continuation.resumeWithException(Exception("系统未开启任何定位源"))
+                    if (resumed.compareAndSet(false, true)) {
+                        continuation.resumeWithException(Exception("系统未开启任何定位源"))
+                    }
                     return@suspendCancellableCoroutine
                 }
 
@@ -388,8 +394,9 @@ class LocationHelper(private val context: Context) {
                         null
                     }
                     if (last != null) {
-                        resumed = true
-                        continuation.resume(last)
+                        if (resumed.compareAndSet(false, true)) {
+                            continuation.resume(last)
+                        }
                         return@suspendCancellableCoroutine
                     }
                 }
@@ -411,8 +418,7 @@ class LocationHelper(private val context: Context) {
                     }
                 }
             } catch (e: SecurityException) {
-                if (!resumed) {
-                    resumed = true
+                if (resumed.compareAndSet(false, true)) {
                     removeListener(listener)
                     continuation.resumeWithException(e)
                 }
