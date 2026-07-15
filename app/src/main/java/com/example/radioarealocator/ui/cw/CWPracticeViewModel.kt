@@ -136,7 +136,10 @@ class CWPracticeViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
-        val correctCount = currentText.zip(userInput).count { (a, b) -> a == b }
+        // 大小写不敏感比较：忽略大小写差异，只要字符本身匹配即判定正确
+        val correctCount = currentText.zip(userInput).count { (a, b) -> 
+            a.equals(b, ignoreCase = true) 
+        }
         val accuracy = correctCount.toFloat() / currentText.length.toFloat() * 100f
         _accuracy.value = accuracy
 
