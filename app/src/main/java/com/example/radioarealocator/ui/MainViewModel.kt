@@ -507,6 +507,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // 拉取每日一言（hitokoto），失败回退本地文案
         refreshDailyQuote()
+
+        // 加载课程进度
+        loadAllCourseProgress()
     }
 
     fun refreshLocation() {
@@ -1091,11 +1094,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _currentLessonId.value = 1
         _currentCourseTitle.value = courseNames[lessonId] ?: "教程练习"
 
-        val text = cwGenerator.getTutorialContent(courseId = lessonId, lessonId = 1, length = 25)
-        _cwCurrentText.value = text
-        _cwMorseCode.value = cwGenerator.toMorseCode(text)
+        // 从数据库加载该课程的最大已完成课时，智能定位到未完成的课程
+        viewModelScope.launch {
+            val maxCompletedLesson = cwProgressStore.getMaxCompletedLessonId(lessonId)
+            val nextLesson = if (maxCompletedLesson != null && maxCompletedLesson > 0) {
+                // 定位到下一个未完成的课程
+                val maxLessons = getMaxLessonsForCourse(lessonId)
+                (maxCompletedLesson + 1).coerceAtMost(maxLessons)
+            } else {
+                1 // 从第1课开始
+            }
 
-        updateLessonInfo()
+            _currentLessonId.value = nextLesson
+            val text = cwGenerator.getTutorialContent(courseId = lessonId, lessonId = nextLesson, length = 25)
+            _cwCurrentText.value = text
+            _cwMorseCode.value = cwGenerator.toMorseCode(text)
+            updateLessonInfo()
+
+            // 加载课程进度
+            loadCourseProgress()
+        }
+    }
+
+    private fun getMaxLessonsForCourse(courseId: Int): Int {
+        return when (courseId) {
+            1 -> 26 // Koch课程26个字符
+            2, 3, 4 -> 10 // 其他课程10组
+            else -> 1
+        }
+    }
+
+    private suspend fun loadCourseProgress() {
+        val progressMap = mutableMapOf<Int, Float>()
+        for (courseId in 1..4) {
+            val maxLessons = getMaxLessonsForCourse(courseId)
+            val completedCount = cwProgressStore.getCompletedLessonCount(courseId)
+            val progress = (completedCount.toFloat() / maxLessons).coerceIn(0f, 1f)
+            progressMap[courseId] = progress
+        }
+        _courseProgress.value = progressMap
     }
 
     private fun updateLessonInfo() {
@@ -1117,11 +1154,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         if (courseId <= 0) return
 
-        val maxLessons = when (courseId) {
-            1 -> 26 // Koch课程26个字符
-            2, 3, 4 -> 10 // 其他课程10组
-            else -> 1
-        }
+        val maxLessons = getMaxLessonsForCourse(courseId)
 
         if (lessonId < maxLessons) {
             _currentLessonId.value = lessonId + 1
@@ -1135,10 +1168,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             updateLessonInfo()
         }
 
-        // 更新总进度
-        val newProgress = (lessonId.toFloat() / maxLessons).coerceIn(0f, 1f)
-        _courseProgress.value = _courseProgress.value.toMutableMap().apply {
-            put(courseId, newProgress)
+        // 重新加载课程进度
+        viewModelScope.launch {
+            loadCourseProgress()
         }
     }
 
@@ -1149,6 +1181,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             put(courseId, 0f)
         }
         generateTutorialText(courseId)
+    }
+
+    fun loadAllCourseProgress() {
+        viewModelScope.launch {
+            loadCourseProgress()
+        }
     }
 }
 

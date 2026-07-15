@@ -37,6 +37,7 @@ fun PracticeScreen(
     accuracy: Float,
     courseTitle: String = "",
     lessonInfo: String = "",
+    isTutorialMode: Boolean = false,
     onUserInputChange: (String) -> Unit,
     onGenerateText: () -> Unit,
     onStartPractice: () -> Unit,
@@ -94,7 +95,7 @@ fun PracticeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = currentText.ifEmpty { "点击生成文本开始练习" },
+                        text = currentText.ifEmpty { if (isTutorialMode) "加载中..." else "点击生成文本开始练习" },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -116,7 +117,7 @@ fun PracticeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = morseCode.ifEmpty { "生成文本后显示" },
+                        text = morseCode.ifEmpty { if (isTutorialMode) "加载中..." else "生成文本后显示" },
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace
                     )
@@ -124,12 +125,15 @@ fun PracticeScreen(
             }
         }
 
-        item {
-            Button(
-                onClick = onGenerateText,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.generate_text))
+        // 仅在非教程练习模式下显示"生成文本"按钮
+        if (!isTutorialMode) {
+            item {
+                Button(
+                    onClick = onGenerateText,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.generate_text))
+                }
             }
         }
 

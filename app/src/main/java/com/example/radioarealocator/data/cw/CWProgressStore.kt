@@ -22,6 +22,12 @@ interface CWProgressDao {
     @Query("SELECT * FROM cw_progress WHERE courseId = :courseId ORDER BY lessonId")
     fun getProgressByCourse(courseId: Int): Flow<List<CWProgress>>
 
+    @Query("SELECT * FROM cw_progress WHERE courseId = :courseId AND lessonId = :lessonId ORDER BY completedAt DESC LIMIT 1")
+    suspend fun getLatestLessonProgress(courseId: Int, lessonId: Int): CWProgress?
+
+    @Query("SELECT MAX(lessonId) FROM cw_progress WHERE courseId = :courseId AND accuracy >= 80")
+    suspend fun getMaxCompletedLessonId(courseId: Int): Int?
+
     @Query("SELECT AVG(accuracy) FROM cw_progress")
     fun getAverageAccuracy(): Flow<Float?>
 
@@ -30,6 +36,9 @@ interface CWProgressDao {
 
     @Query("SELECT * FROM cw_progress ORDER BY completedAt DESC LIMIT 1")
     fun getLatestProgress(): Flow<CWProgress?>
+
+    @Query("SELECT COUNT(*) FROM cw_progress WHERE courseId = :courseId AND accuracy >= 80")
+    suspend fun getCompletedLessonCount(courseId: Int): Int
 }
 
 @Database(entities = [CWProgress::class], version = 1)
@@ -71,5 +80,17 @@ class CWProgressStore private constructor(private val dao: CWProgressDao) {
 
     suspend fun insertProgress(progress: CWProgress) {
         dao.insert(progress)
+    }
+
+    suspend fun getLatestLessonProgress(courseId: Int, lessonId: Int): CWProgress? {
+        return dao.getLatestLessonProgress(courseId, lessonId)
+    }
+
+    suspend fun getMaxCompletedLessonId(courseId: Int): Int? {
+        return dao.getMaxCompletedLessonId(courseId)
+    }
+
+    suspend fun getCompletedLessonCount(courseId: Int): Int {
+        return dao.getCompletedLessonCount(courseId)
     }
 }
