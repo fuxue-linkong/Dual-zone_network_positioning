@@ -991,6 +991,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun generateCWPracticeText() {
         _currentCourseId.value = 0
         _currentLessonId.value = 0
+        // 清除课程练习残留的标题与课时信息，避免自由练习页显示旧课程状态
+        _currentCourseTitle.value = ""
+        _currentLessonInfo.value = ""
         val settings = _cwSettings.value
         val text = cwGenerator.generateRandomCharacters(settings.characterSet, settings.practiceLength)
         _cwCurrentText.value = text
@@ -1051,11 +1054,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // 大小写不敏感比较：忽略大小写差异，只要字符本身匹配即判定正确
+        // 大小写不敏感比较：忽略大小写差异，只要字符本身匹配即判定正确。
+        // 分母取两者较长长度，多输入/少输入的字符均计为错误
         val correctCount = currentText.zip(userInput).count { (a, b) -> 
             a.equals(b, ignoreCase = true) 
         }
-        val accuracy = correctCount.toFloat() / currentText.length.toFloat() * 100f
+        val maxLen = maxOf(currentText.length, userInput.length)
+        val accuracy = correctCount.toFloat() / maxLen.toFloat() * 100f
         _cwAccuracy.value = accuracy
 
         viewModelScope.launch {

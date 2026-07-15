@@ -205,7 +205,12 @@ fun MainScreen(
             selectedTab == 0 && homeSubScreen == 3 -> homeSubScreen = 2
             selectedTab == 0 && cwSubScreen != 0 -> {
                 if (cwSubScreen == 3) viewModel.stopCWPractice()
-                cwSubScreen = if (cwSubScreen == 3) 2 else 0
+                // 练习页按来源返回：课程练习回课程列表，自由练习回设置页
+                cwSubScreen = when {
+                    cwSubScreen != 3 -> 0
+                    viewModel.currentCourseId.value > 0 -> 2
+                    else -> 1
+                }
             }
             selectedTab == 0 && homeSubScreen != 0 -> homeSubScreen = 0
             selectedTab == 1 && settingsSubScreen != 0 -> settingsSubScreen = 0
@@ -282,7 +287,8 @@ fun MainScreen(
                             if (cw == 0) homeSubScreen = 0
                             else if (cw == 3) {
                                 viewModel.stopCWPractice()
-                                cwSubScreen = 2
+                                // 按来源返回：课程练习回课程列表，自由练习回设置页
+                                cwSubScreen = if (viewModel.currentCourseId.value > 0) 2 else 1
                             }
                             else cwSubScreen = 0
                         }) {
@@ -337,9 +343,20 @@ fun MainScreen(
         AnimatedContent(
             targetState = navKey,
             transitionSpec = {
-                // initialState/targetState 由 AnimatedContentTransitionScope 提供
-                val initialDepth = if (initialState[0] == 0) initialState[1] else 10 + initialState[2]
-                val targetDepth = if (targetState[0] == 0) targetState[1] else 10 + targetState[2]
+                // initialState/targetState 由 AnimatedContentTransitionScope 提供。
+                // CW 子页面（home==4）叠加 cwSubScreen 深度：0=列表, 1/2/4=二级页, 3=练习页，
+                // 否则 CW 内部跳转 depth 恒等，返回动画方向错误
+                fun depthOf(state: List<Int>): Int {
+                    if (state[0] != 0) return 10 + state[2]
+                    if (state[1] != 4) return state[1]
+                    return 4 + when (state[3]) {
+                        0 -> 0
+                        3 -> 2
+                        else -> 1
+                    }
+                }
+                val initialDepth = depthOf(initialState)
+                val targetDepth = depthOf(targetState)
                 val forward = targetDepth >= initialDepth
                 val enter = if (forward) {
                     slideInHorizontally(animationSpec = tween(NAV_ANIM_DURATION_MS)) { fullWidth -> fullWidth } +
@@ -409,7 +426,12 @@ fun MainScreen(
                         1 -> FreePracticeSettingsScreen(
                             settings = viewModel.cwSettings.value,
                             onSettingsChange = { viewModel.updateCWSettings(it) },
-                            onStartPractice = { cwSubScreen = 3 },
+                            onStartPractice = {
+                                // 重置为自由练习模式并按当前设置生成文本，
+                                // 避免残留上次课程练习的标题/课时/文本状态
+                                viewModel.generateCWPracticeText()
+                                cwSubScreen = 3
+                            },
                             contentPadding = padding
                         )
                         2 -> TutorialListScreen(
