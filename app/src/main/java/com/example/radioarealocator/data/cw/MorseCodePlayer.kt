@@ -6,9 +6,10 @@ import android.media.AudioTrack
 import kotlin.math.sin
 
 class MorseCodePlayer {
+    private val lock = Any()
+    @Volatile private var isPlaying = false
+    @Volatile private var isPaused = false
     private var audioTrack: AudioTrack? = null
-    private var isPlaying = false
-    private var isPaused = false
 
     fun playMorseCode(
         morseCode: String,
@@ -23,6 +24,7 @@ class MorseCodePlayer {
         isPaused = false
 
         Thread {
+            var completedNormally = false
             try {
                 val dotDuration = 1200.0 / wpm // 毫秒
                 val dashDuration = dotDuration * 3
@@ -37,7 +39,7 @@ class MorseCodePlayer {
                     AudioFormat.ENCODING_PCM_16BIT
                 )
 
-                audioTrack = AudioTrack.Builder()
+                val track = AudioTrack.Builder()
                     .setAudioAttributes(
                         AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -55,7 +57,10 @@ class MorseCodePlayer {
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
 
-                audioTrack?.play()
+                synchronized(lock) {
+                    audioTrack = track
+                    track.play()
+                }
 
                 for (char in morseCode) {
                     if (!isPlaying) break
@@ -81,12 +86,18 @@ class MorseCodePlayer {
                 }
 
                 onComplete()
+                completedNormally = true
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 isPlaying = false
-                audioTrack?.release()
-                audioTrack = null
+                if (!completedNormally) {
+                    try { onComplete() } catch (_: Exception) {}
+                }
+                synchronized(lock) {
+                    audioTrack?.release()
+                    audioTrack = null
+                }
             }
         }.start()
     }
@@ -100,22 +111,31 @@ class MorseCodePlayer {
             samples[i] = (sin(2.0 * Math.PI * frequency * t) * Short.MAX_VALUE).toInt().toShort()
         }
 
-        audioTrack?.write(samples, 0, samples.size)
+        val track = synchronized(lock) { audioTrack }
+        track?.write(samples, 0, samples.size)
     }
 
     fun pause() {
         isPaused = true
+        synchronized(lock) {
+            audioTrack?.pause()
+        }
     }
 
     fun resume() {
         isPaused = false
+        synchronized(lock) {
+            audioTrack?.play()
+        }
     }
 
     fun stop() {
         isPlaying = false
         isPaused = false
-        audioTrack?.release()
-        audioTrack = null
+        synchronized(lock) {
+            audioTrack?.release()
+            audioTrack = null
+        }
     }
 
     fun isPlaying(): Boolean = isPlaying

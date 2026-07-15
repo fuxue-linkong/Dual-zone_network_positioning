@@ -30,10 +30,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -102,19 +101,14 @@ fun MorseCodeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        containerColor = bgPage,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -186,11 +180,11 @@ fun MorseCodeScreen(
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = primaryColor,
-                            unfocusedBorderColor = textSecondary.copy(alpha = 0.3f)
-                        ),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = primaryColor,
+                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f)
+                    ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = if (mode) KeyboardType.Text else KeyboardType.Ascii
                         ),
@@ -262,13 +256,13 @@ fun MorseCodeScreen(
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                            unfocusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                            focusedTextColor = textPrimary,
-                            unfocusedTextColor = textPrimary
-                        ),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = textSecondary.copy(alpha = 0.3f),
+                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f),
+                        focusedTextColor = textPrimary,
+                        unfocusedTextColor = textPrimary
+                    ),
                         singleLine = false,
                         maxLines = 4
                     )
@@ -312,5 +306,4 @@ fun MorseCodeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
 }

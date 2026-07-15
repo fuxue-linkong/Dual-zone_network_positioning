@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
@@ -116,7 +117,8 @@ fun PracticeScreen(
                     )
                     Text(
                         text = morseCode.ifEmpty { "生成文本后显示" },
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = FontFamily.Monospace
                     )
                 }
             }
@@ -191,7 +193,7 @@ fun PracticeScreen(
         }
 
         item {
-            if (accuracy > 0) {
+            if (userInput.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(

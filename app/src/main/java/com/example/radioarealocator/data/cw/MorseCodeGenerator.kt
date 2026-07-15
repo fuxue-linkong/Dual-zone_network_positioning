@@ -11,7 +11,8 @@ class MorseCodeGenerator {
         '0' to "-----", '1' to ".----", '2' to "..---", '3' to "...--", '4' to "....-",
         '5' to ".....", '6' to "-....", '7' to "--...", '8' to "---..", '9' to "----.",
         '.' to ".-.-.-", ',' to "--..--", '?' to "..--..", '!' to "-.-.--", '-' to "-....-",
-        '/' to "-..-.", '(' to "-.--.-", ')' to "-.--.-"
+        '/' to "-..-.", '(' to "-.--.", ')' to "-.--.-",
+        ' ' to "/", '=' to "-...-"
     )
 
     // Koch方法字符顺序（按难度排列，参考lcwo.net）
@@ -21,7 +22,7 @@ class MorseCodeGenerator {
     private val cwCommonWords = listOf(
         "CQ", "DE", "K", "KN", "SK", "AR", "BT", "AS", "VE", "73",
         "RST", "RIG", "ANT", "PWR", "WX", "TEMP", "NAME", "QTH", "QRM", "QRN",
-        "QSB", "QSL", "RIG", "OM", "YL", "ES", "FB", "GM", "GA", "GE",
+        "QSB", "QSL", "OM", "YL", "ES", "FB", "GM", "GA", "GE",
         "TU", "HI", "HIHI", "TEST", "R", "RR", "UR", "MY", "YOUR"
     )
 
@@ -127,8 +128,8 @@ class MorseCodeGenerator {
         return when (courseId) {
             1 -> generateKochLesson(lessonId, length)
             2 -> generateCharacterGroups(3, length / 4)
-            3 -> generateCallsigns(length / 6)
-            4 -> generateCWText(length / 50)
+            3 -> generateCallsigns(maxOf(1, length / 6))
+            4 -> generateCWText(maxOf(1, length / 50))
             else -> generateKochLesson(1, length)
         }
     }

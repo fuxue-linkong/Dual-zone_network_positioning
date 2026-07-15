@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -744,7 +745,7 @@ private fun HomeListItem(
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             // 提亮 25%（保持色相一致），凸显"定位"/"卫星"两个导航入口卡片
-            containerColor = lerp(MaterialTheme.colorScheme.surface, Color.White, 0.25f).copy(alpha = LocalCardAlpha.current),
+            containerColor = lerp(MaterialTheme.colorScheme.surface, if (isSystemInDarkTheme()) Color.Black else Color.White, 0.25f).copy(alpha = LocalCardAlpha.current),
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
@@ -1801,7 +1802,7 @@ private fun FilterSwitchRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -1965,11 +1966,12 @@ private fun SatelliteItem(
                     )
                     IconButton(
                         onClick = onToggleFavorite,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
+                            modifier = Modifier.size(18.dp),
                             tint = if (isFavorite) {
                                 MaterialTheme.colorScheme.tertiary
                             } else {
