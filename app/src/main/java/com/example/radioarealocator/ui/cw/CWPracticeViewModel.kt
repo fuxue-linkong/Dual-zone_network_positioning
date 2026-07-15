@@ -82,6 +82,9 @@ class CWPracticeViewModel(application: Application) : AndroidViewModel(applicati
         val text = generator.generateRandomCharacters(characterSet, length)
         _currentText.value = text
         _morseCode.value = generator.toMorseCode(text)
+        // 清空用户输入框，提供干净的学习环境
+        _userInput.value = ""
+        _accuracy.value = 0f
     }
 
     fun startPractice() {

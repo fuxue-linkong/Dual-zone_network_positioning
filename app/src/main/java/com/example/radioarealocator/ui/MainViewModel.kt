@@ -990,6 +990,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val text = cwGenerator.generateRandomCharacters(settings.characterSet, settings.practiceLength)
         _cwCurrentText.value = text
         _cwMorseCode.value = cwGenerator.toMorseCode(text)
+        // 清空用户输入框，提供干净的学习环境
+        _cwUserInput.value = ""
+        _cwAccuracy.value = 0f
     }
 
     fun startCWPractice() {
@@ -1112,6 +1115,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val text = cwGenerator.getTutorialContent(courseId = lessonId, lessonId = nextLesson, length = 25)
             _cwCurrentText.value = text
             _cwMorseCode.value = cwGenerator.toMorseCode(text)
+            // 清空用户输入框，提供干净的学习环境
+            _cwUserInput.value = ""
+            _cwAccuracy.value = 0f
             updateLessonInfo()
 
             // 加载课程进度
@@ -1168,6 +1174,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             _cwCurrentText.value = text
             _cwMorseCode.value = cwGenerator.toMorseCode(text)
+            // 清空用户输入框，提供干净的学习环境
+            _cwUserInput.value = ""
+            _cwAccuracy.value = 0f
             updateLessonInfo()
         }
 
