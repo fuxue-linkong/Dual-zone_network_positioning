@@ -290,7 +290,7 @@ fun MorseCodeScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     SnackbarHost(
-        hostState = snackbarHostState,
+        state = snackbarHostState,
         modifier = Modifier
             .align(Alignment.BottomCenter)
             .padding(contentPadding)

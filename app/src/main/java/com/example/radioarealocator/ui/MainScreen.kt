@@ -230,7 +230,6 @@ fun MainScreen(
     val navKey = listOf(selectedTab, homeSubScreen, settingsSubScreen, cwSubScreen)
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-        color = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             Crossfade(
                 targetState = navKey,
@@ -325,7 +324,7 @@ fun MainScreen(
             }
         },
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            SnackbarHost(state = snackbarHostState)
         },
         bottomBar = {
             NavigationBar {
@@ -1246,14 +1245,12 @@ private fun SatelliteActionCard(
             ) {
                 Button(
                     onClick = onGetLocation,
-                    enabled = !isLoading,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                    enabled = !isLoading
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MiuixTheme.colorScheme.onPrimary
+                            strokeWidth = 2.dp
                         )
                     } else {
                         Text(stringResource(R.string.sat_action_get_location))
@@ -1285,14 +1282,12 @@ private fun SatelliteActionCard(
             ) {
                 Button(
                     onClick = onUpdateSource,
-                    enabled = !isSatelliteLoading,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                    enabled = !isSatelliteLoading
                 ) {
                     if (isSatelliteLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MiuixTheme.colorScheme.onPrimary
+                            strokeWidth = 2.dp
                         )
                     } else {
                         Text(stringResource(R.string.sat_action_update_source))
@@ -1406,8 +1401,7 @@ private fun LocationStatusCard(
                         // 避免位置突然消失导致用户误以为"刷新失灵"
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = contentColor
+                            strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -1417,12 +1411,7 @@ private fun LocationStatusCard(
                         )
                     } else {
                         Button(
-                            onClick = onRefresh,
-                            colors = ButtonDefaults.buttonColors(
-                                color = MiuixTheme.colorScheme.primary,
-                                contentColor = MiuixTheme.colorScheme.onPrimary
-                            ),
-                            shape = RoundedCornerShape(16.dp)
+                            onClick = onRefresh
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
@@ -1436,7 +1425,7 @@ private fun LocationStatusCard(
                 }
 
                 isLoading -> {
-                    CircularProgressIndicator(color = contentColor)
+                    CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.locating),
@@ -1464,12 +1453,7 @@ private fun LocationStatusCard(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = if (hasPermission) onRefresh else onRequestPermission,
-                        colors = ButtonDefaults.buttonColors(
-                            color = MiuixTheme.colorScheme.primary,
-                            contentColor = MiuixTheme.colorScheme.onPrimary
-                        ),
-                        shape = RoundedCornerShape(16.dp)
+                        onClick = if (hasPermission) onRefresh else onRequestPermission
                     ) {
                         Text(
                             if (hasPermission) {
@@ -1771,10 +1755,7 @@ private fun SatelliteFilterPopup(
                                     expanded = false
                                     onOpenManagement()
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    color = Color.Transparent,
-                                    contentColor = MiuixTheme.colorScheme.primary
-                                )
+                                colors = ButtonDefaults.buttonColorsSecondary()
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -2298,8 +2279,7 @@ private fun ErrorDialog(message: String, onDismiss: () -> Unit) {
     ) {
         TextButton(
             text = "OK",
-            onClick = onDismiss,
-            modifier = Modifier.align(Alignment.End)
+            onClick = onDismiss
         )
     }
 }

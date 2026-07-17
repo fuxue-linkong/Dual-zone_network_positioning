@@ -404,10 +404,13 @@ private fun LeadTimeRow(
     onSelected: (Int) -> Unit
 ) {
     val options = listOf(5, 10, 15, 30)
-    val items = remember(options) {
-        options.map { minutes ->
+    val leadTimeLabels = options.map { minutes ->
+        stringResource(R.string.reminder_lead_minutes_format, minutes)
+    }
+    val items = remember(options, currentMinutes) {
+        options.mapIndexed { index, minutes ->
             DropdownItem(
-                text = stringResource(R.string.reminder_lead_minutes_format, minutes),
+                text = leadTimeLabels[index],
                 selected = minutes == currentMinutes,
                 onClick = { onSelected(minutes) }
             )
@@ -428,15 +431,17 @@ private fun RepeatModeRow(
     current: RepeatMode,
     onSelected: (RepeatMode) -> Unit
 ) {
+    val alwaysLabel = stringResource(R.string.reminder_repeat_always)
+    val daytimeLabel = stringResource(R.string.reminder_repeat_daytime)
     val currentLabel = when (current) {
-        RepeatMode.ALWAYS -> stringResource(R.string.reminder_repeat_always)
-        RepeatMode.DAYTIME_ONLY -> stringResource(R.string.reminder_repeat_daytime)
+        RepeatMode.ALWAYS -> alwaysLabel
+        RepeatMode.DAYTIME_ONLY -> daytimeLabel
     }
-    val items = remember {
+    val items = remember(current, alwaysLabel, daytimeLabel) {
         RepeatMode.entries.map { mode ->
             val label = when (mode) {
-                RepeatMode.ALWAYS -> stringResource(R.string.reminder_repeat_always)
-                RepeatMode.DAYTIME_ONLY -> stringResource(R.string.reminder_repeat_daytime)
+                RepeatMode.ALWAYS -> alwaysLabel
+                RepeatMode.DAYTIME_ONLY -> daytimeLabel
             }
             DropdownItem(
                 text = label,
