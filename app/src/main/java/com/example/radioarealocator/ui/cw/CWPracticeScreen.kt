@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun CWPracticeScreen(
@@ -71,9 +72,9 @@ private fun CWPracticeListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Row(
@@ -86,14 +87,14 @@ private fun CWPracticeListItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MiuixTheme.colorScheme.onSurface
                 )
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }

@@ -1,8 +1,8 @@
 package com.example.radioarealocator.ui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,10 +50,10 @@ class SatelliteFilterIntegrationTest {
         val restorationTester = StateRestorationTester(composeRule)
 
         restorationTester.setContent {
-            Surface {
+            Box {
                 // 模拟 SatelliteFilterPopup 中 expanded 的声明方式
                 var expanded by rememberSaveable { mutableStateOf(false) }
-                Text(
+                BasicText(
                     text = if (expanded) "EXPANDED" else "COLLAPSED",
                     modifier = Modifier.clickable { expanded = true }
                 )
@@ -83,10 +83,10 @@ class SatelliteFilterIntegrationTest {
         val restorationTester = StateRestorationTester(composeRule)
 
         restorationTester.setContent {
-            Surface {
+            Box {
                 // 故意使用 remember（非 saveable）以对照 Bug #8 修复前的行为
                 var expanded by androidx.compose.runtime.remember { mutableStateOf(false) }
-                Text(
+                BasicText(
                     text = if (expanded) "EXPANDED" else "COLLAPSED",
                     modifier = Modifier.clickable { expanded = true }
                 )

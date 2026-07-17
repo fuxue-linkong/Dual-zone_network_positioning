@@ -13,8 +13,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +30,7 @@ import androidx.core.content.ContextCompat
 import com.example.radioarealocator.data.reminder.ReminderNotificationHelper
 import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.ui.MainScreen
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import com.example.radioarealocator.ui.theme.RadioAreaLocatorTheme
@@ -51,21 +50,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * 通知权限请求（Android 13+ 必需）。结果不影响功能本身，
-     * 即使拒绝应用也不会崩溃，仅是通知无法显示。
-     */
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
-        // 无论是否授予，都不阻塞应用使用
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 创建通知渠道（幂等），并在 Android 13+ 请求运行时通知权限
         ensureNotificationReady()
-        // 启动天气定时刷新（每 30 分钟），仅在定位可用时实际请求网络
         viewModel.startWeatherAutoRefresh()
         setContent {
             val backgroundUri by viewModel.backgroundUri
@@ -73,36 +65,24 @@ class MainActivity : ComponentActivity() {
             val backgroundOpacity by viewModel.backgroundOpacity
 
             RadioAreaLocatorTheme(backgroundUri = backgroundUri) {
-                // 设置了背景图时，按用户透明度设置衰减卡片整体不透明度；未设置时保持完全不透明
                 val cardAlpha = if (backgroundUri != null) cardOpacity / 100f else 1f
                 CompositionLocalProvider(LocalCardAlpha provides cardAlpha) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = Color.Transparent
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            // 背景图层（含 scrim 遮罩，保证内容可读）
-                            BackgroundLayer(
-                                uri = backgroundUri,
-                                backgroundOpacity = backgroundOpacity
-                            )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        BackgroundLayer(
+                            uri = backgroundUri,
+                            backgroundOpacity = backgroundOpacity
+                        )
 
-                            // 前景内容
-                            MainScreen(
-                                viewModel = viewModel,
-                                onRequestPermission = ::requestLocationPermission
-                            )
-                        }
+                        MainScreen(
+                            viewModel = viewModel,
+                            onRequestPermission = ::requestLocationPermission
+                        )
                     }
                 }
             }
         }
     }
 
-    /**
-     * 创建通知渠道（首次启动时），并在 Android 13+ 请求 POST_NOTIFICATIONS 权限。
-     * 渠道创建幂等，重复调用安全。
-     */
     private fun ensureNotificationReady() {
         val settings = ReminderStore(this).loadSettings()
         val helper = ReminderNotificationHelper(this)
@@ -122,27 +102,20 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun BackgroundLayer(uri: Uri?, backgroundOpacity: Int) {
         if (uri == null) {
-            // 未设置背景图：用 surface 色填充，保持原视觉
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
+                    .background(MiuixTheme.colorScheme.surface)
             )
             return
         }
-        // 背景图不透明度：0 完全隐藏（图片不可见），100 完全显示（无遮罩）
         val bgAlpha = backgroundOpacity.coerceIn(0, 100) / 100f
-        // scrim 反向缩放：不透明度越高，遮罩越淡；0.82 为最大遮罩强度
         val scrimAlpha = (1f - bgAlpha) * 0.82f
         val context = LocalContext.current
         var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
         LaunchedEffect(uri) {
-            // 不手动 recycle：RenderThread 可能仍在绘制旧 Bitmap，手动回收会导致
-            // use-after-free / double-recycle 崩溃。API 26+ Bitmap 由
-            // NativeAllocationRegistry 跟踪，GC 可正确回收 native 内存。
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
-                    // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
                     val bounds = android.graphics.BitmapFactory.Options().apply {
                         inJustDecodeBounds = true
                     }
@@ -151,7 +124,6 @@ class MainActivity : ComponentActivity() {
                     }
                     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
 
-                    // 目标宽度 1080px，按 2 的幂次计算 inSampleSize
                     val sampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, 1080, 1920)
                     val opts = android.graphics.BitmapFactory.Options().apply {
                         inSampleSize = sampleSize
@@ -172,11 +144,10 @@ class MainActivity : ComponentActivity() {
                 contentScale = ContentScale.Crop
             )
         }
-        // 半透明 scrim：随背景不透明度反向衰减，不透明度 100 时无遮罩，0 时最大遮罩保证文字可读
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = scrimAlpha))
+                .background(MiuixTheme.colorScheme.surface.copy(alpha = scrimAlpha))
         )
     }
 
@@ -200,10 +171,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * 计算图片下采样比例，避免解码超大图导致 OOM。
- * 返回 2 的幂次，符合 BitmapFactory.inSampleSize 的要求。
- */
 private fun calculateInSampleSize(
     srcWidth: Int,
     srcHeight: Int,

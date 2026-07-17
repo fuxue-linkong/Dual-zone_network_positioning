@@ -25,19 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +44,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val morseMap = mapOf(
     'A' to ".-", 'B' to "-...", 'C' to "-.-.", 'D' to "-..", 'E' to ".",
@@ -72,7 +69,6 @@ private val morseMap = mapOf(
 private val reverseMorseMap = morseMap.entries.associate { (k, v) -> v to k }
 
 private fun encode(text: String): String {
-    // 字符间单空格，词间 " / "，保证 encode→decode 可往返还原词间空格
     return text.uppercase()
         .split(Regex("\\s+"))
         .filter { it.isNotEmpty() }
@@ -96,7 +92,7 @@ private fun decode(morse: String): String {
         .trim()
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MorseCodeScreen(
     bgPage: Color,
@@ -140,18 +136,16 @@ fun MorseCodeScreen(
                             Button(
                                 onClick = {},
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = primaryColor,
-                                    contentColor = Color.White
-                                )
+                                colors = ButtonDefaults.buttonColorsPrimary()
                             ) {
                                 Text(stringResource(R.string.morsecode_encode))
                             }
                         } else {
-                            OutlinedButton(
+                            Button(
                                 onClick = { mode = true; input = ""; output = "" },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
+                                colors = ButtonDefaults.buttonColors(
+                                    color = Color.Transparent,
                                     contentColor = textSecondary
                                 )
                             ) {
@@ -163,18 +157,16 @@ fun MorseCodeScreen(
                             Button(
                                 onClick = {},
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = primaryColor,
-                                    contentColor = Color.White
-                                )
+                                colors = ButtonDefaults.buttonColorsPrimary()
                             ) {
                                 Text(stringResource(R.string.morsecode_decode))
                             }
                         } else {
-                            OutlinedButton(
+                            Button(
                                 onClick = { mode = false; input = ""; output = "" },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
+                                colors = ButtonDefaults.buttonColors(
+                                    color = Color.Transparent,
                                     contentColor = textSecondary
                                 )
                             ) {
@@ -183,22 +175,11 @@ fun MorseCodeScreen(
                         }
                     }
 
-                    OutlinedTextField(
+                    TextField(
                         value = input,
                         onValueChange = { input = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                if (mode) stringResource(R.string.morsecode_input_hint_text)
-                                else stringResource(R.string.morsecode_input_hint_morse)
-                            )
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f)
-                    ),
+                        label = if (mode) stringResource(R.string.morsecode_input_hint_text) else stringResource(R.string.morsecode_input_hint_morse),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = if (mode) KeyboardType.Text else KeyboardType.Ascii
                         ),
@@ -227,11 +208,7 @@ fun MorseCodeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(28.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = primaryColor,
-                            contentColor = Color.White
-                        )
+                        colors = ButtonDefaults.buttonColorsPrimary()
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
@@ -239,12 +216,11 @@ fun MorseCodeScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (mode) stringResource(R.string.morsecode_encode)
-                                   else stringResource(R.string.morsecode_decode)
+                            text = if (mode) stringResource(R.string.morsecode_encode) else stringResource(R.string.morsecode_decode)
                         )
                     }
 
-                    OutlinedTextField(
+                    TextField(
                         value = output,
                         onValueChange = {},
                         modifier = Modifier.fillMaxWidth(),
@@ -269,14 +245,7 @@ fun MorseCodeScreen(
                                 )
                             }
                         },
-                        colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                        focusedTextColor = textPrimary,
-                        unfocusedTextColor = textPrimary
-                    ),
+                        label = "",
                         singleLine = false,
                         maxLines = 4
                     )

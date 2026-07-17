@@ -235,10 +235,14 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha22")
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.palette:palette-ktx:1.0.0")
+
+    // Miuix — Compose Multiplatform MIUI-style UI library
+    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.3")
+    implementation("top.yukonga.miuix.kmp:miuix-preference:0.9.3")
+    implementation("top.yukonga.miuix.kmp:miuix-squircle:0.9.3")
 
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.3.0")

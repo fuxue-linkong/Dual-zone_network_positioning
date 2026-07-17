@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,17 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -47,8 +37,15 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
     onBackClick: () -> Unit
@@ -56,7 +53,6 @@ fun AboutScreen(
     val context = LocalContext.current
     val versionName = remember {
         try {
-            // Android 13+ (API 33) 使用 PackageInfoFlags 替代旧的 flags int 参数
             val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.packageManager.getPackageInfo(
                     context.packageName,
@@ -75,7 +71,7 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.about)) },
+                title = stringResource(R.string.about),
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -96,11 +92,10 @@ fun AboutScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = LocalCardAlpha.current),
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.primaryContainer.copy(alpha = LocalCardAlpha.current),
+                    contentColor = MiuixTheme.colorScheme.onPrimaryContainer
                 )
             ) {
                 Column(
@@ -121,119 +116,154 @@ fun AboutScreen(
 
                     Text(
                         text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MiuixTheme.textStyles.headline1,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MiuixTheme.colorScheme.onPrimaryContainer
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = stringResource(R.string.version_info, versionName),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        style = MiuixTheme.textStyles.body1,
+                        color = MiuixTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                 }
             }
 
-            // 维护者列表
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+                    contentColor = MiuixTheme.colorScheme.onSurface
                 )
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.maintainers),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MiuixTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
                     MAINTAINERS.forEach { maintainer ->
-                        ListItem(
-                            headlineContent = { Text(maintainer.name) },
-                            supportingContent = { Text(maintainer.role) },
-                            leadingContent = {
-                                AsyncImage(
-                                    model = maintainer.avatarUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable {
-                                maintainer.githubUrl?.let { url ->
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                    try {
-                                        context.startActivity(intent)
-                                    } catch (e: ActivityNotFoundException) {
-                                        Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    maintainer.githubUrl?.let { url ->
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        try {
+                                            context.startActivity(intent)
+                                        } catch (e: ActivityNotFoundException) {
+                                            Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            AsyncImage(
+                                model = maintainer.avatarUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                            )
+                            Column {
+                                Text(
+                                    text = maintainer.name,
+                                    style = MiuixTheme.textStyles.body1,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = maintainer.role,
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceSecondary
+                                )
                             }
+                        }
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+                    contentColor = MiuixTheme.colorScheme.onSurface
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null
+                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.about),
+                            style = MiuixTheme.textStyles.body1,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = stringResource(R.string.about_description),
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
             }
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+                    contentColor = MiuixTheme.colorScheme.onSurface
                 )
             ) {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about)) },
-                    supportingContent = { Text(stringResource(R.string.about_description)) },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                ListItem(
-                    headlineContent = { Text("GitHub") },
-                    supportingContent = { Text("fuxue-linkong / Dual-zone_network_positioning") },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://github.com/fuxue-linkong/Dual-zone_network_positioning")
-                        )
-                        try {
-                            context.startActivity(intent)
-                        } catch (e: ActivityNotFoundException) {
-                            Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/fuxue-linkong/Dual-zone_network_positioning")
+                            )
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: ActivityNotFoundException) {
+                                Toast.makeText(context, "未找到可打开链接的应用", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null
+                    )
+                    Column {
+                        Text(
+                            text = "GitHub",
+                            style = MiuixTheme.textStyles.body1,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "fuxue-linkong / Dual-zone_network_positioning",
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
+                        )
                     }
-                )
+                }
             }
         }
     }

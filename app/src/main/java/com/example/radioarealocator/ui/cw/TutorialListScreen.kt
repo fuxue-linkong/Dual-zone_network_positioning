@@ -10,11 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,12 +18,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 data class TutorialLesson(
     val id: Int,
     val title: String,
     val description: String,
-    val progress: Float, // 0.0 to 1.0
+    val progress: Float,
     val totalLessons: Int = 1,
     val completedLessons: Int = 0
 )
@@ -99,9 +100,9 @@ private fun TutorialLessonItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Row(
@@ -114,26 +115,28 @@ private fun TutorialLessonItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = lesson.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.title4,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = lesson.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
                 )
                 Text(
-                    text = "进度: ${lesson.completedLessons}/${lesson.totalLessons} (${(lesson.progress * 100).toInt()}%)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "${stringResource(R.string.progress)}: ${lesson.completedLessons}/${lesson.totalLessons} (${(lesson.progress * 100).toInt()}%)",
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.primary
                 )
                 LinearProgressIndicator(
-                    progress = { lesson.progress },
+                    progress = lesson.progress,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = MiuixTheme.colorScheme.primary,
+                        backgroundColor = MiuixTheme.colorScheme.surfaceVariant
+                    )
                 )
             }
         }

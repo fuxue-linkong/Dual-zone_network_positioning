@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 从背景图提取主色调，用于生成 Material3 [androidx.compose.material3.ColorScheme]。
+ * 从背景图提取主色调，用于生成 Miuix [top.yukonga.miuix.kmp.theme.Colors]。
  *
  * 提取策略：
  * - 主色优先用 vibrant/muted 色板

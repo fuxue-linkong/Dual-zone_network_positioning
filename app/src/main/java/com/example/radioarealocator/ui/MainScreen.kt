@@ -50,28 +50,29 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.CheckboxDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.SwitchDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -97,6 +98,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -145,7 +147,6 @@ private val navSlideTween = tween<IntOffset>(NAV_ANIM_DURATION_MS)
 private val navFadeTween = tween<Float>(NAV_ANIM_DURATION_MS)
 private val aboutFadeTween = tween<Float>(ABOUT_ANIM_DURATION_MS)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -163,7 +164,7 @@ fun MainScreen(
     // CW 练习子页面：0=主页, 1=自由练习设置, 2=教程列表, 3=练习页面
     var cwSubScreen by rememberSaveable { mutableIntStateOf(0) }
     val context = LocalContext.current
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // 监听提醒反馈消息，自动显示 SnackBar
     val feedback by viewModel.reminderFeedback
@@ -229,7 +230,7 @@ fun MainScreen(
     val navKey = listOf(selectedTab, homeSubScreen, settingsSubScreen, cwSubScreen)
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        color = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             Crossfade(
                 targetState = navKey,
@@ -248,7 +249,7 @@ fun MainScreen(
                     dailyQuote = viewModel.dailyQuote.value
                 )
                 tab == 0 && home == 1 -> TopAppBar(
-                    title = { Text(stringResource(R.string.home_location)) },
+                    title = stringResource(R.string.home_location),
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
                             Icon(
@@ -259,7 +260,7 @@ fun MainScreen(
                     }
                 )
                 tab == 0 && home == 3 -> TopAppBar(
-                    title = { Text(stringResource(R.string.satellite_management)) },
+                    title = stringResource(R.string.satellite_management),
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 2 }) {
                             Icon(
@@ -270,7 +271,7 @@ fun MainScreen(
                     }
                 )
                 tab == 0 && home == 2 -> TopAppBar(
-                    title = { Text(stringResource(R.string.home_satellite)) },
+                    title = stringResource(R.string.home_satellite),
                     navigationIcon = {
                         IconButton(onClick = { homeSubScreen = 0 }) {
                             Icon(
@@ -281,14 +282,14 @@ fun MainScreen(
                     }
                 )
                 tab == 0 && home == 4 -> TopAppBar(
-                    title = { Text(when (cw) {
+                    title = when (cw) {
                         0 -> stringResource(R.string.cw_practice)
                         1 -> stringResource(R.string.free_practice)
                         2 -> stringResource(R.string.tutorial_practice)
                         3 -> stringResource(R.string.practice)
                         4 -> stringResource(R.string.morsecode_title)
                         else -> stringResource(R.string.cw_practice)
-                    }) },
+                    },
                     navigationIcon = {
                         IconButton(onClick = {
                             if (cw == 0) homeSubScreen = 0
@@ -307,7 +308,7 @@ fun MainScreen(
                     }
                 )
                 tab == 1 && settings == 1 -> TopAppBar(
-                    title = { Text(stringResource(R.string.reminder_list_title)) },
+                    title = stringResource(R.string.reminder_list_title),
                     navigationIcon = {
                         IconButton(onClick = { settingsSubScreen = 0 }) {
                             Icon(
@@ -318,21 +319,21 @@ fun MainScreen(
                     }
                 )
                 else -> TopAppBar(
-                    title = { Text(stringResource(R.string.settings)) }
+                    title = stringResource(R.string.settings)
                 )
                 }
             }
         },
         snackbarHost = {
-            androidx.compose.material3.SnackbarHost(hostState = snackbarHostState)
+            SnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text(stringResource(R.string.home)) }
+                    icon = Icons.Default.Home,
+                    label = stringResource(R.string.home)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
@@ -340,8 +341,8 @@ fun MainScreen(
                         if (selectedTab == 0 && cwSubScreen == 3) viewModel.stopCWPractice()
                         selectedTab = 1
                     },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.settings)) }
+                    icon = Icons.Default.Settings,
+                    label = stringResource(R.string.settings)
                 )
             }
         }
@@ -471,11 +472,11 @@ fun MainScreen(
                             contentPadding = padding
                         )
                         4 -> MorseCodeScreen(
-                            bgPage = MaterialTheme.colorScheme.background,
-                            bgCard = MaterialTheme.colorScheme.surface,
-                            primaryColor = MaterialTheme.colorScheme.primary,
-                            textPrimary = MaterialTheme.colorScheme.onSurface,
-                            textSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
+                            bgPage = MiuixTheme.colorScheme.background,
+                            bgCard = MiuixTheme.colorScheme.surface,
+                            primaryColor = MiuixTheme.colorScheme.primary,
+                            textPrimary = MiuixTheme.colorScheme.onSurface,
+                            textSecondary = MiuixTheme.colorScheme.onSurfaceSecondary,
                             contentPadding = padding
                         )
                     }
@@ -552,9 +553,9 @@ private fun HomeHeader(
     }
 
     val stateColor = if (locationState.result != null) {
-        MaterialTheme.colorScheme.primary
+        MiuixTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.outline
+        MiuixTheme.colorScheme.outline
     }
     val appNameSize = APP_NAME_FONT_SIZE.sp
     val localTimeSize = LOCAL_TIME_FONT_SIZE.sp
@@ -649,7 +650,7 @@ private fun HomeHeader(
                 Text(
                     text = "$utcTime UTC",
                     style = TextStyle(fontSize = utcSize),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 2.dp),
@@ -658,7 +659,7 @@ private fun HomeHeader(
                 // 每日一言：超宽时水平滚动，到端点暂停 2 秒后反向
                 DailyQuoteScroller(
                     quote = dailyQuote,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentColor = MiuixTheme.colorScheme.onSurfaceSecondary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
@@ -779,10 +780,10 @@ private fun HomeListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.defaultColors(
             // 提亮 25%（保持色相一致），凸显"定位"/"卫星"两个导航入口卡片
-            containerColor = lerp(MaterialTheme.colorScheme.surface, if (isSystemInDarkTheme()) Color.Black else Color.White, 0.25f).copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+            color = lerp(MiuixTheme.colorScheme.surface, if (isSystemInDarkTheme()) Color.Black else Color.White, 0.25f).copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Row(
@@ -796,27 +797,27 @@ private fun HomeListItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(MiuixTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = badgeChar,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MiuixTheme.colorScheme.onPrimaryContainer
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MiuixTheme.colorScheme.onSurface
                 )
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -944,8 +945,8 @@ private fun SatelliteDetailContent(
                     SatellitePlaceholderCard {
                         Text(
                             text = stringResource(R.string.satellite_load_failed, satelliteState.satelliteError),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.error
                         )
                     }
                 }
@@ -955,8 +956,8 @@ private fun SatelliteDetailContent(
                     SatellitePlaceholderCard {
                         Text(
                             text = stringResource(R.string.satellite_need_location),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
@@ -969,8 +970,8 @@ private fun SatelliteDetailContent(
                                 if (filter.isActive) R.string.no_satellites_filtered
                                 else R.string.no_satellites
                             ),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
@@ -1025,9 +1026,9 @@ private fun SatelliteManagementContent(
             Card(
                 modifier = Modifier
                     .fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+                    contentColor = MiuixTheme.colorScheme.onSurface
                 )
             ) {
                 Column(
@@ -1037,8 +1038,8 @@ private fun SatelliteManagementContent(
                 ) {
                     Text(
                         text = stringResource(R.string.satellite_management_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -1068,8 +1069,8 @@ private fun SatelliteManagementContent(
                     SatellitePlaceholderCard {
                         Text(
                             text = stringResource(R.string.satellite_need_location),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
@@ -1079,8 +1080,8 @@ private fun SatelliteManagementContent(
                     SatellitePlaceholderCard {
                         Text(
                             text = stringResource(R.string.no_satellites),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
@@ -1112,14 +1113,14 @@ private fun ManagementStat(label: String, value: String) {
     Column {
         Text(
             text = value,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MiuixTheme.textStyles.title3,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MiuixTheme.colorScheme.primary
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MiuixTheme.textStyles.footnote2,
+            color = MiuixTheme.colorScheme.onSurfaceSecondary
         )
     }
 }
@@ -1141,16 +1142,16 @@ private fun SatelliteManagementItem(
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isFavorite) {
-                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = LocalCardAlpha.current)
+        colors = CardDefaults.defaultColors(
+            color = if (isFavorite) {
+                MiuixTheme.colorScheme.tertiaryContainer.copy(alpha = LocalCardAlpha.current)
             } else {
-                MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+                MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
             },
             contentColor = if (isFavorite) {
-                MaterialTheme.colorScheme.onTertiaryContainer
+                MiuixTheme.colorScheme.onTertiaryContainer
             } else {
-                MaterialTheme.colorScheme.onSurface
+                MiuixTheme.colorScheme.onSurface
             }
         )
     ) {
@@ -1166,15 +1167,15 @@ private fun SatelliteManagementItem(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
                 tint = if (isFavorite) {
-                    MaterialTheme.colorScheme.tertiary
+                    MiuixTheme.colorScheme.tertiaryContainer
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MiuixTheme.colorScheme.onSurfaceSecondary
                 }
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = satellite.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.title4,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
@@ -1183,11 +1184,11 @@ private fun SatelliteManagementItem(
                     } else {
                         "${stringResource(R.string.aos_time)}：$timeText"
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = if (isFavorite) {
-                        MaterialTheme.colorScheme.onTertiaryContainer
+                        MiuixTheme.colorScheme.onTertiaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        MiuixTheme.colorScheme.onSurfaceSecondary
                     }
                 )
             }
@@ -1195,13 +1196,13 @@ private fun SatelliteManagementItem(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.tertiary)
+                        .background(MiuixTheme.colorScheme.tertiaryContainer)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.favorited),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiary
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onTertiaryContainer
                     )
                 }
             }
@@ -1226,9 +1227,9 @@ private fun SatelliteActionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Column(
@@ -1252,7 +1253,7 @@ private fun SatelliteActionCard(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MiuixTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(stringResource(R.string.sat_action_get_location))
@@ -1265,13 +1266,13 @@ private fun SatelliteActionCard(
                         } else {
                             stringResource(R.string.sat_no_location_time)
                         },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface
                     )
                     Text(
                         text = lastLocationCity.ifBlank { stringResource(R.string.sat_no_city) },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
@@ -1291,7 +1292,7 @@ private fun SatelliteActionCard(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MiuixTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(stringResource(R.string.sat_action_update_source))
@@ -1304,8 +1305,8 @@ private fun SatelliteActionCard(
                         } else {
                             stringResource(R.string.sat_no_source_time)
                         },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface
                     )
                     val expired = isSatelliteSourceExpired(lastSatelliteTime)
                     Text(
@@ -1314,11 +1315,11 @@ private fun SatelliteActionCard(
                         } else {
                             stringResource(R.string.sat_source_fresh)
                         },
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = if (expired) {
-                            MaterialTheme.colorScheme.error
+                            MiuixTheme.colorScheme.error
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            MiuixTheme.colorScheme.onSurfaceSecondary
                         },
                         modifier = Modifier.padding(top = 2.dp)
                     )
@@ -1337,22 +1338,22 @@ private fun LocationStatusCard(
     onRefresh: () -> Unit
 ) {
     val isSuccess = result != null
-    val containerColor = if (isSuccess) {
-        MaterialTheme.colorScheme.primaryContainer
+    val color = if (isSuccess) {
+        MiuixTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surface
+        MiuixTheme.colorScheme.surface
     }
     val contentColor = if (isSuccess) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        MiuixTheme.colorScheme.onPrimaryContainer
     } else {
-        MaterialTheme.colorScheme.onSurface
+        MiuixTheme.colorScheme.onSurface
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor.copy(alpha = LocalCardAlpha.current),
+        colors = CardDefaults.defaultColors(
+            color = color.copy(alpha = LocalCardAlpha.current),
             contentColor = contentColor
         )
     ) {
@@ -1371,13 +1372,13 @@ private fun LocationStatusCard(
                         .size(10.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isSuccess) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline
+                            if (isSuccess) MiuixTheme.colorScheme.primary
+                            else MiuixTheme.colorScheme.outline
                         )
                 )
                 Text(
                     text = if (isSuccess) stringResource(R.string.location_success) else stringResource(R.string.location_status),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MiuixTheme.textStyles.body1,
                     color = contentColor,
                     fontWeight = FontWeight.Medium
                 )
@@ -1389,13 +1390,13 @@ private fun LocationStatusCard(
                 result != null -> {
                     Text(
                         text = "%.5f".format(result.latitude),
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MiuixTheme.textStyles.headline1,
                         fontWeight = FontWeight.Bold,
                         color = contentColor
                     )
                     Text(
                         text = "%.5f".format(result.longitude),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MiuixTheme.textStyles.title3,
                         fontWeight = FontWeight.SemiBold,
                         color = contentColor
                     )
@@ -1411,15 +1412,15 @@ private fun LocationStatusCard(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.locating),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MiuixTheme.textStyles.body1,
                             color = contentColor
                         )
                     } else {
                         Button(
                             onClick = onRefresh,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                color = MiuixTheme.colorScheme.primary,
+                                contentColor = MiuixTheme.colorScheme.onPrimary
                             ),
                             shape = RoundedCornerShape(16.dp)
                         ) {
@@ -1439,7 +1440,7 @@ private fun LocationStatusCard(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.locating),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                         color = contentColor
                     )
                 }
@@ -1458,15 +1459,15 @@ private fun LocationStatusCard(
                         } else {
                             stringResource(R.string.location_permission_required)
                         },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                         color = contentColor
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = if (hasPermission) onRefresh else onRequestPermission,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            color = MiuixTheme.colorScheme.primary,
+                            contentColor = MiuixTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -1489,9 +1490,9 @@ private fun ZoneInfoCard(result: LocationResult) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Column(
@@ -1501,9 +1502,9 @@ private fun ZoneInfoCard(result: LocationResult) {
         ) {
             Text(
                 text = stringResource(R.string.zone_info),
-                style = MaterialTheme.typography.titleLarge,
+                style = MiuixTheme.textStyles.title2,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MiuixTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1528,7 +1529,7 @@ private fun ZoneInfoCard(result: LocationResult) {
 
             if (result.address.isNotBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                HorizontalDivider(color = MiuixTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1536,13 +1537,13 @@ private fun ZoneInfoCard(result: LocationResult) {
                 ) {
                     Text(
                         text = "${stringResource(R.string.address)}：",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MiuixTheme.textStyles.body1,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
                     Text(
                         text = result.address,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MiuixTheme.textStyles.body1,
+                        color = MiuixTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)
                     )
@@ -1557,15 +1558,15 @@ private fun ZoneItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MiuixTheme.textStyles.title3,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MiuixTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MiuixTheme.textStyles.footnote2,
+            color = MiuixTheme.colorScheme.onSurfaceSecondary
         )
     }
 }
@@ -1587,9 +1588,9 @@ private fun SatelliteSectionHeader(
     ) {
         Text(
             text = stringResource(R.string.nearby_satellites),
-            style = MaterialTheme.typography.titleLarge,
+            style = MiuixTheme.textStyles.title2,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MiuixTheme.colorScheme.onSurface
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1603,8 +1604,8 @@ private fun SatelliteSectionHeader(
                 }
                 Text(
                     text = countText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
                 )
             }
             SatelliteFilterPopup(
@@ -1619,8 +1620,7 @@ private fun SatelliteSectionHeader(
 /**
  * 卫星筛选弹窗：以 Dialog 形式呈现，支持模式多选与开关筛选，
  * 底部提供"更多"入口进入三级页面。
- */
-@OptIn(ExperimentalMaterial3Api::class)
+  */
 @Composable
 private fun SatelliteFilterPopup(
     filter: SatelliteFilter,
@@ -1636,9 +1636,9 @@ private fun SatelliteFilterPopup(
                 .border(
                     width = 1.dp,
                     color = if (filter.isActive) {
-                        MaterialTheme.colorScheme.primary
+                        MiuixTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.outline
+                        MiuixTheme.colorScheme.outline
                     },
                     shape = RoundedCornerShape(10.dp)
                 )
@@ -1651,9 +1651,9 @@ private fun SatelliteFilterPopup(
                 imageVector = Icons.Default.FilterList,
                 contentDescription = null,
                 tint = if (filter.isActive) {
-                    MaterialTheme.colorScheme.primary
+                    MiuixTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MiuixTheme.colorScheme.onSurfaceSecondary
                 }
             )
             if (filter.isActive) {
@@ -1661,47 +1661,35 @@ private fun SatelliteFilterPopup(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MiuixTheme.colorScheme.primary)
                 )
             }
         }
         if (expanded) {
-            BasicAlertDialog(
+            OverlayDialog(
+                show = true,
+                title = stringResource(R.string.filter_title),
                 onDismissRequest = { expanded = false }
             ) {
-                Surface(
+                // Title row with close/dismiss
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 560.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // 标题区
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
                             Text(
                                 text = stringResource(R.string.filter_title),
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MiuixTheme.textStyles.title2,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MiuixTheme.colorScheme.onSurface
                             )
                             if (filter.isActive) {
                                 TextButton(
-                                    onClick = { onFilterChange(SatelliteFilter()) }
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.filter_reset),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
+                                    text = stringResource(R.string.filter_reset),
+                                    onClick = { onFilterChange(SatelliteFilter()) },
+                                )
                             }
                         }
                         HorizontalDivider()
@@ -1715,8 +1703,8 @@ private fun SatelliteFilterPopup(
                         ) {
                             Text(
                                 text = stringResource(R.string.filter_mode_section),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.body1,
+                                color = MiuixTheme.colorScheme.onSurfaceSecondary,
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
                             )
                             FILTER_MODE_OPTIONS.forEach { mode ->
@@ -1778,10 +1766,16 @@ private fun SatelliteFilterPopup(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = {
-                                expanded = false
-                                onOpenManagement()
-                            }) {
+                            Button(
+                                onClick = {
+                                    expanded = false
+                                    onOpenManagement()
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    color = Color.Transparent,
+                                    contentColor = MiuixTheme.colorScheme.primary
+                                )
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
@@ -1795,8 +1789,6 @@ private fun SatelliteFilterPopup(
                             }
                         }
                     }
-                }
-            }
         }
     }
 }
@@ -1817,15 +1809,13 @@ private fun FilterCheckRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurface
         )
-        androidx.compose.material3.Checkbox(
-            checked = checked,
-            onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.primary
-            )
+        Checkbox(
+            state = if (checked) ToggleableState.On else ToggleableState.Off,
+            onClick = { onToggle() },
+            colors = CheckboxDefaults.checkboxColors()
         )
     }
 }
@@ -1846,14 +1836,14 @@ private fun FilterSwitchRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurface
         )
         Switch(
             checked = checked,
             onCheckedChange = { onToggle() },
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = MaterialTheme.colorScheme.primary
+            colors = SwitchDefaults.switchColors(
+                checkedTrackColor = MiuixTheme.colorScheme.primary
             )
         )
     }
@@ -1875,9 +1865,9 @@ private fun SatellitePlaceholderCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
-            contentColor = MaterialTheme.colorScheme.onSurface
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current),
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Box(
@@ -1921,14 +1911,14 @@ private fun SatelliteItem(
 
     // 关注卫星在境内/即将过境时使用 tertiary 系列强调色；境内优先用 primaryContainer
     val cardContainerColor = when {
-        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.primaryContainer
-        isFavorite -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.surface
+        satellite.isCurrentlyVisible -> MiuixTheme.colorScheme.primaryContainer
+        isFavorite -> MiuixTheme.colorScheme.tertiaryContainer
+        else -> MiuixTheme.colorScheme.surface
     }
     val cardContentColor = when {
-        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.onPrimaryContainer
-        isFavorite -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onSurface
+        satellite.isCurrentlyVisible -> MiuixTheme.colorScheme.onPrimaryContainer
+        isFavorite -> MiuixTheme.colorScheme.onTertiaryContainer
+        else -> MiuixTheme.colorScheme.onSurface
     }
 
     Card(
@@ -1938,15 +1928,15 @@ private fun SatelliteItem(
                 if (isFavorite) {
                     Modifier.border(
                         width = 1.5.dp,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        color = MiuixTheme.colorScheme.tertiaryContainer,
                         shape = RoundedCornerShape(12.dp)
                     )
                 } else {
                     Modifier
                 }
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = cardContainerColor.copy(alpha = LocalCardAlpha.current),
+        colors = CardDefaults.defaultColors(
+            color = cardContainerColor.copy(alpha = LocalCardAlpha.current),
             contentColor = cardContentColor
         )
     ) {
@@ -1970,15 +1960,15 @@ private fun SatelliteItem(
                             .clip(CircleShape)
                             .background(
                                 if (satellite.isCurrentlyVisible) {
-                                    MaterialTheme.colorScheme.primary
+                                    MiuixTheme.colorScheme.primary
                                 } else {
-                                    MaterialTheme.colorScheme.outline
+                                    MiuixTheme.colorScheme.outline
                                 }
                             )
                     )
                     Text(
                         text = satellite.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.Bold,
                         color = cardContentColor
                     )
@@ -1986,7 +1976,7 @@ private fun SatelliteItem(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
+                            tint = MiuixTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1998,7 +1988,7 @@ private fun SatelliteItem(
                 ) {
                     Text(
                         text = "${satellite.maxElevation.toInt()}°",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                         fontWeight = FontWeight.SemiBold,
                         color = cardContentColor
                     )
@@ -2011,9 +2001,9 @@ private fun SatelliteItem(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                             tint = if (isFavorite) {
-                                MaterialTheme.colorScheme.tertiary
+                                MiuixTheme.colorScheme.tertiaryContainer
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MiuixTheme.colorScheme.onSurfaceSecondary
                             }
                         )
                     }
@@ -2079,33 +2069,33 @@ private fun SatelliteItem(
 
 @Composable
 private fun TimeBadge(label: String, value: String, isActive: Boolean) {
-    val containerColor = if (isActive) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    val color = if (isActive) {
+        MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MiuixTheme.colorScheme.surfaceVariant
     }
     val contentColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
+        MiuixTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MiuixTheme.colorScheme.onSurfaceSecondary
     }
 
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(containerColor)
+            .background(color)
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = "$label：",
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = contentColor
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MiuixTheme.textStyles.body1,
             fontWeight = FontWeight.SemiBold,
             color = contentColor
         )
@@ -2131,10 +2121,10 @@ private fun formatRemainingTime(seconds: Long): String {
 @Composable
 private fun SourceChip(source: String) {
     val (bgColor, contentColor) = when (source) {
-        "CT" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        "SNOGS" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        "ALL" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        "CT" -> MiuixTheme.colorScheme.secondaryContainer to MiuixTheme.colorScheme.onSecondaryContainer
+        "SNOGS" -> MiuixTheme.colorScheme.tertiaryContainer to MiuixTheme.colorScheme.onTertiaryContainer
+        "ALL" -> MiuixTheme.colorScheme.primaryContainer to MiuixTheme.colorScheme.onPrimaryContainer
+        else -> MiuixTheme.colorScheme.surfaceVariant to MiuixTheme.colorScheme.onSurfaceSecondary
     }
     Chip(text = source, bgColor = bgColor, contentColor = contentColor)
 }
@@ -2151,11 +2141,11 @@ private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
     // 延续状态：追加右侧小星号标识，便于用户识别"非本时段实时报告"
     val displayText = if (isStatusInherited) "$baseText *" else baseText
     val (bgColor, contentColor) = when (status) {
-        "Heard" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        "Not Heard" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        "Heard" -> MiuixTheme.colorScheme.primaryContainer to MiuixTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MiuixTheme.colorScheme.secondaryContainer to MiuixTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MiuixTheme.colorScheme.errorContainer to MiuixTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MiuixTheme.colorScheme.tertiaryContainer to MiuixTheme.colorScheme.onTertiaryContainer
+        else -> MiuixTheme.colorScheme.surfaceVariant to MiuixTheme.colorScheme.onSurfaceSecondary
     }
     // 延续状态：降低 15% 透明度，与实时状态形成视觉层级区分
     val finalBg = if (isStatusInherited) bgColor.copy(alpha = 0.85f) else bgColor
@@ -2181,8 +2171,8 @@ private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.status_segment_title),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MiuixTheme.textStyles.footnote2,
+            color = MiuixTheme.colorScheme.onSurfaceSecondary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -2210,18 +2200,18 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
         else -> segment.status
     }
     val bgColor = when (segment.status) {
-        "Heard" -> MaterialTheme.colorScheme.primaryContainer
-        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer
-        "Not Heard" -> MaterialTheme.colorScheme.errorContainer
-        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        "Heard" -> MiuixTheme.colorScheme.primaryContainer
+        "Telemetry Only" -> MiuixTheme.colorScheme.secondaryContainer
+        "Not Heard" -> MiuixTheme.colorScheme.errorContainer
+        "Crew Active" -> MiuixTheme.colorScheme.tertiaryContainer
+        else -> MiuixTheme.colorScheme.surfaceVariant
     }
     val contentColor = when (segment.status) {
-        "Heard" -> MaterialTheme.colorScheme.onPrimaryContainer
-        "Telemetry Only" -> MaterialTheme.colorScheme.onSecondaryContainer
-        "Not Heard" -> MaterialTheme.colorScheme.onErrorContainer
-        "Crew Active" -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        "Heard" -> MiuixTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MiuixTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MiuixTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MiuixTheme.colorScheme.onTertiaryContainer
+        else -> MiuixTheme.colorScheme.onSurfaceSecondary
     }
     val rangeLabel = remember(segment.segment) {
         "${segment.segment.startHour.toString().padStart(2, '0')}" +
@@ -2236,19 +2226,19 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = rangeLabel,
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = contentColor,
             fontWeight = FontWeight.SemiBold
         )
         Text(
             text = displayText,
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = contentColor
         )
         if (segment.carriedOver) {
             Text(
                 text = stringResource(R.string.status_segment_carryover),
-                style = MaterialTheme.typography.labelSmall,
+                style = MiuixTheme.textStyles.footnote2,
                 color = contentColor,
                 fontWeight = FontWeight.Bold
             )
@@ -2259,20 +2249,20 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
 @Composable
 private fun ModeChip(mode: String) {
     val color = when (mode.uppercase()) {
-        "FM" -> MaterialTheme.colorScheme.primaryContainer
-        "SSTV" -> MaterialTheme.colorScheme.secondaryContainer
-        "DSTAR" -> MaterialTheme.colorScheme.tertiaryContainer
-        "CW" -> MaterialTheme.colorScheme.errorContainer
-        "USB", "LSB" -> MaterialTheme.colorScheme.surfaceVariant
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        "FM" -> MiuixTheme.colorScheme.primaryContainer
+        "SSTV" -> MiuixTheme.colorScheme.secondaryContainer
+        "DSTAR" -> MiuixTheme.colorScheme.tertiaryContainer
+        "CW" -> MiuixTheme.colorScheme.errorContainer
+        "USB", "LSB" -> MiuixTheme.colorScheme.surfaceVariant
+        else -> MiuixTheme.colorScheme.surfaceVariant
     }
     val contentColor = when (mode.uppercase()) {
-        "FM" -> MaterialTheme.colorScheme.onPrimaryContainer
-        "SSTV" -> MaterialTheme.colorScheme.onSecondaryContainer
-        "DSTAR" -> MaterialTheme.colorScheme.onTertiaryContainer
-        "CW" -> MaterialTheme.colorScheme.onErrorContainer
-        "USB", "LSB" -> MaterialTheme.colorScheme.onSurfaceVariant
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        "FM" -> MiuixTheme.colorScheme.onPrimaryContainer
+        "SSTV" -> MiuixTheme.colorScheme.onSecondaryContainer
+        "DSTAR" -> MiuixTheme.colorScheme.onTertiaryContainer
+        "CW" -> MiuixTheme.colorScheme.onErrorContainer
+        "USB", "LSB" -> MiuixTheme.colorScheme.onSurfaceSecondary
+        else -> MiuixTheme.colorScheme.onSurfaceSecondary
     }
     Chip(text = mode, bgColor = color, contentColor = contentColor)
 }
@@ -2291,7 +2281,7 @@ private fun Chip(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = contentColor,
             fontWeight = FontWeight.Medium
         )
@@ -2300,14 +2290,16 @@ private fun Chip(
 
 @Composable
 private fun ErrorDialog(message: String, onDismiss: () -> Unit) {
-    AlertDialog(
+    OverlayDialog(
+        show = true,
+        title = stringResource(R.string.location_failed),
+        summary = message,
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("OK")
-            }
-        },
-        title = { Text(stringResource(R.string.location_failed)) },
-        text = { Text(message) }
-    )
+    ) {
+        TextButton(
+            text = "OK",
+            onClick = onDismiss,
+            modifier = Modifier.align(Alignment.End)
+        )
+    }
 }

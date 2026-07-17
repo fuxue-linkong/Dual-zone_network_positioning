@@ -10,13 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +19,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun PracticeScreen(
@@ -57,7 +58,7 @@ fun PracticeScreen(
         item {
             Text(
                 text = if (courseTitle.isNotEmpty()) courseTitle else stringResource(R.string.cw_practice),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MiuixTheme.textStyles.headline1,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -66,15 +67,15 @@ fun PracticeScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LocalCardAlpha.current)
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surfaceVariant.copy(alpha = LocalCardAlpha.current)
                     )
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             text = lessonInfo,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
                     }
                 }
@@ -84,19 +85,19 @@ fun PracticeScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
                 )
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "原文:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${stringResource(R.string.original_text)}:",
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
                     Text(
                         text = currentText.ifEmpty { if (isTutorialMode) "加载中..." else "点击生成文本开始练习" },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -106,26 +107,25 @@ fun PracticeScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
                 )
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "摩尔斯电码:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${stringResource(R.string.morse_code)}:",
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
                     Text(
                         text = morseCode.ifEmpty { if (isTutorialMode) "加载中..." else "生成文本后显示" },
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MiuixTheme.textStyles.body2,
                         fontFamily = FontFamily.Monospace
                     )
                 }
             }
         }
 
-        // 仅在非教程练习模式下显示"生成文本"按钮
         if (!isTutorialMode) {
             item {
                 Button(
@@ -141,9 +141,9 @@ fun PracticeScreen(
             TextField(
                 value = userInput,
                 onValueChange = onUserInputChange,
-                label = { Text("输入你听到的内容") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isPlaying
+                label = stringResource(R.string.input_what_you_hear),
+                enabled = !isPlaying,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -200,8 +200,8 @@ fun PracticeScreen(
             if (userInput.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.primaryContainer
                     )
                 ) {
                     Column(
@@ -210,22 +210,24 @@ fun PracticeScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.accuracy),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = MiuixTheme.textStyles.title4,
+                            color = MiuixTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
                             text = "${accuracy.toInt()}%",
-                            style = MaterialTheme.typography.headlineLarge,
+                            style = MiuixTheme.textStyles.title1,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MiuixTheme.colorScheme.primary
                         )
                         LinearProgressIndicator(
-                            progress = { accuracy / 100f },
+                            progress = accuracy / 100f,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                foregroundColor = MiuixTheme.colorScheme.primary,
+                                backgroundColor = MiuixTheme.colorScheme.surfaceVariant
+                            )
                         )
                     }
                 }
