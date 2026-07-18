@@ -1,0 +1,73 @@
+name: Deploy Website to GitHub Pages
+
+# ─────────────────────────────────────────────────────────────
+# GitHub Pages 部署工作流
+#
+# 触发条件：
+#   - main 分支上 website/ 目录变更时自动部署
+#   - 支持手动触发（workflow_dispatch）
+#
+# 前置配置：
+#   仓库 Settings → Pages → Source 选择 "GitHub Actions"
+# ─────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# GitHub Pages 部署需要写权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只允许一次部署，排队中的新部署会取消旧的
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # website/ 目录包含 index.html / style.css / script.js / images/
+          path: website
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Publish deployment summary
+        run: |
+          echo "## GitHub Pages Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pages URL | ${{ steps.deployment.outputs.page_url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Website deployed successfully." >> "$GITHUB_STEP_SUMMARY"

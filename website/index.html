@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RadioAreaLocator 双区网络定位 — 业余无线电爱好者的随身控制台。GPS 定位、CQ/ITU 分区、Maidenhead 网格、卫星过境预测、CW 摩尔斯电码练习。">
+    <meta name="theme-color" content="#050907">
+    <title>RadioAreaLocator · 双区网络定位</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <!-- 背景层：网格 + 噪点 + 扫描线 -->
+    <div class="bg-layer" aria-hidden="true">
+        <div class="bg-grid"></div>
+        <div class="bg-scanlines"></div>
+        <div class="bg-noise"></div>
+        <div class="bg-glow bg-glow--1"></div>
+        <div class="bg-glow bg-glow--2"></div>
+    </div>
+
+    <!-- 顶部状态条：Morse 码滚动 -->
+    <div class="ticker" aria-hidden="true">
+        <div class="ticker__track">
+            <span class="ticker__item">·· ·−·· −−· ··−−·· ·− −·· ·· ·−−· ·− −−− ··−·· − ·− ··· ·· ···−· ·· ·− −·</span>
+            <span class="ticker__item">−·−− −− ··· · ··−· ·· −· −·−· · ··· − ··· ··− ···</span>
+            <span class="ticker__item">·· ·−·· −−· ··−−·· ·− −·· ·· ·−−· ·− −−− ··−·· − ·− ··· ·· ···−· ·· ·− −·</span>
+            <span class="ticker__item">−·−− −− ··· · ··−· ·· −· −·−· · ··· − ··· ··− ···</span>
+        </div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <header class="nav">
+        <a href="#" class="nav__brand">
+            <span class="nav__logo" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="28" height="28">
+                    <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="16" cy="16" r="3" fill="currentColor"/>
+                    <path d="M2 16 Q9 8 16 16 T30 16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.7"/>
+                    <path d="M2 16 Q9 24 16 16 T30 16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+                </svg>
+            </span>
+            <span class="nav__name">RadioAreaLocator</span>
+        </a>
+        <nav class="nav__links">
+            <a href="#features">功能</a>
+            <a href="#showcase">预览</a>
+            <a href="#stack">技术</a>
+            <a href="#security">安全</a>
+            <a href="#developer">开发者</a>
+        </nav>
+        <div class="nav__meta">
+            <span class="badge">v1.2.0-beta.1</span>
+            <a class="nav__github" href="https://github.com" target="_blank" rel="noopener" aria-label="GitHub 仓库">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero__grid">
+                <div class="hero__content">
+                    <div class="hero__eyebrow">
+                        <span class="pulse"></span>
+                        <span>AMATEUR RADIO · ANDROID · KOTLIN</span>
+                    </div>
+                    <h1 class="hero__title">
+                        <span class="hero__title-cn">双区网络<br>定位</span>
+                        <span class="hero__title-en">RadioAreaLocator</span>
+                    </h1>
+                    <p class="hero__lead">
+                        为业余无线电爱好者打造的随身控制台。<br>
+                        一键获取 GPS，计算 <strong>CQ / ITU 分区</strong> 与 <strong>Maidenhead 网格</strong>，
+                        预测卫星过境，练习摩尔斯电码。
+                    </p>
+                    <div class="hero__cta">
+                        <a class="btn btn--primary" href="#showcase">
+                            <span>查看应用预览</span>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                        </a>
+                        <a class="btn btn--ghost" href="https://github.com" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+                            <span>查看源码</span>
+                        </a>
+                    </div>
+                    <div class="hero__stats">
+                        <div class="stat">
+                            <div class="stat__num">23</div>
+                            <div class="stat__label">业余卫星目录</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat__num">6</div>
+                            <div class="stat__label">位网格定位</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat__num">AES-256</div>
+                            <div class="stat__label">GCM 加密</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat__num">26+</div>
+                            <div class="stat__label">Koch 课程</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 示波器 / 信号可视化 -->
+                <div class="hero__visual" aria-hidden="true">
+                    <div class="scope">
+                        <div class="scope__frame">
+                            <div class="scope__header">
+                                <span class="scope__label">SIG · 144.390 MHz</span>
+                                <span class="scope__led scope__led--green"></span>
+                            </div>
+                            <svg class="scope__wave" viewBox="0 0 400 200" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="waveGrad" x1="0" x2="0" y1="0" y2="1">
+                                        <stop offset="0%" stop-color="#36D167" stop-opacity="0.6"/>
+                                        <stop offset="100%" stop-color="#36D167" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <g class="scope__grid">
+                                    <line x1="0" y1="50" x2="400" y2="50"/>
+                                    <line x1="0" y1="100" x2="400" y2="100"/>
+                                    <line x1="0" y1="150" x2="400" y2="150"/>
+                                    <line x1="100" y1="0" x2="100" y2="200"/>
+                                    <line x1="200" y1="0" x2="200" y2="200"/>
+                                    <line x1="300" y1="0" x2="300" y2="200"/>
+                                </g>
+                                <path class="scope__path" d="M0,100 L40,100 L50,40 L60,160 L70,40 L80,160 L90,100 L160,100 L170,30 L180,170 L190,30 L200,170 L210,100 L300,100 L310,50 L320,150 L330,50 L340,150 L350,100 L400,100"/>
+                                <path class="scope__fill" d="M0,100 L40,100 L50,40 L60,160 L70,40 L80,160 L90,100 L160,100 L170,30 L180,170 L190,30 L200,170 L210,100 L300,100 L310,50 L320,150 L330,50 L340,150 L350,100 L400,100 L400,200 L0,200 Z" fill="url(#waveGrad)"/>
+                            </svg>
+                            <div class="scope__footer">
+                                <span>SIG-OUT</span>
+                                <span class="scope__bars" aria-hidden="true">
+                                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                                </span>
+                                <span>WPM 15</span>
+                            </div>
+                        </div>
+
+                        <!-- 雷达扫描 -->
+                        <div class="radar">
+                            <div class="radar__ring radar__ring--1"></div>
+                            <div class="radar__ring radar__ring--2"></div>
+                            <div class="radar__ring radar__ring--3"></div>
+                            <div class="radar__sweep"></div>
+                            <div class="radar__blip radar__blip--1"></div>
+                            <div class="radar__blip radar__blip--2"></div>
+                            <div class="radar__blip radar__blip--3"></div>
+                            <div class="radar__center"></div>
+                            <div class="radar__label">SAT TRACK</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 功能 -->
+        <section id="features" class="section">
+            <header class="section__head">
+                <div class="section__index">01 / 核心功能</div>
+                <h2 class="section__title">一台设备，<br>连接整片天空</h2>
+                <p class="section__desc">从地面坐标到轨道预测，从电波分区到摩尔斯电码 — 五大模块覆盖业余无线电日常所需。</p>
+            </header>
+
+            <div class="features">
+                <article class="feature feature--accent">
+                    <div class="feature__icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>
+                            <circle cx="12" cy="12" r="4" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature__title">分区定位</h3>
+                    <p class="feature__text">一键获取 GPS 坐标，实时计算 <em>CQ Zone</em>、<em>ITU Zone</em> 与 6 位 <em>Maidenhead</em> 网格定位，配合反向地理编码显示地址。</p>
+                    <ul class="feature__tags">
+                        <li>CQ Zone</li>
+                        <li>ITU Zone</li>
+                        <li>Maidenhead Grid</li>
+                        <li>Geocoder</li>
+                    </ul>
+                </article>
+
+                <article class="feature">
+                    <div class="feature__icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                            <ellipse cx="12" cy="12" rx="10" ry="4"/>
+                            <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
+                            <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature__title">卫星过境预测</h3>
+                    <p class="feature__text">基于 <em>predict4java</em> 的 SGP4/SDP4 轨道计算，支持 CelesTrak / SatNOGS 三种 TLE 数据源，并行预测未来 48 小时过境。</p>
+                    <ul class="feature__tags">
+                        <li>SGP4</li>
+                        <li>CelesTrak</li>
+                        <li>SatNOGS</li>
+                        <li>AMSAT 状态</li>
+                    </ul>
+                </article>
+
+                <article class="feature">
+                    <div class="feature__icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M3 12h3M9 12h2M13 12h6M3 12l1.5-4M6 12l-1.5 4M11 12l1-3M13 12l-1 3M19 12l1.5-3M19 12l1.5 3"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature__title">CW 摩尔斯练习</h3>
+                    <p class="feature__text">完整 Koch 课程（26 课）+ 字符组 / 呼号 / 文本训练。AudioTrack 实时合成正弦波，可调 WPM、音调与播放模式。</p>
+                    <ul class="feature__tags">
+                        <li>Koch 方法</li>
+                        <li>呼号训练</li>
+                        <li>AudioTrack</li>
+                        <li>进度跟踪</li>
+                    </ul>
+                </article>
+
+                <article class="feature">
+                    <div class="feature__icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2a10 10 0 0 0-10 10 10 10 0 0 0 10 10 10 10 0 0 0 10-10 10 10 0 0 0-10-10z M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature__title">过境提醒</h3>
+                    <p class="feature__text">AlarmManager 精确闹钟 + WorkManager 每日刷新，AOS 前可配提前量提醒。重启自动恢复，支持仅白天模式。</p>
+                    <ul class="feature__tags">
+                        <li>AlarmManager</li>
+                        <li>WorkManager</li>
+                        <li>BootReceiver</li>
+                        <li>后台预测</li>
+                    </ul>
+                </article>
+
+                <article class="feature feature--wide">
+                    <div class="feature__icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>
+                            <circle cx="12" cy="12" r="5" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature__title">天气与每日一言</h3>
+                    <p class="feature__text">高德天气 API 30 分钟自动刷新；hitokoto.cn 一言服务每日一句，失败回退本地文案池 — 让控制台也有温度。</p>
+                    <ul class="feature__tags">
+                        <li>高德天气 API</li>
+                        <li>Hitokoto</li>
+                        <li>本地兜底</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <!-- 截图展示 -->
+        <section id="showcase" class="section section--showcase">
+            <header class="section__head">
+                <div class="section__index">02 / 应用预览</div>
+                <h2 class="section__title">实时信号，<br>一目了然</h2>
+                <p class="section__desc">Material 3 + Miuix KMP 设计语言，可自定义背景图与卡片透明度，让数据在指尖流动。</p>
+            </header>
+
+            <div class="showcase">
+                <figure class="showcase__frame">
+                    <div class="showcase__device">
+                        <img src="./images/screenshot.jpg" alt="RadioAreaLocator 应用截图：主界面展示定位信息、卫星过境预测与天气卡片" loading="lazy"/>
+                    </div>
+                    <figcaption class="showcase__caption">
+                        <span class="showcase__tag">MAIN SCREEN</span>
+                        <span>定位 · 卫星 · 天气 · 一言 同屏显示</span>
+                    </figcaption>
+                </figure>
+
+                <aside class="showcase__notes">
+                    <div class="note">
+                        <div class="note__label">动态主题</div>
+                        <p>从背景图自动提取色板，生成 Material 3 ColorScheme。状态栏透明跟随背景，沉浸式体验。</p>
+                    </div>
+                    <div class="note">
+                        <div class="note__label">卡片透明度</div>
+                        <p>0–100% 自由调节，背景图与卡片内容可读性平衡。scrim 遮罩反向缩放保证文字对比。</p>
+                    </div>
+                    <div class="note">
+                        <div class="note__label">持续定位</div>
+                        <p>首次定位后启动持续监听，地址解析 3 秒去抖。失败指数退避自动恢复，移动中无感更新。</p>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <!-- 技术栈 -->
+        <section id="stack" class="section">
+            <header class="section__head">
+                <div class="section__index">03 / 技术栈</div>
+                <h2 class="section__title">现代 Android，<br>工程化构建</h2>
+                <p class="section__desc">Kotlin 2.3 + Jetpack Compose + Material 3 Expressive。CI/CD 零密钥配置，JaCoCo 覆盖率守护。</p>
+            </header>
+
+            <div class="stack">
+                <div class="stack__group">
+                    <h3 class="stack__title">语言与框架</h3>
+                    <ul class="stack__list">
+                        <li><span class="stack__name">Kotlin</span><span class="stack__ver">2.3.21</span></li>
+                        <li><span class="stack__name">Jetpack Compose</span><span class="stack__ver">BOM 2026.06</span></li>
+                        <li><span class="stack__name">Material 3</span><span class="stack__ver">Expressive</span></li>
+                        <li><span class="stack__name">Coroutines</span><span class="stack__ver">1.10.1</span></li>
+                        <li><span class="stack__name">Miuix KMP</span><span class="stack__ver">—</span></li>
+                    </ul>
+                </div>
+                <div class="stack__group">
+                    <h3 class="stack__title">数据与定位</h3>
+                    <ul class="stack__list">
+                        <li><span class="stack__name">Room</span><span class="stack__ver">2.7.0</span></li>
+                        <li><span class="stack__name">DataStore</span><span class="stack__ver">1.1.4</span></li>
+                        <li><span class="stack__name">Play Services Location</span><span class="stack__ver">21.3.0</span></li>
+                        <li><span class="stack__name">OkHttp</span><span class="stack__ver">4.12.0</span></li>
+                        <li><span class="stack__name">WorkManager</span><span class="stack__ver">2.10.0</span></li>
+                    </ul>
+                </div>
+                <div class="stack__group">
+                    <h3 class="stack__title">领域专用</h3>
+                    <ul class="stack__list">
+                        <li><span class="stack__name">predict4java</span><span class="stack__ver">1.3.1</span></li>
+                        <li><span class="stack__name">高德地图 3D SDK</span><span class="stack__ver">latest</span></li>
+                        <li><span class="stack__name">MPAndroidChart</span><span class="stack__ver">v3.1.0</span></li>
+                        <li><span class="stack__name">Coil Compose</span><span class="stack__ver">2.7.0</span></li>
+                        <li><span class="stack__name">Palette</span><span class="stack__ver">1.0.0</span></li>
+                    </ul>
+                </div>
+                <div class="stack__group">
+                    <h3 class="stack__title">工程化</h3>
+                    <ul class="stack__list">
+                        <li><span class="stack__name">Gradle</span><span class="stack__ver">9.4.1</span></li>
+                        <li><span class="stack__name">KSP</span><span class="stack__ver">2.3.10</span></li>
+                        <li><span class="stack__name">JaCoCo</span><span class="stack__ver">0.8.12</span></li>
+                        <li><span class="stack__name">R8 ProGuard</span><span class="stack__ver">—</span></li>
+                        <li><span class="stack__name">GitHub Actions</span><span class="stack__ver">CI/CD</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 安全设计 -->
+        <section id="security" class="section section--security">
+            <header class="section__head">
+                <div class="section__index">04 / 安全设计</div>
+                <h2 class="section__title">三碎片密钥，<br>零 Secrets 构建</h2>
+                <p class="section__desc">摆脱 GitHub Secrets 依赖。AES-256-GCM 加密敏感信息，密钥分散三处，包名绑定防重打包。</p>
+            </header>
+
+            <div class="crypto">
+                <div class="crypto__diagram" aria-hidden="true">
+                    <div class="shard shard--a">
+                        <div class="shard__label">Shard A</div>
+                        <div class="shard__hex">5C 3A 91 F7 2E D4 08 B6</div>
+                        <div class="shard__src">BuildConfig</div>
+                    </div>
+                    <div class="shard__op">⊕</div>
+                    <div class="shard shard--b">
+                        <div class="shard__label">Shard B</div>
+                        <div class="shard__hex">3F C8 52 A1 9D E0 44 2C</div>
+                        <div class="shard__src">混淆字节</div>
+                    </div>
+                    <div class="shard__op">⊕</div>
+                    <div class="shard shard--c">
+                        <div class="shard__label">Shard C</div>
+                        <div class="shard__hex">SHA-256(pkg + SALT)</div>
+                        <div class="shard__src">运行时派生</div>
+                    </div>
+                    <div class="shard__op">=</div>
+                    <div class="shard shard--key">
+                        <div class="shard__label">Master Key</div>
+                        <div class="shard__hex">256-bit AES Key</div>
+                        <div class="shard__src">AES-256-GCM</div>
+                    </div>
+                </div>
+
+                <div class="crypto__detail">
+                    <div class="crypto__item">
+                        <span class="crypto__num">01</span>
+                        <h4>开发端加密</h4>
+                        <p>明文 API Key 通过 <code>gradle encryptSecrets</code> 任务加密为 <code>secrets.dat</code>，提交入库。</p>
+                    </div>
+                    <div class="crypto__item">
+                        <span class="crypto__num">02</span>
+                        <h4>运行时组装</h4>
+                        <p>应用启动时从 BuildConfig + 混淆数组 + 包名派生 三处组装主密钥，XOR 还原。</p>
+                    </div>
+                    <div class="crypto__item">
+                        <span class="crypto__num">03</span>
+                        <h4>防重打包</h4>
+                        <p>ShardC 绑定 <code>context.packageName</code>，重打包后包名变更 → 主密钥不匹配 → GCM 认证失败。</p>
+                    </div>
+                    <div class="crypto__item">
+                        <span class="crypto__num">04</span>
+                        <h4>CI 零配置</h4>
+                        <p>密文已在仓库，所有碎片已在代码中。CI 检出即构建，无需任何 GitHub Secrets。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 开发者 -->
+        <section id="developer" class="section section--developer">
+            <header class="section__head">
+                <div class="section__index">05 / 关于开发者</div>
+                <h2 class="section__title">一个学生，<br>一份热爱</h2>
+            </header>
+
+            <div class="dev">
+                <div class="dev__avatar">
+                    <img src="./images/avatar.jpg" alt="开发者头像" loading="lazy"/>
+                    <div class="dev__ring" aria-hidden="true"></div>
+                </div>
+                <div class="dev__body">
+                    <p class="dev__quote">
+                        “本人不是 HAM，仅是对于业余无线电略为感兴趣，做这个只是周边人是业余无线电爱好者所提出想法，帮助实现而已，顺便学习学习开发过程。”
+                    </p>
+                    <p class="dev__bio">
+                        一个苦命学生族，借着周边 HAM 朋友的想法，用 AI 协助构建了这款应用 — 既是为业余无线电圈子尽一份力，也是为了在高考之前多学一点开发。
+                    </p>
+
+                    <div class="dev__meta">
+                        <div class="dev__row">
+                            <span class="dev__key">身份</span>
+                            <span class="dev__val">学生 · 业余开发者</span>
+                        </div>
+                        <div class="dev__row">
+                            <span class="dev__key">兴趣</span>
+                            <span class="dev__val">业余无线电 · Android 开发</span>
+                        </div>
+                        <div class="dev__row">
+                            <span class="dev__key">联系</span>
+                            <a class="dev__mail" href="mailto:fuxuelingkong@outlook.com">fuxuelingkong@outlook.com</a>
+                        </div>
+                        <div class="dev__row">
+                            <span class="dev__key">反馈</span>
+                            <span class="dev__val">欢迎在 GitHub Issue 提出建议或 bug</span>
+                        </div>
+                    </div>
+
+                    <div class="dev__note">
+                        <span>“考证嘛……估计高考后再考吧？我也不清楚到底会不会考，毕竟学生还得为学业为重。”</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer__grid">
+            <div class="footer__brand">
+                <div class="footer__logo">RadioAreaLocator</div>
+                <p class="footer__tagline">为业余无线电爱好者而生的随身控制台。</p>
+                <div class="footer__morse" aria-hidden="true">
+                    <span>−· ·− ·−·· ·· ··−</span>
+                </div>
+            </div>
+            <div class="footer__col">
+                <h4>导航</h4>
+                <a href="#features">核心功能</a>
+                <a href="#showcase">应用预览</a>
+                <a href="#stack">技术栈</a>
+                <a href="#security">安全设计</a>
+                <a href="#developer">开发者</a>
+            </div>
+            <div class="footer__col">
+                <h4>资源</h4>
+                <a href="https://github.com" target="_blank" rel="noopener">GitHub 仓库</a>
+                <a href="https://github.com/issues" target="_blank" rel="noopener">提交 Issue</a>
+                <a href="mailto:fuxuelingkong@outlook.com">邮件反馈</a>
+            </div>
+            <div class="footer__col">
+                <h4>系统要求</h4>
+                <span>Android 8.0+ (API 26)</span>
+                <span>targetSdk 37</span>
+                <span>需定位权限</span>
+            </div>
+        </div>
+        <div class="footer__bar">
+            <span>© 2026 RadioAreaLocator · MIT License</span>
+            <span class="footer__sig">SIGNAL · LOCKED · 73</span>
+        </div>
+    </footer>
+
+    <script src="./script.js" defer></script>
+</body>
+</html>
