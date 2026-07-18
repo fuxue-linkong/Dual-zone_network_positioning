@@ -906,6 +906,37 @@ main { position: relative; z-index: 1; }
 .section--developer {
     background: linear-gradient(180deg, transparent, rgba(163, 205, 218, 0.02));
 }
+/* 精简版：头像 + 名字 + 联系方式，水平排列 */
+.dev--minimal {
+    grid-template-columns: auto 1fr;
+    gap: 40px;
+    align-items: center;
+}
+.dev__body--minimal {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.dev__name {
+    font-family: var(--font-cn);
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+.dev__name::after {
+    content: ' ·';
+    color: var(--phosphor);
+}
+.dev__meta--inline {
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px dashed var(--border-soft);
+    border-bottom: none;
+    padding-top: 20px;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
 .dev {
     display: grid;
     grid-template-columns: 0.6fr 1.4fr;
@@ -1100,8 +1131,9 @@ main { position: relative; z-index: 1; }
     .crypto__diagram { grid-template-columns: 1fr 1fr; }
     .crypto__diagram .shard__op { display: none; }
     .stack { grid-template-columns: repeat(2, 1fr); }
-    .dev { grid-template-columns: 1fr; }
+    .dev, .dev--minimal { grid-template-columns: 1fr; }
     .dev__avatar { width: 160px; height: 160px; }
+    .dev--minimal .dev__avatar { width: 140px; height: 140px; }
     .footer__grid { grid-template-columns: 1fr 1fr; }
 }
 
