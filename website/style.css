@@ -790,118 +790,6 @@ main { position: relative; z-index: 1; }
     color: var(--text-faint);
 }
 
-/* ---------- 安全设计 ---------- */
-.section--security {
-    background: linear-gradient(180deg, transparent, rgba(54, 209, 103, 0.02), transparent);
-}
-.crypto {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 64px;
-    align-items: start;
-}
-.crypto__diagram {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
-    align-items: center;
-    gap: 12px;
-    padding: 32px;
-    background: var(--bg-card);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-}
-.shard {
-    padding: 20px 16px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--border-soft);
-    border-radius: 10px;
-    text-align: center;
-    transition: all 0.3s;
-    position: relative;
-}
-.shard:hover {
-    border-color: var(--phosphor);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -8px var(--phosphor-glow);
-}
-.shard--a { border-top: 2px solid var(--azure); }
-.shard--b { border-top: 2px solid var(--amber); }
-.shard--c { border-top: 2px solid var(--rust); }
-.shard--key {
-    border-color: var(--phosphor);
-    background: var(--phosphor-soft);
-    box-shadow: 0 0 24px -8px var(--phosphor-glow);
-}
-.shard__label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
-    letter-spacing: 0.1em;
-    margin-bottom: 8px;
-    font-weight: 600;
-}
-.shard--key .shard__label { color: var(--phosphor-bright); }
-.shard__hex {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--phosphor);
-    margin-bottom: 8px;
-    word-break: break-all;
-    line-height: 1.4;
-}
-.shard__src {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-faint);
-    letter-spacing: 0.05em;
-}
-.shard__op {
-    font-family: var(--font-display);
-    font-size: 24px;
-    color: var(--phosphor);
-    text-align: center;
-}
-.crypto__detail {
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-}
-.crypto__item {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 20px;
-    padding-bottom: 24px;
-    border-bottom: 1px dashed var(--border-soft);
-}
-.crypto__item:last-child { border-bottom: none; }
-.crypto__num {
-    font-family: var(--font-display);
-    font-size: 18px;
-    color: var(--phosphor);
-    line-height: 1;
-}
-.crypto__item h4 {
-    margin: 0 0 8px;
-    font-family: var(--font-cn);
-    font-size: 17px;
-    color: var(--text);
-}
-.crypto__item p {
-    margin: 0;
-    font-size: 13.5px;
-    color: var(--text-dim);
-    line-height: 1.65;
-}
-.crypto__item code {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--phosphor-bright);
-    background: var(--phosphor-soft);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
 /* ---------- 开发者 ---------- */
 .section--developer {
     background: linear-gradient(180deg, transparent, rgba(163, 205, 218, 0.02));
@@ -1194,9 +1082,6 @@ main { position: relative; z-index: 1; }
     .features { grid-template-columns: repeat(2, 1fr); }
     .feature--wide { grid-column: span 2; }
     .showcase, .showcase--text { grid-template-columns: 1fr; }
-    .crypto { grid-template-columns: 1fr; }
-    .crypto__diagram { grid-template-columns: 1fr 1fr; }
-    .crypto__diagram .shard__op { display: none; }
     .stack { grid-template-columns: repeat(2, 1fr); }
     .dev, .dev--minimal { grid-template-columns: 1fr; }
     .devs { grid-template-columns: 1fr; }
@@ -1220,8 +1105,6 @@ main { position: relative; z-index: 1; }
     .dev__meta { grid-template-columns: 1fr; }
     .radar { width: 140px; height: 140px; right: -24px; bottom: -32px; }
     .scope__wave { height: 140px; }
-    .crypto__diagram { padding: 20px; grid-template-columns: 1fr; gap: 8px; }
-    .crypto__diagram .shard__op { display: block; text-align: center; }
 }
 
 /* 减少动画偏好 */

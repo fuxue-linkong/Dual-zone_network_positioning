@@ -15,8 +15,7 @@
         '.showcase__frame',
         '.showcase__notes .note',
         '.stack__group',
-        '.crypto__diagram',
-        '.crypto__item',
+        '.dev-card',
         '.dev__avatar',
         '.dev__body',
         '.section__head'

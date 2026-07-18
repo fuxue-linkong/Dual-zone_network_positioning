@@ -48,7 +48,6 @@
             <a href="#features">功能</a>
             <a href="#showcase">预览</a>
             <a href="#stack">技术</a>
-            <a href="#security">安全</a>
             <a href="#developer">开发者</a>
         </nav>
         <div class="nav__meta">
@@ -97,8 +96,8 @@
                             <div class="stat__label">位网格定位</div>
                         </div>
                         <div class="stat">
-                            <div class="stat__num">AES-256</div>
-                            <div class="stat__label">GCM 加密</div>
+                            <div class="stat__num">3</div>
+                            <div class="stat__label">TLE 数据源</div>
                         </div>
                         <div class="stat">
                             <div class="stat__num">26+</div>
@@ -289,7 +288,7 @@
             <header class="section__head">
                 <div class="section__index">03 / 技术栈</div>
                 <h2 class="section__title">现代 Android，<br>工程化构建</h2>
-                <p class="section__desc">Kotlin 2.3 + Jetpack Compose + Material 3 Expressive。CI/CD 零密钥配置，JaCoCo 覆盖率守护。</p>
+                <p class="section__desc">Kotlin 2.3 + Jetpack Compose + Material 3 Expressive。CI/CD 自动化构建，JaCoCo 覆盖率守护。</p>
             </header>
 
             <div class="stack">
@@ -336,70 +335,10 @@
             </div>
         </section>
 
-        <!-- 安全设计 -->
-        <section id="security" class="section section--security">
-            <header class="section__head">
-                <div class="section__index">04 / 安全设计</div>
-                <h2 class="section__title">三碎片密钥，<br>零 Secrets 构建</h2>
-                <p class="section__desc">摆脱 GitHub Secrets 依赖。AES-256-GCM 加密敏感信息，密钥分散三处，包名绑定防重打包。</p>
-            </header>
-
-            <div class="crypto">
-                <div class="crypto__diagram" aria-hidden="true">
-                    <div class="shard shard--a">
-                        <div class="shard__label">Shard A</div>
-                        <div class="shard__hex">5C 3A 91 F7 2E D4 08 B6</div>
-                        <div class="shard__src">BuildConfig</div>
-                    </div>
-                    <div class="shard__op">⊕</div>
-                    <div class="shard shard--b">
-                        <div class="shard__label">Shard B</div>
-                        <div class="shard__hex">3F C8 52 A1 9D E0 44 2C</div>
-                        <div class="shard__src">混淆字节</div>
-                    </div>
-                    <div class="shard__op">⊕</div>
-                    <div class="shard shard--c">
-                        <div class="shard__label">Shard C</div>
-                        <div class="shard__hex">SHA-256(pkg + SALT)</div>
-                        <div class="shard__src">运行时派生</div>
-                    </div>
-                    <div class="shard__op">=</div>
-                    <div class="shard shard--key">
-                        <div class="shard__label">Master Key</div>
-                        <div class="shard__hex">256-bit AES Key</div>
-                        <div class="shard__src">AES-256-GCM</div>
-                    </div>
-                </div>
-
-                <div class="crypto__detail">
-                    <div class="crypto__item">
-                        <span class="crypto__num">01</span>
-                        <h4>开发端加密</h4>
-                        <p>明文 API Key 通过 <code>gradle encryptSecrets</code> 任务加密为 <code>secrets.dat</code>，提交入库。</p>
-                    </div>
-                    <div class="crypto__item">
-                        <span class="crypto__num">02</span>
-                        <h4>运行时组装</h4>
-                        <p>应用启动时从 BuildConfig + 混淆数组 + 包名派生 三处组装主密钥，XOR 还原。</p>
-                    </div>
-                    <div class="crypto__item">
-                        <span class="crypto__num">03</span>
-                        <h4>防重打包</h4>
-                        <p>ShardC 绑定 <code>context.packageName</code>，重打包后包名变更 → 主密钥不匹配 → GCM 认证失败。</p>
-                    </div>
-                    <div class="crypto__item">
-                        <span class="crypto__num">04</span>
-                        <h4>CI 零配置</h4>
-                        <p>密文已在仓库，所有碎片已在代码中。CI 检出即构建，无需任何 GitHub Secrets。</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- 开发者 -->
         <section id="developer" class="section section--developer">
             <header class="section__head">
-                <div class="section__index">05 / 关于开发者</div>
+                <div class="section__index">04 / 关于开发者</div>
                 <h2 class="section__title">开发者</h2>
             </header>
 
@@ -458,7 +397,6 @@
                 <a href="#features">核心功能</a>
                 <a href="#showcase">应用预览</a>
                 <a href="#stack">技术栈</a>
-                <a href="#security">安全设计</a>
                 <a href="#developer">开发者</a>
             </div>
             <div class="footer__col">
