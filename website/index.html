@@ -8,14 +8,23 @@
     <title>RadioAreaLocator · 双区网络定位</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 鸿蒙字体 CDN：优先本地系统，缺失则回退 Noto Sans SC */
+        @font-face {
+            font-family: 'HarmonyOS Sans SC';
+            src: local('HarmonyOS Sans SC'), local('HarmonyOS_Sans_SC'),
+                 local('HarmonyOS Sans'), local('HarmonyOS_Sans');
+            font-display: swap;
+        }
+    </style>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <!-- 顶部状态条 -->
     <div class="statusbar" aria-hidden="true">
-        <span class="statusbar__left">radioarealocator v1.2.0-beta.1</span>
-        <span class="statusbar__right">[ 73 · SK ]</span>
+        <span class="statusbar__left">RADIOAREALOCATOR · v1.2.0-beta.1</span>
+        <span class="statusbar__right">[ ORBIT · LOCKED · 73 ]</span>
     </div>
 
     <!-- 顶部导航 -->
@@ -59,34 +68,99 @@
                 </div>
             </div>
 
-            <!-- 终端 mockup -->
-            <div class="terminal" aria-hidden="true">
-                <div class="terminal__bar">
-                    <span class="terminal__dot"></span>
-                    <span class="terminal__title">radioarealocator — zsh</span>
+            <!-- 卫星轨道图 -->
+            <div class="orbit-viz" aria-hidden="true">
+                <svg class="orbit-svg" viewBox="0 0 520 520" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <radialGradient id="earthGrad" cx="38%" cy="32%" r="68%">
+                            <stop offset="0%" stop-color="#f8f7f7"/>
+                            <stop offset="60%" stop-color="#e9e6e6"/>
+                            <stop offset="100%" stop-color="#c9c4c4"/>
+                        </radialGradient>
+                        <radialGradient id="shadow" cx="65%" cy="65%" r="60%">
+                            <stop offset="0%" stop-color="rgba(15,0,0,0)"/>
+                            <stop offset="100%" stop-color="rgba(15,0,0,0.18)"/>
+                        </radialGradient>
+                    </defs>
+
+                    <!-- 经纬度网格 -->
+                    <g class="grid-lines" stroke="rgba(15,0,0,0.06)" stroke-width="0.5" fill="none">
+                        <ellipse cx="260" cy="260" rx="180" ry="60"/>
+                        <ellipse cx="260" cy="260" rx="180" ry="120"/>
+                        <ellipse cx="260" cy="260" rx="180" ry="180"/>
+                        <ellipse cx="260" cy="260" rx="120" ry="180"/>
+                        <ellipse cx="260" cy="260" rx="60" ry="180"/>
+                        <line x1="80" y1="260" x2="440" y2="260"/>
+                        <line x1="260" y1="80" x2="260" y2="440"/>
+                    </g>
+
+                    <!-- 地球 -->
+                    <circle cx="260" cy="260" r="180" fill="url(#earthGrad)" stroke="rgba(15,0,0,0.12)" stroke-width="1"/>
+                    <circle cx="260" cy="260" r="180" fill="url(#shadow)"/>
+
+                    <!-- 大陆轮廓简化线（点缀） -->
+                    <g class="continents" stroke="rgba(15,0,0,0.15)" stroke-width="1" fill="rgba(15,0,0,0.04)">
+                        <path d="M180 180 Q220 160 250 175 Q280 195 270 220 Q240 235 210 220 Q185 205 180 180 Z"/>
+                        <path d="M295 210 Q335 200 355 230 Q360 260 335 275 Q305 280 290 255 Q285 230 295 210 Z"/>
+                        <path d="M200 290 Q230 285 260 300 Q280 320 265 345 Q235 355 210 340 Q190 320 200 290 Z"/>
+                        <path d="M310 320 Q340 315 365 335 Q360 360 330 365 Q305 355 310 320 Z"/>
+                    </g>
+
+                    <!-- 轨道椭圆 -->
+                    <g class="orbits" fill="none" stroke-width="1" stroke-dasharray="3 4">
+                        <ellipse class="orbit orbit--1" cx="260" cy="260" rx="230" ry="110" stroke="rgba(31,157,74,0.45)" transform="rotate(-20 260 260)"/>
+                        <ellipse class="orbit orbit--2" cx="260" cy="260" rx="250" ry="150" stroke="rgba(31,157,74,0.35)" transform="rotate(35 260 260)"/>
+                        <ellipse class="orbit orbit--3" cx="260" cy="260" rx="240" ry="90" stroke="rgba(31,157,74,0.25)" transform="rotate(75 260 260)"/>
+                    </g>
+
+                    <!-- 卫星 -->
+                    <g class="satellite satellite--1">
+                        <circle cx="0" cy="0" r="3.5" fill="#1f9d4a"/>
+                        <circle cx="0" cy="0" r="8" fill="none" stroke="#1f9d4a" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="-9" y1="0" x2="-14" y2="0" stroke="#1f9d4a" stroke-width="0.8"/>
+                        <line x1="9" y1="0" x2="14" y2="0" stroke="#1f9d4a" stroke-width="0.8"/>
+                    </g>
+                    <g class="satellite satellite--2">
+                        <circle cx="0" cy="0" r="3.5" fill="#2c7bb6"/>
+                        <circle cx="0" cy="0" r="8" fill="none" stroke="#2c7bb6" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="-9" y1="0" x2="-14" y2="0" stroke="#2c7bb6" stroke-width="0.8"/>
+                        <line x1="9" y1="0" x2="14" y2="0" stroke="#2c7bb6" stroke-width="0.8"/>
+                    </g>
+                    <g class="satellite satellite--3">
+                        <circle cx="0" cy="0" r="3" fill="#d97706"/>
+                        <circle cx="0" cy="0" r="7" fill="none" stroke="#d97706" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="-8" y1="0" x2="-12" y2="0" stroke="#d97706" stroke-width="0.8"/>
+                        <line x1="8" y1="0" x2="12" y2="0" stroke="#d97706" stroke-width="0.8"/>
+                    </g>
+
+                    <!-- 地面观测点 -->
+                    <g class="ground-station">
+                        <circle cx="260" cy="340" r="5" fill="#201d1d"/>
+                        <circle cx="260" cy="340" r="10" fill="none" stroke="#201d1d" stroke-width="0.8" opacity="0.5"/>
+                        <circle cx="260" cy="340" r="16" fill="none" stroke="#201d1d" stroke-width="0.4" opacity="0.3" class="pulse-ring"/>
+                    </g>
+
+                    <!-- 信号波束 -->
+                    <g class="beams" stroke="rgba(31,157,74,0.3)" stroke-width="0.5" fill="none">
+                        <path d="M260 340 Q200 250 60 180" stroke-dasharray="2 3"/>
+                        <path d="M260 340 Q330 260 470 200" stroke-dasharray="2 3"/>
+                    </g>
+
+                    <!-- 标注 -->
+                    <g class="labels" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(15,0,0,0.5)">
+                        <text x="60" y="175">AO-7</text>
+                        <text x="472" y="195" text-anchor="end">FO-29</text>
+                        <text x="270" y="358">QTH</text>
+                        <text x="430" y="245" text-anchor="end" opacity="0.6">LEO</text>
+                        <text x="80" y="395" opacity="0.6">ORBIT</text>
+                    </g>
+                </svg>
+
+                <!-- 标签 -->
+                <div class="orbit-viz__caption">
+                    <span class="caption__dot"></span>
+                    <span>实时轨道预测 · SGP4/SDP4</span>
                 </div>
-                <pre class="terminal__body"><span class="t-prompt">$</span> <span class="t-cmd">radioarealocator --locate</span>
-
-<span class="t-ok">[+]</span> GPS locked    : 31.2304°N, 121.4737°E
-<span class="t-ok">[+]</span> CQ Zone       : <span class="t-num">24</span>
-<span class="t-ok">[+]</span> ITU Zone      : <span class="t-num">33</span>
-<span class="t-ok">[+]</span> Maidenhead    : <span class="t-key">PM95JC</span>
-<span class="t-ok">[+]</span> Address       : 上海市黄浦区
-
-<span class="t-prompt">$</span> <span class="t-cmd">radioarealocator --predict --hours 48</span>
-
-<span class="t-info">[*]</span> Tracking <span class="t-num">23</span> satellites via CelesTrak
-<span class="t-ok">[+]</span> AO-7     AOS 14:32  EL 34°  <span class="t-key">in 2h 15m</span>
-<span class="t-ok">[+]</span> FO-29    AOS 16:08  EL 52°  <span class="t-key">in 3h 51m</span>
-<span class="t-ok">[+]</span> ISS      AOS 18:44  EL 67°  <span class="t-key">in 6h 27m</span>
-<span class="t-warn">[!]</span> 3 passes below horizon threshold, skipped
-
-<span class="t-prompt">$</span> <span class="t-cmd">radioarealocator --cw --koch 12</span>
-
-<span class="t-info">[*]</span> Lesson 12 · K · M · R · S · U · A · P
-<span class="t-ok">[+]</span> Accuracy      : <span class="t-num">92%</span>  ▓▓▓▓▓▓▓▓▓░
-<span class="t-ok">[+]</span> Next unlocked : <span class="t-key">Lesson 13</span>
-<span class="t-prompt">$</span> <span class="t-cursor">_</span></pre>
             </div>
         </section>
 
@@ -315,7 +389,7 @@
         </div>
         <div class="footer__bar">
             <span>© 2026 RadioAreaLocator · MIT License</span>
-            <span class="footer__sig">SIGNAL · LOCKED · 73</span>
+            <span class="footer__sig">ORBIT · LOCKED · 73</span>
         </div>
     </footer>
 

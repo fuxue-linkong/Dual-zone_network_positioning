@@ -1,6 +1,6 @@
 /* ============================================================
-   RadioAreaLocator · opencode.ai 风格设计系统
-   暖白画布 · 全等宽字体 · manpage 排版 · ASCII 标记
+   RadioAreaLocator · opencode.ai 风格 + 航天轨道主题
+   暖白画布 · 鸿蒙字体 · manpage 排版 · SVG 卫星轨道图
    ============================================================ */
 
 /* ---------- 设计变量 ---------- */
@@ -10,50 +10,31 @@
     --surface-soft: #f8f7f7;
     --surface-card: #f1eeee;
     --surface-dark: #201d1d;
-    --surface-dark-elevated: #302c2c;
 
     --ink: #201d1d;
     --ink-deep: #0f0000;
-    --charcoal: #302c2c;
     --body: #424245;
     --mute: #646262;
-    --stone: #6e6e73;
     --ash: #9a9898;
 
     --hairline: rgba(15, 0, 0, 0.12);
     --hairline-strong: rgba(15, 0, 0, 0.24);
 
-    /* 终端绿（保留应用 phosphor 调性） */
+    /* 强调色 */
     --phosphor: #1f9d4a;
     --phosphor-bright: #2fc05f;
-    --phosphor-dark: #30d158;
+    --orbit-blue: #2c7bb6;
+    --orbit-amber: #d97706;
 
-    /* 终端色板 */
-    --term-bg: #1a1818;
-    --term-fg: #e8e3e3;
-    --term-prompt: #30d158;
-    --term-cmd: #fdfcfc;
-    --term-ok: #30d158;
-    --term-info: #5ac8fa;
-    --term-warn: #ff9f0a;
-    --term-key: #ffd60a;
-    --term-num: #64d2ff;
-    --term-mute: #9a9898;
-
-    /* 字体 */
-    --font-mono: 'JetBrains Mono', 'Noto Sans Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    --font-cn: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    /* 字体：鸿蒙字体优先 */
+    --font-sans: 'HarmonyOS Sans SC', 'HarmonyOS Sans', 'PingFang SC',
+                 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
     /* 几何 */
     --radius-sm: 4px;
-    --radius-md: 4px;
-    --radius-full: 9999px;
 
     /* 间距 */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 12px;
-    --space-lg: 16px;
     --space-xl: 24px;
     --space-xxl: 32px;
     --space-section: 96px;
@@ -69,10 +50,9 @@ body {
     margin: 0;
     background: var(--canvas);
     color: var(--ink);
-    font-family: var(--font-mono), var(--font-cn);
+    font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.65;
-    font-feature-settings: "liga" 0;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -90,16 +70,15 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* ---------- 顶部状态条 ---------- */
 .statusbar {
     background: var(--surface-dark);
-    color: var(--term-fg);
+    color: #e8e3e3;
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.08em;
     padding: 6px var(--space-xxl);
     display: flex;
     justify-content: space-between;
-    text-transform: lowercase;
 }
-.statusbar__right { color: var(--phosphor-dark); }
+.statusbar__right { color: var(--phosphor-bright); }
 
 /* ---------- 导航 ---------- */
 .nav {
@@ -140,6 +119,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
     font-size: 13px;
     color: var(--mute);
     border-bottom: none;
+    font-family: var(--font-mono);
 }
 .nav__github:hover { color: var(--ink); }
 
@@ -154,9 +134,8 @@ main {
 .rule {
     border: none;
     border-top: 1px solid var(--hairline);
-    margin: 0;
-    max-width: var(--container);
     margin: 0 auto;
+    max-width: var(--container);
 }
 
 /* ---------- Hero ---------- */
@@ -175,7 +154,7 @@ main {
     letter-spacing: 0.1em;
 }
 .hero__title {
-    font-family: var(--font-cn);
+    font-family: var(--font-sans);
     font-size: clamp(40px, 5vw, 64px);
     font-weight: 700;
     line-height: 1.1;
@@ -195,12 +174,11 @@ main {
     align-items: center;
     height: 36px;
     padding: 4px 20px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 14px;
     font-weight: 500;
     border-radius: var(--radius-sm);
     border: 1px solid var(--ink);
-    border-bottom: 1px solid var(--ink);
     transition: background 0.15s, color 0.15s;
 }
 .btn:hover { border-bottom-color: var(--ink); }
@@ -215,7 +193,7 @@ main {
 }
 .btn--ghost:hover { background: var(--surface-card); }
 
-/* Hero stats：水平 manpage 风格 */
+/* Hero stats */
 .hero__stats {
     display: flex;
     flex-wrap: wrap;
@@ -235,58 +213,115 @@ main {
 .stat__sep { color: var(--ash); }
 .stat__label { color: var(--mute); }
 
-/* ---------- 终端 mockup ---------- */
-.terminal {
-    background: var(--term-bg);
-    border: 1px solid #000;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    box-shadow: 0 24px 60px -20px rgba(15, 0, 0, 0.25);
-    font-family: var(--font-mono);
+/* ---------- 卫星轨道图 ---------- */
+.orbit-viz {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 520px;
+    margin: 0 auto;
 }
-.terminal__bar {
-    background: #2a2727;
-    padding: 8px 14px;
-    display: flex;
+.orbit-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* 卫星动画：沿椭圆轨道运动 */
+.satellite {
+    transform-origin: 0 0;
+}
+.satellite--1 {
+    animation: orbit-1 28s linear infinite;
+}
+.satellite--2 {
+    animation: orbit-2 42s linear infinite;
+    animation-delay: -8s;
+}
+.satellite--3 {
+    animation: orbit-3 36s linear infinite;
+    animation-delay: -16s;
+}
+
+/* 轨道 1：rx=230 ry=110 rotate(-20) */
+@keyframes orbit-1 {
+    0%   { transform: rotate(-20deg) translate(230px, 0) rotate(20deg); }
+    25%  { transform: rotate(70deg) translate(230px, 0) rotate(-70deg); }
+    50%  { transform: rotate(160deg) translate(230px, 0) rotate(-160deg); }
+    75%  { transform: rotate(250deg) translate(230px, 0) rotate(-250deg); }
+    100% { transform: rotate(340deg) translate(230px, 0) rotate(-340deg); }
+}
+
+/* 轨道 2：rx=250 ry=150 rotate(35) */
+@keyframes orbit-2 {
+    0%   { transform: rotate(35deg) translate(250px, 0) rotate(-35deg); }
+    25%  { transform: rotate(125deg) translate(250px, 0) rotate(-125deg); }
+    50%  { transform: rotate(215deg) translate(250px, 0) rotate(-215deg); }
+    75%  { transform: rotate(305deg) translate(250px, 0) rotate(-305deg); }
+    100% { transform: rotate(395deg) translate(250px, 0) rotate(-395deg); }
+}
+
+/* 轨道 3：rx=240 ry=90 rotate(75) */
+@keyframes orbit-3 {
+    0%   { transform: rotate(75deg) translate(240px, 0) rotate(-75deg); }
+    25%  { transform: rotate(165deg) translate(240px, 0) rotate(-165deg); }
+    50%  { transform: rotate(255deg) translate(240px, 0) rotate(-255deg); }
+    75%  { transform: rotate(345deg) translate(240px, 0) rotate(-345deg); }
+    100% { transform: rotate(435deg) translate(240px, 0) rotate(-435deg); }
+}
+
+/* 地面站脉冲 */
+.pulse-ring {
+    transform-origin: 260px 340px;
+    animation: pulse 2.4s ease-out infinite;
+}
+@keyframes pulse {
+    0%   { transform: scale(0.6); opacity: 0.6; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* 标注文字闪烁 */
+.labels text {
+    animation: label-fade 4s ease-in-out infinite;
+}
+.labels text:nth-child(2) { animation-delay: 0.5s; }
+.labels text:nth-child(3) { animation-delay: 1s; }
+@keyframes label-fade {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+}
+
+/* 轨道图标题 */
+.orbit-viz__caption {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid #000;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--mute);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
 }
-.terminal__dot {
-    width: 11px;
-    height: 11px;
+.caption__dot {
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: #ff5f57;
-    box-shadow: 18px 0 0 #febc2e, 36px 0 0 #28c840;
-    margin-right: 18px;
+    background: var(--phosphor);
+    box-shadow: 0 0 8px var(--phosphor);
+    animation: blink-dot 1.6s ease-in-out infinite;
 }
-.terminal__title {
-    font-size: 12px;
-    color: var(--term-mute);
-    margin-left: 12px;
+@keyframes blink-dot {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
 }
-.terminal__body {
-    margin: 0;
-    padding: 24px;
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--term-fg);
-    overflow-x: auto;
-    white-space: pre;
-}
-.t-prompt { color: var(--term-prompt); font-weight: 700; }
-.t-cmd { color: var(--term-cmd); }
-.t-ok { color: var(--term-ok); }
-.t-info { color: var(--term-info); }
-.t-warn { color: var(--term-warn); }
-.t-key { color: var(--term-key); }
-.t-num { color: var(--term-num); }
-.t-cursor {
-    display: inline-block;
-    animation: blink 1s steps(2) infinite;
-    color: var(--term-prompt);
-}
-@keyframes blink { 50% { opacity: 0; } }
 
 /* ---------- 通用 section ---------- */
 .section {
@@ -306,7 +341,7 @@ main {
     letter-spacing: 0.08em;
 }
 .section__title {
-    font-family: var(--font-cn);
+    font-family: var(--font-sans);
     font-size: clamp(28px, 3.5vw, 40px);
     font-weight: 700;
     line-height: 1.15;
@@ -346,7 +381,7 @@ main {
     padding-bottom: 12px;
 }
 .feature__title {
-    font-family: var(--font-cn);
+    font-family: var(--font-sans);
     font-size: 20px;
     font-weight: 700;
     color: var(--ink);
@@ -481,7 +516,7 @@ main {
     min-width: 0;
 }
 .dev__name {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 20px;
     font-weight: 700;
     color: var(--ink);
@@ -571,6 +606,7 @@ main {
     .stack { grid-template-columns: repeat(2, 1fr); }
     .devs { grid-template-columns: 1fr; }
     .footer__grid { grid-template-columns: 1fr 1fr; }
+    .orbit-viz { max-width: 420px; }
 }
 @media (max-width: 640px) {
     .nav { flex-wrap: wrap; gap: 16px; padding: 16px var(--space-xl); }
@@ -584,8 +620,8 @@ main {
     .footer { padding: 48px var(--space-xl) 24px; }
     .footer__grid { grid-template-columns: 1fr; gap: 32px; }
     .footer__bar { flex-direction: column; gap: 8px; }
-    .terminal__body { font-size: 11.5px; padding: 16px; }
     .dev-card { flex-direction: column; align-items: flex-start; }
+    .orbit-viz { max-width: 340px; }
 }
 
 /* ---------- 减少动画偏好 ---------- */
