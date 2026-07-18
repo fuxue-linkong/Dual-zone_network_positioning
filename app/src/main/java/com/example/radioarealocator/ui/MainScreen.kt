@@ -1755,7 +1755,7 @@ private fun SatelliteFilterPopup(
                                     expanded = false
                                     onOpenManagement()
                                 },
-                                colors = ButtonDefaults.buttonColorsSecondary()
+                                colors = ButtonDefaults.buttonColorsPrimary()
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
