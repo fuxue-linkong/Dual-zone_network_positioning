@@ -12,8 +12,6 @@
         '.hero__subtitle',
         '.hero__desc',
         '.hero__cta',
-        '.hero__stats',
-        '.stat-card',
         '.section__head',
         '.feature',
         '.note',
