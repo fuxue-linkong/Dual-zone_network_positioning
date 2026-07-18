@@ -264,8 +264,81 @@
 
             <div class="showcase">
                 <figure class="showcase__frame">
-                    <div class="showcase__device">
-                        <img src="./images/screenshot.jpg" alt="RadioAreaLocator 应用截图：主界面展示定位信息、卫星过境预测与天气卡片" loading="lazy"/>
+                    <!-- 纯 CSS 模拟应用界面（无图片资源） -->
+                    <div class="mock" role="img" aria-label="RadioAreaLocator 主界面示意图：状态栏、定位卡片、卫星卡片、天气卡片">
+                        <div class="mock__statusbar">
+                            <span>21:34</span>
+                            <span class="mock__statusicons">●●● ◐</span>
+                        </div>
+                        <div class="mock__hero">
+                            <div class="mock__signal">
+                                <span class="mock__dot"></span>
+                                <span>SIG · LOCKED</span>
+                            </div>
+                            <div class="mock__title">双区网络定位</div>
+                            <div class="mock__sub">RadioAreaLocator · v1.2.0-beta.1</div>
+                        </div>
+
+                        <div class="mock__card mock__card--loc">
+                            <div class="mock__card-head">
+                                <span class="mock__card-tag">LOCATION</span>
+                                <span class="mock__card-time">21:34:08</span>
+                            </div>
+                            <div class="mock__coord">
+                                <span>39.9042°N</span>
+                                <span>116.4074°E</span>
+                            </div>
+                            <div class="mock__zones">
+                                <div class="mock__zone">
+                                    <span class="mock__zone-label">CQ</span>
+                                    <span class="mock__zone-val">24</span>
+                                </div>
+                                <div class="mock__zone">
+                                    <span class="mock__zone-label">ITU</span>
+                                    <span class="mock__zone-val">44</span>
+                                </div>
+                                <div class="mock__zone">
+                                    <span class="mock__zone-label">GRID</span>
+                                    <span class="mock__zone-val">OM89</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mock__card mock__card--sat">
+                            <div class="mock__card-head">
+                                <span class="mock__card-tag">SATELLITES</span>
+                                <span class="mock__card-time">5 / 23</span>
+                            </div>
+                            <ul class="mock__passes">
+                                <li>
+                                    <span class="mock__sat-name">ISS</span>
+                                    <span class="mock__sat-mode">FM · SSTV</span>
+                                    <span class="mock__sat-time">AOS 22:18</span>
+                                </li>
+                                <li>
+                                    <span class="mock__sat-name">SO-50</span>
+                                    <span class="mock__sat-mode">FM</span>
+                                    <span class="mock__sat-time">AOS 23:42</span>
+                                </li>
+                                <li>
+                                    <span class="mock__sat-name">AO-91</span>
+                                    <span class="mock__sat-mode">FM</span>
+                                    <span class="mock__sat-time">AOS 01:05</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="mock__card mock__card--wx">
+                            <div class="mock__card-head">
+                                <span class="mock__card-tag">WX</span>
+                                <span class="mock__card-time">· HANGZHOU</span>
+                            </div>
+                            <div class="mock__wx-row">
+                                <span class="mock__wx-temp">18°C</span>
+                                <span class="mock__wx-desc">多云转晴 · 北风 3 级</span>
+                            </div>
+                            <div class="mock__wx-quote">“仰望星空，脚踏实地。”</div>
+                        </div>
                     </div>
                     <figcaption class="showcase__caption">
                         <span class="showcase__tag">MAIN SCREEN</span>
