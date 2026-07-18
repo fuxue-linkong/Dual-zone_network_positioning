@@ -919,7 +919,7 @@ main { position: relative; z-index: 1; }
 }
 .dev__name {
     font-family: var(--font-cn);
-    font-size: clamp(32px, 4vw, 48px);
+    font-size: clamp(28px, 3.5vw, 40px);
     font-weight: 800;
     color: var(--text);
     letter-spacing: -0.02em;
@@ -936,6 +936,73 @@ main { position: relative; z-index: 1; }
     padding-top: 20px;
     padding-bottom: 0;
     margin-bottom: 0;
+}
+
+/* 双开发者卡片网格 */
+.devs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+.dev-card {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 32px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    transition: all 0.4s var(--ease-out);
+}
+.dev-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-4px);
+    background: rgba(20, 30, 22, 0.75);
+}
+.dev-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+.dev-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.dev-card__meta .dev__mail {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 100px;
+    font-size: 12px;
+    background: rgba(0,0,0,0.2);
+    transition: all 0.2s;
+}
+.dev-card__meta .dev__mail:hover {
+    border-color: var(--phosphor);
+    color: var(--phosphor);
+    background: var(--phosphor-soft);
+}
+.dev-card__meta .dev__mail span {
+    border-bottom: none;
+}
+.dev__avatar--sm {
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+}
+.dev__avatar--sm .dev__ring {
+    inset: -8px;
+}
+.dev__avatar--sm .dev__ring::before {
+    width: 6px;
+    height: 6px;
+    top: -3px;
 }
 .dev {
     display: grid;
@@ -1132,6 +1199,7 @@ main { position: relative; z-index: 1; }
     .crypto__diagram .shard__op { display: none; }
     .stack { grid-template-columns: repeat(2, 1fr); }
     .dev, .dev--minimal { grid-template-columns: 1fr; }
+    .devs { grid-template-columns: 1fr; }
     .dev__avatar { width: 160px; height: 160px; }
     .dev--minimal .dev__avatar { width: 140px; height: 140px; }
     .footer__grid { grid-template-columns: 1fr 1fr; }
