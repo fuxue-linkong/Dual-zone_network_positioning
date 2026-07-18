@@ -1,19 +1,16 @@
 // ============================================================
-// RadioAreaLocator · 交互脚本（DeepSeek 风格）
+// RadioAreaLocator · 交互脚本
 // ============================================================
 
 (function () {
     'use strict';
 
-    // 滚动揭示
+    // ──────────────────────────────────────────────
+    // 1. 滚动揭示
+    // ──────────────────────────────────────────────
     const revealTargets = [
-        '.hero__badge',
-        '.hero__title',
-        '.hero__subtitle',
-        '.hero__desc',
-        '.hero__cta',
-        '.hero__stats',
-        '.stat-card',
+        '.hero__head',
+        '.orbit-viz',
         '.section__head',
         '.feature',
         '.note',
@@ -38,7 +35,9 @@
 
     document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
 
-    // 导航栏激活态
+    // ──────────────────────────────────────────────
+    // 2. 导航栏激活态
+    // ──────────────────────────────────────────────
     const navLinks = document.querySelectorAll('.nav__links a');
     const sections = document.querySelectorAll('main section[id]');
 
@@ -48,7 +47,7 @@
                 const id = entry.target.id;
                 navLinks.forEach(link => {
                     link.style.color = link.getAttribute('href') === '#' + id
-                        ? 'var(--text-primary)'
+                        ? 'var(--ink)'
                         : '';
                 });
             }
