@@ -41,6 +41,29 @@
     --container: 1200px;
 }
 
+/* ---------- 浅色模式覆盖（系统未启用深色时） ---------- */
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-base: #F7F8FA;
+        --bg-elevated: #FFFFFF;
+        --bg-card: rgba(255, 255, 255, 0.72);
+        --bg-card-hover: rgba(255, 255, 255, 0.95);
+
+        --text-primary: #1F2328;
+        --text-secondary: #424A53;
+        --text-tertiary: #636C76;
+        --text-muted: #848D97;
+
+        --border: rgba(0, 0, 0, 0.08);
+        --border-strong: rgba(0, 0, 0, 0.14);
+
+        --accent: #2D6BFF;
+        --accent-bright: #1A56E0;
+        --accent-glow: rgba(45, 107, 255, 0.22);
+        --accent-soft: rgba(45, 107, 255, 0.08);
+    }
+}
+
 /* ---------- 重置 ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -79,6 +102,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.02em; }
     opacity: 0.4;
     animation: drift 18s ease-in-out infinite;
 }
+@media (prefers-color-scheme: light) {
+    .aurora__blob { opacity: 0.25; }
+}
 .aurora__blob--1 {
     width: 600px;
     height: 600px;
@@ -116,6 +142,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.02em; }
     background-size: 60px 60px;
     mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
     -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+@media (prefers-color-scheme: light) {
+    .aurora__grid {
+        background-image:
+            linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    }
 }
 
 /* ---------- 导航 ---------- */
@@ -348,6 +381,15 @@ main {
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+@media (prefers-color-scheme: light) {
+    .hero__title,
+    .section__title {
+        background: linear-gradient(180deg, #1F2328 0%, #424A53 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
 .section__desc {
     font-size: 15px;
     color: var(--text-tertiary);
@@ -395,6 +437,12 @@ main {
 .feature--accent {
     background: linear-gradient(135deg, rgba(77,143,255,0.08) 0%, rgba(90,200,200,0.04) 100%);
     border-color: rgba(77,143,255,0.2);
+}
+@media (prefers-color-scheme: light) {
+    .feature--accent {
+        background: linear-gradient(135deg, rgba(45,107,255,0.06) 0%, rgba(90,200,200,0.03) 100%);
+        border-color: rgba(45,107,255,0.18);
+    }
 }
 .feature__icon {
     width: 44px;
