@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.ContactPage
 import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.SatelliteAlt
@@ -278,27 +277,6 @@ fun SettingPagerMiuix(
                                 stringResource(id = R.string.favorites_count) + ": ${businessState.reminderItems.size}"
                             },
                             onClick = actions.onOpenReminderList
-                        )
-                    }
-
-                    // 业务设置：CW 练习入口
-                    Card(
-                        modifier = Modifier
-                            .padding(top = 12.dp)
-                            .fillMaxWidth(),
-                    ) {
-                        ArrowPreference(
-                            title = stringResource(id = R.string.cw_practice),
-                            summary = stringResource(id = R.string.cw_practice_desc),
-                            startAction = {
-                                Icon(
-                                    Icons.Rounded.GraphicEq,
-                                    modifier = Modifier.padding(end = 6.dp),
-                                    contentDescription = stringResource(id = R.string.cw_practice),
-                                    tint = colorScheme.onBackground
-                                )
-                            },
-                            onClick = actions.onOpenCWPractice
                         )
                     }
 

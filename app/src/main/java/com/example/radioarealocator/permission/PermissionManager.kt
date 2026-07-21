@@ -4,10 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import android.os.PowerManager
 import android.provider.Settings
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,28 +22,19 @@ class PermissionManager(context: Context) {
         _state.value = readState()
     }
 
-    fun notificationRuntimePermission(): String? =
-        Manifest.permission.POST_NOTIFICATIONS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU }
+    /**
+     * 定位运行时权限：ACCESS_FINE_LOCATION（核心业务依赖，必需授权）。
+     * 同时声明了 ACCESS_COARSE_LOCATION 作为降级兜底，但 [PermissionState.location] 仅以 FINE 为准。
+     */
+    fun locationRuntimePermission(): String = Manifest.permission.ACCESS_FINE_LOCATION
 
-    fun notificationSettingsIntent(): Intent =
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, appContext.packageName)
-        }
-
-    fun batteryWhitelistIntent(): Intent =
-        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-            data = Uri.parse("package:${appContext.packageName}")
+    fun locationSettingsIntent(): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", appContext.packageName, null)
         }
 
     private fun readState() = PermissionState(
-        notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            hasPermission(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            NotificationManagerCompat.from(appContext).areNotificationsEnabled()
-        },
-        batteryWhitelist =
-            (appContext.getSystemService(Context.POWER_SERVICE) as PowerManager)
-                .isIgnoringBatteryOptimizations(appContext.packageName),
+        location = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION),
     )
 
     private fun hasPermission(permission: String): Boolean =

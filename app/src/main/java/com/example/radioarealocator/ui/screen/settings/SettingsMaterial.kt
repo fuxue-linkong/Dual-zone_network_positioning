@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContactPage
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SatelliteAlt
@@ -250,24 +249,6 @@ fun SettingPagerMaterial(
                             }
                         )
                     }
-                }
-            )
-
-            // 业务设置：CW 练习入口
-            SegmentedColumn(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                content = listOf {
-                    SegmentedListItem(
-                        onClick = actions.onOpenCWPractice,
-                        headlineContent = { Text(stringResource(id = R.string.cw_practice)) },
-                        supportingContent = { Text(stringResource(id = R.string.cw_practice_desc)) },
-                        leadingContent = {
-                            Icon(Icons.Filled.GraphicEq, stringResource(id = R.string.cw_practice))
-                        },
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
-                        }
-                    )
                 }
             )
 

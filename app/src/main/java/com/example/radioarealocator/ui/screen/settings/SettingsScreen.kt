@@ -48,7 +48,6 @@ fun SettingPager(
         onSetSatelliteSource = mainViewModel::setSatelliteSource,
         onUpdateReminderSettings = mainViewModel::updateReminderSettings,
         onOpenReminderList = { navigator.push(Route.ReminderList) },
-        onOpenCWPractice = { navigator.push(Route.CWPractice) },
     )
 
     when (LocalUiMode.current) {

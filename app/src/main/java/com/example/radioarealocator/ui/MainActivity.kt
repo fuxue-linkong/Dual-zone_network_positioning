@@ -63,6 +63,7 @@ import com.example.radioarealocator.ui.cw.CWPracticeRouteScreen
 import com.example.radioarealocator.ui.screen.about.AboutScreen
 import com.example.radioarealocator.ui.screen.colorpalette.ColorPaletteScreen
 import com.example.radioarealocator.ui.screen.home.HomePager
+import com.example.radioarealocator.ui.screen.location.LocationDetailScreen
 import com.example.radioarealocator.ui.screen.permission.PermissionScreen
 import com.example.radioarealocator.ui.screen.reminder.ReminderListRouteScreen
 import com.example.radioarealocator.ui.screen.satellite.SatelliteManagementScreen
@@ -155,6 +156,7 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.CWPractice> { CWPracticeRouteScreen() }
                                 entry<Route.SatelliteManagement> { SatelliteManagementScreen() }
                                 entry<Route.ReminderList> { ReminderListRouteScreen() }
+                                entry<Route.LocationDetail> { LocationDetailScreen() }
                             }
                         )
                     }

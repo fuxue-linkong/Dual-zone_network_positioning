@@ -17,6 +17,7 @@
     <string name="permission_microphone">Microphone</string>
     <string name="permission_battery">Battery Whitelist</string>
     <string name="permission_overlay">Overlay</string>
+    <string name="permission_location">Location</string>
     <string name="permission_granted">Granted</string>
     <string name="permission_required">Required</string>
     <string name="permission_optional">Optional</string>
@@ -83,6 +84,8 @@
     <string name="latitude" translatable="false">纬度</string>
     <string name="longitude" translatable="false">经度</string>
     <string name="location_status" translatable="false">定位状态</string>
+    <string name="location_detail_title" translatable="false">定位详情</string>
+    <string name="location_detail_desc" translatable="false">查看定位状态与位置地图</string>
     <string name="location_success" translatable="false">定位成功</string>
     <string name="zone_info" translatable="false">分区信息</string>
     <string name="delete" translatable="false">删除</string>

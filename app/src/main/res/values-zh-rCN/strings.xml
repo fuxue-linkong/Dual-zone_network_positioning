@@ -8,6 +8,7 @@
     <string name="permission_microphone">麦克风</string>
     <string name="permission_battery">电池白名单</string>
     <string name="permission_overlay">悬浮窗</string>
+    <string name="permission_location">定位权限</string>
     <string name="permission_granted">已授权</string>
     <string name="permission_required">必需</string>
     <string name="permission_optional">可选</string>

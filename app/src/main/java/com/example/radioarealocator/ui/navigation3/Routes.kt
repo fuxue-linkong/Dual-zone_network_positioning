@@ -48,4 +48,9 @@ sealed interface Route : NavKey, Parcelable {
     @Parcelize
     @Serializable
     data object ReminderList : Route
+
+    /** 定位详情：定位状态 + 位置地图（同一子页面） */
+    @Parcelize
+    @Serializable
+    data object LocationDetail : Route
 }

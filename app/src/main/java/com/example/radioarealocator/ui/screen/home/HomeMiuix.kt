@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.permission.PermissionState
-import com.example.radioarealocator.ui.AMapCard
 import com.example.radioarealocator.ui.WeatherCard
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
 import com.example.radioarealocator.ui.util.BlurredBar
@@ -99,10 +98,16 @@ fun HomePagerMiuix(
                     ) {
                         // 每日一言
                         DailyQuoteCard(businessState.dailyQuote)
-                        // 权限卡片：引导用户授权定位
-                        PermissionCardMiuix(permissionState, actions.onPermissionsClick)
-                        // 定位卡：CQ/ITU/梅登兰德 + 经纬度 + 地址
-                        LocationCardMiuix(businessState, actions.onRefreshLocation)
+                        // 条件卡：定位未授权 → 权限引导卡；定位已授权 → 时间排布 + 定位详情入口
+                        if (permissionState.requiredGranted) {
+                            // 卫星列表卡：附近过境卫星（时间排布）
+                            SatelliteListCardMiuix(businessState, actions)
+                            // 定位详情入口：跳转到定位状态+地图子页面
+                            LocationEntryCardMiuix(actions.onLocationDetailClick)
+                        } else {
+                            // 权限卡片：引导用户授权定位
+                            PermissionCardMiuix(permissionState, actions.onPermissionsClick)
+                        }
                         // 天气卡
                         WeatherCard(
                             weather = businessState.weather,
@@ -111,12 +116,6 @@ fun HomePagerMiuix(
                             nextSatellite = businessState.nextSatellite,
                             onRefresh = actions.onRefreshWeather,
                         )
-                        // 卫星列表卡：附近过境卫星
-                        SatelliteListCardMiuix(businessState, actions)
-                        // 地图卡
-                        businessState.location.result?.let { loc ->
-                            AMapCard(latitude = loc.latitude, longitude = loc.longitude)
-                        }
                         // CW 练习入口
                         CwEntryCardMiuix(actions.onCWPracticeClick)
                         // 应用版本信息
@@ -245,71 +244,13 @@ private fun DailyQuoteCard(quote: String) {
 }
 
 @Composable
-private fun LocationCardMiuix(
-    state: HomeBusinessState,
-    onRefresh: () -> Unit,
-) {
-    val loc = state.location
-    val result = loc.result
+private fun LocationEntryCardMiuix(onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.location_status),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurface
-                )
-                top.yukonga.miuix.kmp.basic.TextButton(
-                    onClick = onRefresh,
-                    text = if (loc.isLoading) stringResource(R.string.locating) else stringResource(R.string.action_refresh)
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            when {
-                loc.isLoading && result == null -> Text(
-                    text = stringResource(R.string.locating),
-                    color = colorScheme.onSurfaceVariantSummary
-                )
-                loc.error != null && result == null -> Text(
-                    text = stringResource(R.string.location_failed),
-                    color = colorScheme.onError
-                )
-                result != null -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    LocationRow(stringResource(R.string.latitude), "%.4f°".format(result.latitude))
-                    LocationRow(stringResource(R.string.longitude), "%.4f°".format(result.longitude))
-                    result.cqZone?.let { LocationRow(stringResource(R.string.cq_zone), it.toString()) }
-                    result.ituZone?.let { LocationRow(stringResource(R.string.itu_zone), it.toString()) }
-                    LocationRow(stringResource(R.string.maidenhead), result.maidenhead)
-                    if (loc.lastLocationCity.isNotBlank()) {
-                        LocationRow(stringResource(R.string.address), loc.lastLocationCity)
-                    }
-                }
-                else -> Text(
-                    text = stringResource(R.string.tap_to_locate),
-                    color = colorScheme.onSurfaceVariantSummary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocationRow(title: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = title, color = colorScheme.onSurfaceVariantSummary, fontSize = 14.sp)
-        Text(text = value, color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        BasicComponent(
+            title = stringResource(R.string.location_detail_title),
+            summary = stringResource(R.string.location_detail_desc),
+            onClick = onClick
+        )
     }
 }
 

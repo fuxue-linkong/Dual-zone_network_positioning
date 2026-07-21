@@ -44,5 +44,4 @@ data class SettingsScreenActions(
     val onSetSatelliteSource: (String) -> Unit = {},
     val onUpdateReminderSettings: (ReminderSettings) -> Unit = {},
     val onOpenReminderList: () -> Unit = {},
-    val onOpenCWPractice: () -> Unit = {},
 )

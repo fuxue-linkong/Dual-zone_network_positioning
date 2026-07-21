@@ -22,10 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -90,11 +89,9 @@ fun PermissionScreen() {
     }
 
     val actions = PermissionActions(
-        onNotification = {
-            manager.notificationRuntimePermission()?.let(permissionLauncher::launch)
-                ?: settingsLauncher.launch(manager.notificationSettingsIntent())
+        onLocation = {
+            permissionLauncher.launch(manager.locationRuntimePermission())
         },
-        onBattery = { settingsLauncher.launch(manager.batteryWhitelistIntent()) },
     )
     val onBack = dropUnlessResumed { navigator.pop() }
 
@@ -105,8 +102,7 @@ fun PermissionScreen() {
 }
 
 private data class PermissionActions(
-    val onNotification: () -> Unit,
-    val onBattery: () -> Unit,
+    val onLocation: () -> Unit,
 )
 
 @Composable
@@ -176,18 +172,11 @@ private fun PermissionScreenMiuix(
                         .padding(top = 12.dp)
                 ) {
                     PermissionRowMiuix(
-                        stringResource(R.string.permission_notification),
-                        state.notification,
+                        stringResource(R.string.permission_location),
+                        state.location,
                         true,
-                        Icons.Default.Notifications,
-                        actions.onNotification,
-                    )
-                    PermissionRowMiuix(
-                        stringResource(R.string.permission_battery),
-                        state.batteryWhitelist,
-                        true,
-                        Icons.Default.BatterySaver,
-                        actions.onBattery,
+                        Icons.Default.LocationOn,
+                        actions.onLocation,
                     )
                 }
             }
@@ -306,18 +295,11 @@ private fun PermissionScreenMaterial(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         PermissionRowMaterial(
-                            stringResource(R.string.permission_notification),
-                            state.notification,
+                            stringResource(R.string.permission_location),
+                            state.location,
                             true,
-                            Icons.Default.Notifications,
-                            actions.onNotification,
-                        )
-                        PermissionRowMaterial(
-                            stringResource(R.string.permission_battery),
-                            state.batteryWhitelist,
-                            true,
-                            Icons.Default.BatterySaver,
-                            actions.onBattery,
+                            Icons.Default.LocationOn,
+                            actions.onLocation,
                         )
                     }
                 }
