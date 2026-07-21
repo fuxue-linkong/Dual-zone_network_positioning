@@ -29,9 +29,6 @@ datastore = "1.1.4"
 room = "2.7.0"
 mpandroidchart = "v3.1.0"
 
-# Baseline Profile：消除 Compose/Miuix 组件运行时 JIT 编译，避免冷启动期间主线程被阻塞
-benchmark = "1.4.1"
-
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }
 kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
@@ -40,8 +37,6 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 lsplugin-apksign = { id = "org.lsposed.lsplugin.apksign", version.ref = "apksign" }
-# Baseline Profile 生成器插件（应用在 :baselineprofile 模块）
-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
@@ -112,8 +107,3 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version = "1.1.5" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version = "3.5.1" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-
-# Baseline Profile 生成器（macrobenchmark + JUnit4 runner）
-androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
-androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version = "2.3.0" }
-androidx-test-runner = { module = "androidx.test:runner", version = "1.6.2" }

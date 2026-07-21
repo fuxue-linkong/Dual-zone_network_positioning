@@ -99,11 +99,6 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.lsplugin.apksign)
-    // Baseline Profile 自动嵌入：从 :baselineprofile 模块生成结果注入 release APK
-    // 生成方法：本地跑 `./gradlew :baselineprofile:generateBaselineProfile`
-    // 生成的 baseline-prof.txt 会被 AGP 自动嵌入 APK，ART 安装时 AOT 预编译关键路径，
-    // 消除冷启动期间 Compose/Miuix 组件的 JIT 编译阻塞主线程问题。
-    alias(libs.plugins.baselineprofile)
     jacoco
 }
 
