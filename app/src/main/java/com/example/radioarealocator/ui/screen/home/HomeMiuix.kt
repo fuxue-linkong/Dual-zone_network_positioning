@@ -1,5 +1,6 @@
 package com.example.radioarealocator.ui.screen.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,25 +19,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.permission.PermissionState
 import com.example.radioarealocator.ui.WeatherCard
+import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
 import com.example.radioarealocator.ui.util.BlurredBar
 import com.example.radioarealocator.ui.util.rememberBlurBackdrop
+import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -52,7 +65,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -96,26 +111,27 @@ fun HomePagerMiuix(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // 每日一言
-                        DailyQuoteCard(businessState.dailyQuote)
-                        // 条件卡：定位未授权 → 权限引导卡；定位已授权 → 时间排布 + 定位详情入口
+                        // 条件卡：定位未授权 → 权限引导卡 + 独立每日言/天气；定位已授权 → 时间排布（替换权限卡行）
                         if (permissionState.requiredGranted) {
-                            // 卫星列表卡：附近过境卫星（时间排布）
+                            // 时间排布：时间卡（含每日言滚动）+ 紧贴的天气卡
+                            HomeHeaderMiuix(businessState, actions.onRefreshWeather)
+                            // 卫星列表卡：附近过境卫星
                             SatelliteListCardMiuix(businessState, actions)
                             // 定位详情入口：跳转到定位状态+地图子页面
                             LocationEntryCardMiuix(actions.onLocationDetailClick)
                         } else {
                             // 权限卡片：引导用户授权定位
                             PermissionCardMiuix(permissionState, actions.onPermissionsClick)
+                            // 未授权时独立显示每日言 + 天气卡
+                            DailyQuoteCard(businessState.dailyQuote)
+                            WeatherCard(
+                                weather = businessState.weather,
+                                isLoading = businessState.weatherLoading,
+                                error = businessState.weatherError,
+                                nextSatellite = businessState.nextSatellite,
+                                onRefresh = actions.onRefreshWeather,
+                            )
                         }
-                        // 天气卡
-                        WeatherCard(
-                            weather = businessState.weather,
-                            isLoading = businessState.weatherLoading,
-                            error = businessState.weatherError,
-                            nextSatellite = businessState.nextSatellite,
-                            onRefresh = actions.onRefreshWeather,
-                        )
                         // CW 练习入口
                         CwEntryCardMiuix(actions.onCWPracticeClick)
                         // 应用版本信息
@@ -125,6 +141,106 @@ fun HomePagerMiuix(
                 }
             }
         }
+    }
+}
+
+/**
+ * 主页时间排布（来自 main 分支 HomeHeader，适配 Miuix 主题）。
+ *
+ * 顶部为时间卡：本地时间（大字号）+ 右侧日期（星期 / 年 月 日，"日"放大）+ UTC 时间 +
+ * 每日一言水平滚动；时间卡正下方紧贴天气卡。背景色与定位状态色联动（有定位结果 → primary，无 → outline）。
+ */
+@Composable
+private fun HomeHeaderMiuix(
+    state: HomeBusinessState,
+    onRefreshWeather: () -> Unit,
+) {
+    // 时钟每秒刷新，仅在此组件内部持有，避免 1s tick 触发整个主页重组
+    var now by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = Instant.now()
+            delay(1000)
+        }
+    }
+
+    val stateColor = if (state.location.result != null) colorScheme.primary else colorScheme.outline
+    val zonedNow = now.atZone(ZoneId.systemDefault())
+    val localTime = zonedNow.format(timeFormatter)
+    val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
+    // 日期：第一行星期几，第二行"年 月 日"，其中"日"放大
+    val weekday = zonedNow.format(weekdayFormatter)
+    val dateYearMonth = "${zonedNow.year}年 ${zonedNow.monthValue}月 "
+    val dateDayText = "${zonedNow.dayOfMonth}日"
+    val dateLine = remember(stateColor, dateYearMonth, dateDayText) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(fontSize = DATE_FONT_SIZE.sp, color = stateColor)) {
+                append(dateYearMonth)
+                withStyle(SpanStyle(fontSize = DATE_DAY_FONT_SIZE.sp)) {
+                    append(dateDayText)
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 时间卡
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(stateColor.copy(alpha = 0.12f * LocalCardAlpha.current))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            // 本地时间 + 日期并排：时间在左，月/日（两行）在右
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = localTime,
+                    fontSize = LOCAL_TIME_FONT_SIZE.sp,
+                    color = stateColor
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = weekday,
+                        fontSize = DATE_FONT_SIZE.sp,
+                        color = stateColor
+                    )
+                    Text(text = dateLine)
+                }
+            }
+            Text(
+                text = "$utcTime UTC",
+                fontSize = (LOCAL_TIME_FONT_SIZE * UTC_FONT_SIZE_SCALE).sp,
+                color = colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp)
+            )
+            // 每日一言：超宽时水平滚动
+            DailyQuoteScroller(
+                quote = state.dailyQuote,
+                contentColor = colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
+        }
+        // 天气卡：位于时间卡正下方，占满宽度
+        WeatherCard(
+            weather = state.weather,
+            isLoading = state.weatherLoading,
+            error = state.weatherError,
+            nextSatellite = state.nextSatellite,
+            onRefresh = onRefreshWeather,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
