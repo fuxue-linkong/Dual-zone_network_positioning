@@ -1,9 +1,6 @@
 package com.example.radioarealocator.ui.cw
 
-import android.app.Application
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.radioarealocator.data.cw.CWProgress
 import com.example.radioarealocator.data.cw.CWProgressStore
@@ -13,14 +10,21 @@ import com.example.radioarealocator.data.cw.CharacterSet
 import com.example.radioarealocator.data.cw.MorseCodeGenerator
 import com.example.radioarealocator.data.cw.MorseCodePlayer
 import com.example.radioarealocator.data.cw.PlayMode
+import com.example.radioarealocator.radioApp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class CWPracticeViewModel(application: Application) : AndroidViewModel(application) {
-    private val settingsStore = CWSettingsStore(application)
-    private val progressStore = CWProgressStore(application)
+/**
+ * 使用普通 [ViewModel] + 全局 [radioApp] 上下文（与 [com.example.radioarealocator.ui.MainViewModel] 风格一致）。
+ * Navigation3 NavDisplay entry 的 ViewModelStoreOwner 不在 CreationExtras 中提供 APPLICATION_KEY，
+ * 改用 AndroidViewModel 会在 viewModel<CWPracticeViewModel>() 处抛 IllegalArgumentException 导致闪退。
+ */
+class CWPracticeViewModel : ViewModel() {
+    private val app = radioApp
+    private val settingsStore = CWSettingsStore(app)
+    private val progressStore = CWProgressStore(app)
     private val generator = MorseCodeGenerator()
     private val player = MorseCodePlayer()
 
