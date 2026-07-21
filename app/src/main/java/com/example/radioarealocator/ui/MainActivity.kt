@@ -1,6 +1,7 @@
 package com.example.radioarealocator.ui
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -40,7 +41,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.HasDefaultViewModelProviderFactory
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.MutableCreationExtras
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -147,16 +154,16 @@ class MainActivity : ComponentActivity() {
                                 navigator.pop()
                             },
                             entryProvider = entryProvider {
-                                entry<Route.Main> { mainScreenEntry() }
-                                entry<Route.About> { AboutScreen() }
-                                entry<Route.ColorPalette> { ColorPaletteScreen() }
-                                entry<Route.Permissions> { PermissionScreen() }
-                                entry<Route.Home> { mainScreenEntry() }
-                                entry<Route.Settings> { mainScreenEntry() }
-                                entry<Route.CWPractice> { CWPracticeRouteScreen() }
-                                entry<Route.SatelliteManagement> { SatelliteManagementScreen() }
-                                entry<Route.ReminderList> { ReminderListRouteScreen() }
-                                entry<Route.LocationDetail> { LocationDetailScreen() }
+                                entry<Route.Main> { WithApplicationViewModelStoreOwner { mainScreenEntry() } }
+                                entry<Route.About> { WithApplicationViewModelStoreOwner { AboutScreen() } }
+                                entry<Route.ColorPalette> { WithApplicationViewModelStoreOwner { ColorPaletteScreen() } }
+                                entry<Route.Permissions> { WithApplicationViewModelStoreOwner { PermissionScreen() } }
+                                entry<Route.Home> { WithApplicationViewModelStoreOwner { mainScreenEntry() } }
+                                entry<Route.Settings> { WithApplicationViewModelStoreOwner { mainScreenEntry() } }
+                                entry<Route.CWPractice> { WithApplicationViewModelStoreOwner { CWPracticeRouteScreen() } }
+                                entry<Route.SatelliteManagement> { WithApplicationViewModelStoreOwner { SatelliteManagementScreen() } }
+                                entry<Route.ReminderList> { WithApplicationViewModelStoreOwner { ReminderListRouteScreen() } }
+                                entry<Route.LocationDetail> { WithApplicationViewModelStoreOwner { LocationDetailScreen() } }
                             }
                         )
                     }
@@ -324,4 +331,62 @@ private fun MainScreenBackHandler(
             mainState.animateToPage(0)
         }
     )
+}
+
+/**
+ * 包装 [ViewModelStoreOwner]，在其 [defaultViewModelCreationExtras] 中注入 [ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]。
+ *
+ * 根因：Navigation3 NavDisplay entry 的 ViewModelStoreOwner 默认不实现
+ * [HasDefaultViewModelProviderFactory]，导致其 `defaultViewModelCreationExtras` 为空
+ * （缺少 `APPLICATION_KEY`）。此时调用 `viewModel<AndroidViewModel 子类>()` 会抛
+ * `IllegalArgumentException: CreationExtras must have an application by 'APPLICATION_KEY'`。
+ *
+ * 此 wrapper 作为防御层，确保任何 entry 内的 `viewModel()` 调用都能在 CreationExtras 中拿到
+ * [Application]，从而彻底消除该崩溃（对普通 [androidx.lifecycle.ViewModel] 无副作用）。
+ *
+ * @param delegate 被包装的原始 ViewModelStoreOwner（通常是 NavDisplay entry 自带的 owner）
+ * @param application 当前应用 Application 实例
+ */
+private class ApplicationKeyViewModelStoreOwner(
+    private val delegate: ViewModelStoreOwner,
+    private val application: Application,
+) : ViewModelStoreOwner by delegate, HasDefaultViewModelProviderFactory {
+
+    @Suppress("DEPRECATION") // AndroidViewModelFactory(application) 构造虽 deprecated 但仍可用，且能同时创建普通 ViewModel 与 AndroidViewModel
+    override val defaultViewModelProviderFactory: ViewModelProvider.Factory
+        get() = (delegate as? HasDefaultViewModelProviderFactory)?.defaultViewModelProviderFactory
+            ?: ViewModelProvider.AndroidViewModelFactory(application)
+
+    override val defaultViewModelCreationExtras: CreationExtras
+        get() {
+            val base = (delegate as? HasDefaultViewModelProviderFactory)
+                ?.defaultViewModelCreationExtras
+                ?: CreationExtras.Empty
+            return MutableCreationExtras(base).apply {
+                set(ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY, application)
+            }
+        }
+}
+
+/**
+ * 在当前组合作用域内提供一个注入了 `APPLICATION_KEY` 的 [ViewModelStoreOwner]。
+ *
+ * 用法：在 NavDisplay 的每个 `entry<Route.X> { ... }` 内容外层调用本函数，
+ * 即可让该 entry 内所有 `viewModel<T>()` 调用拿到 Application。
+ */
+@Composable
+private fun WithApplicationViewModelStoreOwner(content: @Composable () -> Unit) {
+    val baseOwner = LocalViewModelStoreOwner.current
+    val application = LocalContext.current.applicationContext as Application
+    val owner = remember(baseOwner, application) {
+        if (baseOwner == null) null
+        else ApplicationKeyViewModelStoreOwner(baseOwner, application)
+    }
+    if (owner != null) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+            content()
+        }
+    } else {
+        content()
+    }
 }
