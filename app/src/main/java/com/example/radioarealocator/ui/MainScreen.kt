@@ -1133,7 +1133,7 @@ private fun SatelliteManagementItem(
     val formatter = remember { DateTimeFormatter.ofPattern("MM-dd HH:mm") }
     val zone = remember { ZoneId.systemDefault() }
     val timeText = if (satellite.isCurrentlyVisible) {
-        stringResource(R.string.in_pass)
+        satellite.losTime.atZone(zone).format(formatter)
     } else {
         satellite.aosTime.atZone(zone).format(formatter)
     }
@@ -1177,12 +1177,12 @@ private fun SatelliteManagementItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
-                    text = if (satellite.isCurrentlyVisible) {
-                        "${stringResource(R.string.in_pass)} · $timeText"
-                    } else {
-                        "${stringResource(R.string.aos_time)}：$timeText"
-                    },
+                    Text(
+                        text = if (satellite.isCurrentlyVisible) {
+                            "${stringResource(R.string.in_pass)} · ${stringResource(R.string.los_time)}：$timeText"
+                        } else {
+                            "${stringResource(R.string.aos_time)}：$timeText"
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isFavorite) {
                         MaterialTheme.colorScheme.onTertiaryContainer

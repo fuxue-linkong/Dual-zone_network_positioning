@@ -710,6 +710,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        refreshJob?.cancel()
         locationOnlyJob?.cancel()
         _locationState.value = _locationState.value.copy(
             isLoading = true,
@@ -761,6 +762,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun refreshSatelliteSourceOnly() {
         satelliteOnlyJob?.cancel()
+        segmentStatusJob?.cancel()
+        segmentStatusFetchedAt = null
         _satelliteState.value = _satelliteState.value.copy(
             isSatelliteLoading = true,
             satelliteError = null
