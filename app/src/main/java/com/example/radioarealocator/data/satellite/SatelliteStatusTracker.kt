@@ -40,18 +40,19 @@ data class SatelliteStatusQuery(
  * 卫星状态持续显示跟踪器。
  *
  * 核心机制：
- * 1. 每 5 分钟从 AMSAT 抓取一次卫星状态报告（含 UTC 分钟级时间戳）；
- * 2. 以卫星名称为键存储最近一次有报告时间槽的状态（卫星状态字典）；
- * 3. 收到新报告时更新对应卫星从当前时间槽开始的状态记录；
- * 4. 查询时若当前时间槽无该卫星新报告，自动向前追溯最近有效状态槽，
- *    沿用其状态值并标记 [SatelliteStatusQuery.isInherited] = true；
- * 5. 超过 24 小时（96 槽）无报告视为无数据。
+ * 1. 每 5 分钟从 AMSAT API 和网页同时抓取卫星状态报告；
+ * 2. 网页数据源提供精确的 15 分钟时间槽数据，确保时效性；
+ * 3. 以卫星名称为键存储最近一次有报告时间槽的状态（卫星状态字典）；
+ * 4. 收到新报告时更新对应卫星从当前时间槽开始的状态记录；
+ * 5. 查询时严格筛选仅返回最近 15 分钟内的报告（[queryRecentStatus]）；
+ * 6. 超过 15 分钟无报告视为无数据，不再延续显示过期状态。
  *
- * 这样界面永远不会因"当前槽无新报告"而显示"无数据"，而是延续显示最近状态，
- * 并通过 [SatelliteStatusQuery.isInherited] 提供视觉区分依据。
+ * 网页数据源（[AmsatPageScraper]）解析 `https://www.amsat.org/status/` 页面，
+ * 提取当前 15 分钟时间槽内有报告的卫星状态，数据更精确、时效性更强。
  */
 class SatelliteStatusTracker(
     private val apiService: AmsatStatusApiService,
+    private val pageScraper: AmsatPageScraper,
     private val scope: CoroutineScope
 ) {
 
@@ -98,19 +99,39 @@ class SatelliteStatusTracker(
 
     private suspend fun refresh() {
         try {
-            val reports = apiService.fetchStatusSummaryReports()
+            // 优先从网页抓取最近 15 分钟时间槽的数据（更精确）
+            val pageReports = try {
+                pageScraper.fetchRecentReports()
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            // 同时从 API 获取数据作为补充
+            val apiReports = apiService.fetchStatusSummaryReports()
+
             val currentSlot = absoluteSlot()
-            // 合并策略：保留未在新报告中出现的旧卫星（沿用其状态），
-            // 新报告中出现的卫星覆盖为当前槽的实时状态
+            // 合并策略：网页数据优先，API 数据补充
             refreshMutex.withLock {
                 val merged = _statusMap.value.toMutableMap()
-                reports.forEach { report ->
+
+                // 先用 API 数据更新
+                apiReports.forEach { report ->
                     merged[report.name] = SatelliteStatusEntry(
                         status = report.status,
                         reportTime = report.reportTime,
                         absoluteSlot = currentSlot
                     )
                 }
+
+                // 网页数据覆盖 API 数据（更精确的15分钟时间槽）
+                pageReports.forEach { report ->
+                    merged[report.name] = SatelliteStatusEntry(
+                        status = report.status,
+                        reportTime = report.reportTime,
+                        absoluteSlot = currentSlot
+                    )
+                }
+
                 _statusMap.value = merged
             }
         } catch (e: CancellationException) {
@@ -142,6 +163,28 @@ class SatelliteStatusTracker(
             status = entry.status,
             reportTime = entry.reportTime,
             isInherited = diff > 0
+        )
+    }
+
+    /**
+     * 严格查询最近 15 分钟内的卫星状态。
+     *
+     * 仅返回当前 15 分钟时间槽内有报告的卫星状态，过期数据不返回。
+     * 用于确保展示的卫星报告均为最近 15 分钟内生成的内容。
+     *
+     * - 返回 null：当前时间槽内无该卫星的报告
+     * - 返回非 null：当前时间槽内有实时报告
+     */
+    fun queryRecentStatus(name: String): SatelliteStatusQuery? {
+        val entry = _statusMap.value[name] ?: return null
+        val currentSlot = absoluteSlot()
+        val diff = currentSlot - entry.absoluteSlot
+        // 仅返回当前时间槽（diff == 0）的报告
+        if (diff != 0L) return null
+        return SatelliteStatusQuery(
+            status = entry.status,
+            reportTime = entry.reportTime,
+            isInherited = false
         )
     }
 
