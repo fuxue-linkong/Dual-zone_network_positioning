@@ -133,15 +133,15 @@ class LocationHelper(private val context: Context) {
      * 当设备位置变化超过 [minDistanceM] 或经过 [intervalMs] 时上报新位置。
      * Flow 被取消时自动移除回调，避免泄漏。
      *
-     * 默认参数优先保证实时性：5 秒间隔 + 0 米最小位移 + 高精度优先级，
+     * 默认参数优先保证实时性：5 秒间隔 + 5 米最小位移 + 高精度优先级，
      * 确保设备位置发生变化时经纬度能被及时捕获并更新到界面。
      *
      * @param intervalMs 期望的位置上报间隔（毫秒）
      * @param minDistanceM 最小位移阈值（米），小于此距离的变化不上报
      */
     fun locationUpdates(
-        intervalMs: Long = 10_000L,
-        minDistanceM: Float = 10f
+        intervalMs: Long = 5_000L,
+        minDistanceM: Float = 5f
     ): Flow<Location> = callbackFlow {
         if (!hasPermission()) {
             close(SecurityException("缺少定位权限"))

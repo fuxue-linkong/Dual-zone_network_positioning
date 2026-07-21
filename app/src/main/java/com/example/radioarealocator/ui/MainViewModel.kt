@@ -341,9 +341,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 30 分钟自动刷新间隔
         private const val WEATHER_REFRESH_INTERVAL_MS = 30L * 60 * 1000
 
-        // 地址解析去抖时长：位置停止变化 3 秒后才触发 Geocoder 反查，
+        // 地址解析去抖时长：位置停止变化 2 秒后才触发 Geocoder 反查，
         // 平衡实时性与性能（移动过程中持续触发会造成卡顿）
-        private const val ADDRESS_DEBOUNCE_MS = 3_000L
+        private const val ADDRESS_DEBOUNCE_MS = 2_000L
         // 位置监听失败后的自动重试参数（指数退避）
         private const val LOCATION_RETRY_BASE_MS = 2_000L
         private const val LOCATION_RETRY_MAX_MS = 30_000L
