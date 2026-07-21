@@ -83,6 +83,20 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- 禁用 WorkManager 自动初始化（androidx.startup），
+             改为在 ReminderScheduler 首次调用 WorkManager.getInstance(context) 时按需初始化。
+             这样可避免启动阶段与高德 SDK、Compose 首帧等抢占主线程资源。 -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>
