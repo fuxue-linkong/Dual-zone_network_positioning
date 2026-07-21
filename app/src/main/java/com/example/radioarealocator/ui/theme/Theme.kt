@@ -139,16 +139,22 @@ fun RadioAreaLocatorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     backgroundUri: android.net.Uri? = null,
+    monetEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     var backgroundScheme by remember { mutableStateOf<Colors?>(null) }
 
-    LaunchedEffect(backgroundUri, darkTheme) {
-        backgroundScheme = backgroundUri?.let { uri ->
-            BackgroundPalette.extractColors(context, uri)?.let { swatches ->
-                buildSchemeFromSwatches(swatches, darkTheme)
+    // 仅在启用莫奈取色且设置了背景图时提取主色调；否则使用默认主题色 #3482FF
+    LaunchedEffect(backgroundUri, darkTheme, monetEnabled) {
+        backgroundScheme = if (monetEnabled) {
+            backgroundUri?.let { uri ->
+                BackgroundPalette.extractColors(context, uri)?.let { swatches ->
+                    buildSchemeFromSwatches(swatches, darkTheme)
+                }
             }
+        } else {
+            null
         }
     }
 

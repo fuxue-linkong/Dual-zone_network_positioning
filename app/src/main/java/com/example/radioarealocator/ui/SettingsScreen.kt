@@ -62,6 +62,8 @@ fun SettingsScreen(
     onCardOpacityChange: (Int) -> Unit,
     backgroundOpacity: Int,
     onBackgroundOpacityChange: (Int) -> Unit,
+    monetEnabled: Boolean,
+    onMonetEnabledChange: (Boolean) -> Unit,
     onAboutClick: () -> Unit,
     reminderSettings: ReminderSettings,
     onUpdateReminderSettings: (ReminderSettings) -> Unit,
@@ -173,6 +175,16 @@ fun SettingsScreen(
                         onClick = onPickBackground
                     )
                     if (backgroundUri != null) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = MiuixTheme.colorScheme.dividerLine.copy(alpha = 0.5f * LocalCardAlpha.current)
+                        )
+                        SwitchPreference(
+                            title = stringResource(R.string.monet_color),
+                            summary = stringResource(R.string.monet_color_desc),
+                            checked = monetEnabled,
+                            onCheckedChange = onMonetEnabledChange
+                        )
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 4.dp),
                             color = MiuixTheme.colorScheme.dividerLine.copy(alpha = 0.5f * LocalCardAlpha.current)

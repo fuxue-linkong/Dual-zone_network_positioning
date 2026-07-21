@@ -63,8 +63,12 @@ class MainActivity : ComponentActivity() {
             val backgroundUri by viewModel.backgroundUri
             val cardOpacity by viewModel.cardOpacity
             val backgroundOpacity by viewModel.backgroundOpacity
+            val monetEnabled by viewModel.monetEnabled
 
-            RadioAreaLocatorTheme(backgroundUri = backgroundUri) {
+            RadioAreaLocatorTheme(
+                backgroundUri = backgroundUri,
+                monetEnabled = monetEnabled
+            ) {
                 val cardAlpha = if (backgroundUri != null) cardOpacity / 100f else 1f
                 CompositionLocalProvider(LocalCardAlpha provides cardAlpha) {
                     Box(modifier = Modifier.fillMaxSize()) {

@@ -477,6 +477,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settingsStore.backgroundOpacity = clamped
     }
 
+    // 是否启用莫奈取色（从背景图提取主色调）。关闭后使用默认主题色 #3482FF
+    private val _monetEnabled = mutableStateOf(settingsStore.monetEnabled)
+    val monetEnabled: State<Boolean> = _monetEnabled
+
+    /**
+     * 切换莫奈取色开关并持久化。
+     */
+    fun setMonetEnabled(value: Boolean) {
+        _monetEnabled.value = value
+        settingsStore.monetEnabled = value
+    }
+
     val hasLocationPermission: Boolean
         get() = locationHelper.hasPermission()
 

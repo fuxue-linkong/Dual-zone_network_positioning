@@ -41,6 +41,16 @@ class SettingsStore(context: Context) {
         }
 
     /**
+     * 是否启用莫奈取色（从背景图提取主色调）。默认 true。
+     * 关闭后即使设置了背景图，也使用默认主题色 #3482FF。
+     */
+    var monetEnabled: Boolean
+        get() = prefs.getBoolean(KEY_MONET_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_MONET_ENABLED, value).apply()
+        }
+
+    /**
      * 卫星 TLE 数据来源："ALL" / "CT" / "SNOGS"。默认 ALL。
      */
     var satelliteSource: String
@@ -91,6 +101,7 @@ class SettingsStore(context: Context) {
         private const val KEY_BACKGROUND_URI = "background_uri"
         private const val KEY_CARD_OPACITY = "card_opacity"
         private const val KEY_BACKGROUND_OPACITY = "background_opacity"
+        private const val KEY_MONET_ENABLED = "monet_enabled"
         private const val KEY_SATELLITE_SOURCE = "satellite_source"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"

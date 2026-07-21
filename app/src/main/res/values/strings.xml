@@ -80,6 +80,8 @@
     <string name="background_set">已设置背景图，点击重新选择</string>
     <string name="background_unset">未设置，点击选择图片</string>
     <string name="clear">清除</string>
+    <string name="monet_color">莫奈取色</string>
+    <string name="monet_color_desc">从背景图提取主色调作为主题色，关闭后使用默认蓝色 #3482FF</string>
     <string name="card_opacity">卡片透明度</string>
     <string name="card_opacity_desc">设置背景图后生效，0 为全透明，100 为全不透明</string>
     <string name="card_opacity_format">%1$d%%</string>
