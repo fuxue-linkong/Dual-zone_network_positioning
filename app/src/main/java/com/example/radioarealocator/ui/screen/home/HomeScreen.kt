@@ -33,13 +33,14 @@ fun HomePager(
     val permissionManager = remember(context) { PermissionManager(context) }
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
 
-    val locationState by mainViewModel.locationState.collectAsStateWithLifecycle()
-    val satelliteState by mainViewModel.satelliteState.collectAsStateWithLifecycle()
-    val weather by mainViewModel.weather.collectAsStateWithLifecycle()
-    val weatherLoading by mainViewModel.weatherLoading.collectAsStateWithLifecycle()
-    val weatherError by mainViewModel.weatherError.collectAsStateWithLifecycle()
-    val dailyQuote by mainViewModel.dailyQuote.collectAsStateWithLifecycle()
-    val favoriteSatellites by mainViewModel.favoriteSatellites.collectAsStateWithLifecycle()
+    // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可
+    val locationState by mainViewModel.locationState
+    val satelliteState by mainViewModel.satelliteState
+    val weather by mainViewModel.weather
+    val weatherLoading by mainViewModel.weatherLoading
+    val weatherError by mainViewModel.weatherError
+    val dailyQuote by mainViewModel.dailyQuote
+    val favoriteSatellites by mainViewModel.favoriteSatellites
 
     var hasActivated by remember { mutableStateOf(false) }
     if (isCurrentPage) hasActivated = true

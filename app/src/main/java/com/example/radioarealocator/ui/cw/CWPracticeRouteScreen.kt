@@ -68,7 +68,7 @@ fun CWPracticeRouteScreen() {
 
     val onBack: () -> Unit = when (page) {
         CWPage.Main -> dropUnlessResumed { navigator.pop() }
-        else -> { page = CWPage.Main }
+        else -> { { page = CWPage.Main } }
     }
 
     // CW 子组件均使用 Miuix 组件 + LocalCardAlpha，统一在 MiuixTheme 下渲染

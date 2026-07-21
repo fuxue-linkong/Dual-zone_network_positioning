@@ -31,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.radioarealocator.R
@@ -64,8 +63,9 @@ import java.time.format.DateTimeFormatter
 fun SatelliteManagementScreen() {
     val navigator = LocalNavigator.current
     val mainViewModel = viewModel<MainViewModel>()
-    val satelliteState by mainViewModel.satelliteState.collectAsStateWithLifecycle()
-    val favorites by mainViewModel.favoriteSatellites.collectAsStateWithLifecycle()
+    // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可
+    val satelliteState by mainViewModel.satelliteState
+    val favorites by mainViewModel.favoriteSatellites
 
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)

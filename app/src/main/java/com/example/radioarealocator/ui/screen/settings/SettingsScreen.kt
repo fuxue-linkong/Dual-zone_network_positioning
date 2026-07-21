@@ -22,9 +22,10 @@ fun SettingPager(
     val mainViewModel = viewModel<MainViewModel>()
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
-    val satelliteSource by mainViewModel.satelliteSource.collectAsStateWithLifecycle()
-    val reminderSettings by mainViewModel.reminderSettings.collectAsStateWithLifecycle()
-    val reminderItems by mainViewModel.reminderItems.collectAsStateWithLifecycle()
+    // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可
+    val satelliteSource by mainViewModel.satelliteSource
+    val reminderSettings by mainViewModel.reminderSettings
+    val reminderItems by mainViewModel.reminderItems
 
     LifecycleResumeEffect(Unit) {
         settingsViewModel.refresh()
