@@ -227,9 +227,12 @@ fun MainScreen(
     // 用 Box 叠加：底层是主 Scaffold，顶层是 AboutScreen 浮层。
     // AboutScreen 通过淡入淡出过渡显示，避免瞬时硬切。
     // navKey 同时驱动 TopAppBar Crossfade 与主内容区 AnimatedContent，保证视觉同步。
+    // Scaffold 背景设为透明：底层 BackgroundLayer 在无背景图时会绘制 surface 色，
+    // 在有背景图时绘制图片；若 Scaffold 用默认 surface 不透明色，会把背景图完全遮住。
     val navKey = listOf(selectedTab, homeSubScreen, settingsSubScreen, cwSubScreen)
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             Crossfade(
                 targetState = navKey,

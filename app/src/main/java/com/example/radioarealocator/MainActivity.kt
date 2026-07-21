@@ -105,14 +105,16 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun BackgroundLayer(uri: Uri?, backgroundOpacity: Int) {
-        if (uri == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.surface)
-            )
-            return
-        }
+        // 始终先绘制一层 surface 色，保证：
+        // 1) 无背景图时作为页面底色；
+        // 2) 有背景图但 bitmap 尚未解码完成 / 解码失败时（如 Photo Picker URI 重启后失效），
+        //    避免透出 Activity 窗口背景出现闪烁。
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MiuixTheme.colorScheme.surface)
+        )
+        if (uri == null) return
         val bgAlpha = backgroundOpacity.coerceIn(0, 100) / 100f
         val scrimAlpha = (1f - bgAlpha) * 0.82f
         val context = LocalContext.current
