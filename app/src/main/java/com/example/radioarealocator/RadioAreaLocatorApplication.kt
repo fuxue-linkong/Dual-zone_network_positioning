@@ -3,7 +3,6 @@ package com.example.radioarealocator
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.Build
-import android.os.UserManager
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import com.amap.api.maps.MapsInitializer
@@ -52,9 +51,6 @@ class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner {
 
     private val appViewModelStore by lazy { ViewModelStore() }
 
-    private fun isUserUnlocked(): Boolean =
-        getSystemService(UserManager::class.java)?.isUserUnlocked == true
-
     override fun onCreate() {
         super.onCreate()
         radioApp = this
@@ -63,8 +59,13 @@ class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner {
         SecretManager.init(this)
 
         // 2. 高德 SDK 隐私合规：在 SDK 任何接口调用前必须先调用这两个接口
-        MapsInitializer.updatePrivacyShow(this, true, true)
-        MapsInitializer.updatePrivacyAgree(this, true)
+        // 用 try/catch 保护，避免 SDK 内部异常导致整个应用启动失败
+        try {
+            MapsInitializer.updatePrivacyShow(this, true, true)
+            MapsInitializer.updatePrivacyAgree(this, true)
+        } catch (_: Throwable) {
+            // 高德 SDK 初始化失败不应阻塞应用启动
+        }
 
         // 3. 地图 SDK Key 运行时注入
         // 本地构建时 manifestPlaceholders 已从 local.properties 填充 Key，
@@ -82,29 +83,35 @@ class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner {
             }
         }
 
-        if (!isUserUnlocked()) {
-            return
-        }
-
         // 4. Android 14+ 启用 OnBackInvokedCallback（依赖 hiddenapibypass）
+        // 用 try/catch 保护，避免不同厂商 ROM 上的 hidden API 限制差异导致崩溃
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val prefs = this.getSharedPreferences("settings", MODE_PRIVATE)
-            val enable = prefs.getBoolean("enable_predictive_back", false)
-            HiddenApiBypass.addHiddenApiExemptions("Landroid/content/pm/ApplicationInfo;->setEnableOnBackInvokedCallback")
-            setEnableOnBackInvokedCallback(applicationInfo, enable)
+            try {
+                val prefs = this.getSharedPreferences("settings", MODE_PRIVATE)
+                val enable = prefs.getBoolean("enable_predictive_back", false)
+                HiddenApiBypass.addHiddenApiExemptions("Landroid/content/pm/ApplicationInfo;->setEnableOnBackInvokedCallback")
+                setEnableOnBackInvokedCallback(applicationInfo, enable)
+            } catch (_: Throwable) {
+                // hidden API 绕过失败不影响应用启动
+            }
         }
 
         // 5. OkHttpClient 单例（10MB 缓存 + 默认 UA 拦截器）
-        okhttpClient = OkHttpClient.Builder()
-            .cache(Cache(File(cacheDir, "okhttp"), 10 * 1024 * 1024))
-            .addInterceptor { block ->
-                block.proceed(
-                    block.request().newBuilder()
-                        .header("User-Agent", "RadioAreaLocator/${BuildConfig.VERSION_CODE}")
-                        .header("Accept-Language", Locale.getDefault().toLanguageTag())
-                        .build()
-                )
-            }.build()
+        // 用 try/catch 保护，避免缓存目录不可写等异常导致应用启动失败
+        try {
+            okhttpClient = OkHttpClient.Builder()
+                .cache(Cache(File(cacheDir, "okhttp"), 10 * 1024 * 1024))
+                .addInterceptor { block ->
+                    block.proceed(
+                        block.request().newBuilder()
+                            .header("User-Agent", "RadioAreaLocator/${BuildConfig.VERSION_CODE}")
+                            .header("Accept-Language", Locale.getDefault().toLanguageTag())
+                            .build()
+                    )
+                }.build()
+        } catch (_: Throwable) {
+            okhttpClient = OkHttpClient.Builder().build()
+        }
     }
 
     override val viewModelStore: ViewModelStore
