@@ -9,19 +9,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 从背景图提取主色调，用于生成 Miuix [top.yukonga.miuix.kmp.theme.Colors]。
+ * 从背景图提取主色调，作为 Miuix [top.yukonga.miuix.kmp.theme.ThemeController]
+ * 的 keyColor 传入。Miuix 内部会基于该种子色用 HCT 算法生成完整的 Material 色板，
+ * 无需我们手写色板拼装逻辑。
  *
- * 提取策略：
- * - 主色优先用 vibrant/muted 色板
- * - 容器色用对应色板的浅色/深色变体
- * - surface 保持中性，保证 UI 可读性
+ * 提取策略：优先 vibrant，其次 muted，最后回退到 dominant。
  */
 object BackgroundPalette {
 
     /**
-     * 解码 URI 对应图片并提取颜色。失败或为空时返回 null。
+     * 解码 URI 对应图片并提取主色。失败或为空时返回 null。
      */
-    suspend fun extractColors(context: Context, uri: Uri): PaletteSwatches? = withContext(Dispatchers.IO) {
+    suspend fun extractKeyColor(context: Context, uri: Uri): Color? = withContext(Dispatchers.IO) {
         runCatching {
             // 两阶段解码：先读边界，再按目标尺寸下采样，避免超大图 OOM
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -51,52 +50,16 @@ object BackgroundPalette {
                     )
                 } else bitmap
                 val palette = Palette.from(scaled).generate()
-                // dominantSwatch 几乎总有值；为空则视为提取失败
-                val dominant = palette.dominantSwatch ?: return@runCatching null
-                PaletteSwatches(
-                    primary = palette.vibrantSwatch?.rgb
-                        ?: palette.mutedSwatch?.rgb
-                        ?: dominant.rgb,
-                    secondary = palette.mutedSwatch?.rgb
-                        ?: palette.lightVibrantSwatch?.rgb
-                        ?: dominant.rgb,
-                    tertiary = palette.lightVibrantSwatch?.rgb
-                        ?: palette.darkVibrantSwatch?.rgb
-                        ?: dominant.rgb,
-                    surface = palette.lightMutedSwatch?.rgb
-                        ?: palette.darkMutedSwatch?.rgb
-                        ?: palette.mutedSwatch?.rgb
-                        ?: dominant.rgb,
-                    bodyTextColor = palette.vibrantSwatch?.bodyTextColor
-                        ?: palette.mutedSwatch?.bodyTextColor
-                        ?: dominant.bodyTextColor
-                )
+                val rgb = palette.vibrantSwatch?.rgb
+                    ?: palette.mutedSwatch?.rgb
+                    ?: palette.dominantSwatch?.rgb
+                    ?: return@runCatching null
+                Color(rgb)
             } finally {
                 // 异常路径也确保回收，避免 native 内存泄漏
                 if (scaled != null && scaled !== bitmap) scaled.recycle()
                 bitmap.recycle()
             }
         }.getOrNull()
-    }
-
-    /** 从 Palette 提取出的原始色板信息。rgb 颜色为 android.graphics.Color int。 */
-    data class PaletteSwatches(
-        val primary: Int,
-        val secondary: Int,
-        val tertiary: Int,
-        val surface: Int,
-        val bodyTextColor: Int
-    )
-
-    /**
-     * 计算一个颜色的合理 "on" 色（黑或白），保证对比度。
-     */
-    fun onColorFor(rgb: Int): Color {
-        val r = (rgb shr 16) and 0xFF
-        val g = (rgb shr 8) and 0xFF
-        val b = rgb and 0xFF
-        // 使用相对亮度判断
-        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
-        return if (luminance > 0.5) Color.Black else Color.White
     }
 }

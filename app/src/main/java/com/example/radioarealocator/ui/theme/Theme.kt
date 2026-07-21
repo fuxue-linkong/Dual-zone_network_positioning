@@ -2,7 +2,6 @@ package com.example.radioarealocator.ui.theme
 
 import android.app.Activity
 import android.graphics.Color as AndroidColor
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,8 +16,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import top.yukonga.miuix.kmp.theme.Colors
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.darkColorScheme
 import top.yukonga.miuix.kmp.theme.lightColorScheme
 
@@ -134,37 +134,60 @@ private val DarkColorScheme = darkColorScheme(
     tertiaryContainerVariant = dark_tertiaryContainer,
 )
 
+/**
+ * 应用主题。
+ *
+ * 莫奈取色使用 Miuix 内置的 [ThemeController] + [ColorSchemeMode.MonetSystem]：
+ * - monetEnabled = true 且设置了背景图：从背景图提取主色作为 keyColor，由 Miuix 用 HCT
+ *   算法生成完整 Material 色板。
+ * - monetEnabled = true 但无背景图：keyColor = null，Miuix 自动取系统壁纸主色
+ *   （即 Android Material You 系统取色）。
+ * - monetEnabled = false：使用 [ColorSchemeMode.System] + 默认蓝色 #3482FF 色板
+ *   （[LightColorScheme] / [DarkColorScheme]）。
+ */
 @Composable
 fun RadioAreaLocatorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
     backgroundUri: android.net.Uri? = null,
     monetEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    var backgroundScheme by remember { mutableStateOf<Colors?>(null) }
+    // 从背景图提取的主色（作为 Monet keyColor）；monetEnabled 关闭或无背景图时为 null。
+    var monetKeyColor by remember { mutableStateOf<Color?>(null) }
 
-    // 仅在启用莫奈取色且设置了背景图时提取主色调；否则使用默认主题色 #3482FF
-    LaunchedEffect(backgroundUri, darkTheme, monetEnabled) {
-        backgroundScheme = if (monetEnabled) {
-            backgroundUri?.let { uri ->
-                BackgroundPalette.extractColors(context, uri)?.let { swatches ->
-                    buildSchemeFromSwatches(swatches, darkTheme)
-                }
-            }
+    LaunchedEffect(backgroundUri, monetEnabled) {
+        monetKeyColor = if (monetEnabled) {
+            backgroundUri?.let { uri -> BackgroundPalette.extractKeyColor(context, uri) }
         } else {
             null
         }
     }
 
-    val colors = when {
-        backgroundScheme != null -> backgroundScheme!!.copy()
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    // ThemeController 所有属性为 val，keyColor / monetEnabled 变化时需要重建实例
+    val controller = remember(monetEnabled, monetKeyColor, darkTheme) {
+        if (monetEnabled) {
+            ThemeController(
+                colorSchemeMode = ColorSchemeMode.MonetSystem,
+                lightColors = LightColorScheme,
+                darkColors = DarkColorScheme,
+                keyColor = monetKeyColor,
+                isDark = darkTheme
+            )
+        } else {
+            ThemeController(
+                colorSchemeMode = ColorSchemeMode.System,
+                lightColors = LightColorScheme,
+                darkColors = DarkColorScheme,
+                isDark = darkTheme
+            )
+        }
     }
 
+    // 同步状态栏色与外观，背景图存在时让状态栏透明以便背景图延伸到顶部
     val view = LocalView.current
+    // currentColors() 是 @Composable 方法，需在 Composable 上下文调用，不能放进 SideEffect
+    val currentColors = if (!view.isInEditMode) controller.currentColors() else null
     if (!view.isInEditMode) {
         SideEffect {
             val ctx = view.context
@@ -173,7 +196,7 @@ fun RadioAreaLocatorTheme(
                 window.statusBarColor = if (backgroundUri != null) {
                     AndroidColor.TRANSPARENT
                 } else {
-                    colors.surface.toArgb()
+                    currentColors?.surface?.toArgb() ?: AndroidColor.TRANSPARENT
                 }
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             }
@@ -181,69 +204,8 @@ fun RadioAreaLocatorTheme(
     }
 
     MiuixTheme(
-        colors = colors,
+        controller = controller,
         textStyles = AppTextStyles,
         content = content
-    )
-}
-
-private fun buildSchemeFromSwatches(
-    swatches: BackgroundPalette.PaletteSwatches,
-    dark: Boolean
-): Colors {
-    val primary = Color(swatches.primary)
-    val onPrimary = BackgroundPalette.onColorFor(swatches.primary)
-    val secondary = Color(swatches.secondary)
-    val onSecondary = BackgroundPalette.onColorFor(swatches.secondary)
-    val tertiary = Color(swatches.tertiary)
-    val onTertiary = BackgroundPalette.onColorFor(swatches.tertiary)
-
-    val surfaceRgb = swatches.surface
-    val surface = if (dark) {
-        Color(surfaceRgb).let {
-            Color(it.red * 0.25f, it.green * 0.25f, it.blue * 0.25f)
-        }
-    } else {
-        Color(
-            red = (Color(surfaceRgb).red + 1f) / 2f,
-            green = (Color(surfaceRgb).green + 1f) / 2f,
-            blue = (Color(surfaceRgb).blue + 1f) / 2f,
-        )
-    }
-    val onSurface = BackgroundPalette.onColorFor(surface.toArgb())
-
-    val primaryContainer = if (dark) {
-        Color(swatches.primary).let {
-            Color(it.red * 0.4f, it.green * 0.4f, it.blue * 0.4f)
-        }
-    } else {
-        Color(
-            red = (Color(swatches.primary).red + 1f) / 2f,
-            green = (Color(swatches.primary).green + 1f) / 2f,
-            blue = (Color(swatches.primary).blue + 1f) / 2f,
-        )
-    }
-    val onPrimaryContainer = BackgroundPalette.onColorFor(primaryContainer.toArgb())
-
-    val base = if (dark) DarkColorScheme.copy() else LightColorScheme.copy()
-    return base.copy(
-        primary = primary,
-        onPrimary = onPrimary,
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        secondary = secondary,
-        onSecondary = onSecondary,
-        tertiaryContainer = tertiary,
-        onTertiaryContainer = onTertiary,
-        surface = surface,
-        onSurface = onSurface,
-        surfaceVariant = surface,
-        onSurfaceSecondary = onSurface,
-        outline = onSurface.copy(alpha = 0.5f),
-        dividerLine = onSurface.copy(alpha = 0.2f),
-        primaryVariant = primary,
-        onPrimaryVariant = onPrimary,
-        secondaryVariant = secondary,
-        onSecondaryVariant = onSecondary,
     )
 }
