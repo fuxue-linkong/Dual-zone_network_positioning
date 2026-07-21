@@ -1,195 +1,251 @@
 <resources>
-    <string name="app_name">双区网络定位</string>
-    <string name="action_refresh">刷新定位</string>
-    <string name="location_permission_required">需要定位权限才能获取当前位置</string>
-    <string name="grant_permission">授予权限</string>
-    <string name="cq_zone">CQ 分区</string>
-    <string name="itu_zone">ITU 分区</string>
-    <string name="maidenhead">梅登兰德定位</string>
-    <string name="address">地址</string>
-    <string name="latitude">纬度</string>
-    <string name="longitude">经度</string>
-    <string name="location_status">定位状态</string>
-    <string name="location_success">定位成功</string>
-    <string name="zone_info">分区信息</string>
-    <string name="delete">删除</string>
-    <string name="locating">定位中…</string>
-    <string name="location_failed">定位失败，请检查 GPS 与网络</string>
-    <string name="open_settings">去设置</string>
-    <string name="tap_to_locate">点击刷新获取当前位置</string>
-    <string name="about">关于</string>
-    <string name="settings">设置</string>
-    <string name="home">主页</string>
-    <string name="about_app">关于本应用</string>
-    <string name="maintainers">维护者</string>
-    <string name="maintainer_role_lead">主要维护者</string>
-    <string name="maintainer_role_contributor">贡献者</string>
-    <string name="satellite_source">卫星数据来源</string>
-    <string name="source_all">全部 (ALL)</string>
-    <string name="source_celestrak">CelesTrak 源</string>
-    <string name="source_satnogs">SatNOGS 源</string>
-    <string name="back">返回</string>
-    <string name="version_info">版本：%s</string>
-    <string name="satellite_source_desc">选择卫星数据的来源，不同来源的卫星目录略有差异</string>
-    <string name="elevation">仰角</string>
-    <string name="aos_azimuth">入境方位</string>
-    <string name="mode">模式</string>
-    <string name="char_count">个字符</string>
-    <string name="minutes">分钟</string>
-    <string name="original_text">原文</string>
-    <string name="morse_code">摩斯电码</string>
-    <string name="input_what_you_hear">输入你听到的内容</string>
-    <string name="about_description">一款基于手机定位自动生成 CQ/ITU 分区和梅登兰德定位的小工具。</string>
-    <string name="nearby_satellites">附近卫星</string>
-    <string name="satellite_count">共 %d 颗</string>
-    <string name="satellite_count_filtered">%1$d / %2$d 颗</string>
-    <string name="no_satellites_filtered">当前筛选条件下无卫星</string>
-    <string name="filter_mode_section">按工作模式</string>
-    <string name="filter_only_in_pass">仅在境卫星</string>
-    <string name="filter_only_upcoming">仅即将入境</string>
-    <string name="filter_only_amsat">仅 AMSAT 收录</string>
-    <string name="filter_only_favorites">仅已关注</string>
-    <string name="filter_more">更多</string>
-    <string name="filter_reset">重置筛选</string>
-    <string name="filter_title">筛选卫星</string>
-    <string name="filter_done">完成</string>
-    <string name="satellite_management">卫星管理</string>
-    <string name="satellite_management_desc">点击卫星可添加或取消特别关注。关注的卫星在即将过境和在境时会以高亮显示。</string>
-    <string name="favorites_count">已关注</string>
-    <string name="favorited">已关注</string>
-    <string name="mode_unknown">未知</string>
-    <string name="max_elevation">最大仰角</string>
-    <string name="aos_time">入境</string>
-    <string name="los_time">出境</string>
-    <string name="time_remaining">剩余</string>
-    <string name="in_pass">在境</string>
-    <string name="upcoming">即将入境</string>
-    <string name="satellite_need_location">获取定位后将显示近期过境卫星</string>
-    <string name="no_satellites">暂无近期过境卫星</string>
-    <string name="satellite_load_failed">卫星信息加载失败：%s</string>
-    <string name="status_heard">活跃</string>
-    <string name="status_telemetry_only">仅遥测</string>
-    <string name="status_not_heard">无信号</string>
-    <string name="status_crew_active">机组活跃</string>
-    <string name="status_no_data">无报告</string>
-    <string name="status_segment_title">今日运行状态（北京时间）</string>
-    <string name="status_segment_carryover">延续</string>
-    <string name="background_image">背景图</string>
-    <string name="background_image_desc">选择背景图后，应用主题色将从背景图取色</string>
-    <string name="background_pick">选择背景图</string>
-    <string name="background_set">已设置背景图，点击重新选择</string>
-    <string name="background_unset">未设置，点击选择图片</string>
-    <string name="clear">清除</string>
-    <string name="monet_color">莫奈取色</string>
-    <string name="monet_color_desc">从背景图提取主色作为种子，由 Miuix 生成主题色板；未设背景图时跟随系统壁纸，关闭后使用默认蓝色 #3482FF</string>
-    <string name="card_opacity">卡片透明度</string>
-    <string name="card_opacity_desc">设置背景图后生效，0 为全透明，100 为全不透明</string>
-    <string name="card_opacity_format">%1$d%%</string>
-    <string name="background_opacity">背景图不透明度</string>
-    <string name="background_opacity_desc">设置背景图后生效，0 为完全隐藏，100 为完全显示</string>
-    <string name="background_opacity_format">%1$d%%</string>
-    <string name="home_location">定位</string>
-    <string name="home_location_desc">查看当前位置及 CQ/ITU/梅登兰德分区</string>
-    <string name="home_satellite">卫星</string>
-    <string name="home_satellite_desc">查看附近过境卫星信息</string>
-    <string name="sat_action_get_location">获取定位</string>
-    <string name="sat_action_update_source">更新卫星源</string>
-    <string name="sat_no_location_time">未获取</string>
-    <string name="sat_no_source_time">未更新</string>
-    <string name="sat_no_city">未知地区</string>
-    <string name="sat_source_expired">已过期</string>
-    <string name="sat_source_fresh">有效</string>
+    <!-- App identity -->
+    <string name="app_name" translatable="false">双区网络定位</string>
+
+    <!-- UI Kit UI strings (English default) -->
+    <string name="home_sample_notification" translatable="false">This is a sample notification</string>
+    <string name="home_app_version" translatable="false">App version</string>
+    <string name="home_example_link_title" translatable="false">This is a sample link</string>
+    <string name="home_example_link_subtitle" translatable="false">This is a subtitle of the sample link</string>
+    <string name="home_example_link_url" translatable="false">https://github.com/chenaizhang/KernelSU-Style-UI-Kit</string>
+    <string name="about_source_link" translatable="false">View source on %1$s</string>
+    <string name="permission_section">Permissions</string>
+    <string name="permission_ready">Core permissions are ready.</string>
+    <string name="permission_missing">Grant missing permissions first.</string>
+    <string name="permission_storage">Storage Access</string>
+    <string name="permission_notification">Notifications</string>
+    <string name="permission_microphone">Microphone</string>
+    <string name="permission_battery">Battery Whitelist</string>
+    <string name="permission_overlay">Overlay</string>
+    <string name="permission_granted">Granted</string>
+    <string name="permission_required">Required</string>
+    <string name="permission_optional">Optional</string>
+    <string name="permission_action_required">Action Required</string>
+    <string name="permission_grant_action">Grant</string>
+    <string name="permission_status_ready_title">Permissions Ready</string>
+    <string name="permission_status_missing_title">Permissions Required</string>
+    <string name="home">Home</string>
+    <string name="confirm">Confirm</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+    <string name="send_log">Send logs</string>
+    <string name="settings_check_update">Check for updates</string>
+    <string name="settings_check_update_summary">Automatically check for updates when opening the app.</string>
+    <string name="settings_enable_predictive_back">Predictive back gesture</string>
+    <string name="settings_enable_predictive_back_summary">Enable predictive back gesture support.</string>
+    <string name="save_log">Save logs</string>
+    <string name="log_saved">Logs saved</string>
+    <string name="processing">Processing…</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_summary">Choose the app theme mode.</string>
+    <string name="settings_theme_mode_system">Follow system</string>
+    <string name="settings_theme_mode_light">Light</string>
+    <string name="settings_theme_mode_dark">Dark</string>
+    <string name="settings_monet">Enable Monet</string>
+    <string name="settings_key_color">Key color</string>
+    <string name="settings_key_color_default">Default</string>
+    <string name="settings_ui_mode">UI Style</string>
+    <string name="settings_ui_mode_summary">Choose the interface style.</string>
+    <string name="settings_page_scale">Page Scale</string>
+    <string name="settings_page_scale_summary">Adjust the global display scale.</string>
+    <string name="settings_color_spec">Color Spec</string>
+    <string name="settings_color_style">Color Style</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_red">Red</string>
+    <string name="color_green">Green</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_brown">Brown</string>
+    <string name="color_deep_purple">Deep Purple</string>
+    <string name="color_indigo">Indigo</string>
+    <string name="color_cyan">Cyan</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_amber">Amber</string>
+    <string name="color_blue_grey">Blue Grey</string>
+    <string name="color_sakura">Sakura</string>
+    <string name="settings_enable_blur">Blur</string>
+    <string name="settings_enable_blur_summary">Enable blur effect for top and bottom bars.</string>
+    <string name="settings_floating_bottom_bar">Floating bottom bar</string>
+    <string name="settings_floating_bottom_bar_summary">Use Apple style floating bottom bar.</string>
+    <string name="settings_enable_glass">Liquid glass</string>
+    <string name="settings_enable_glass_summary">Enable liquid glass effect for floating bottom bar.</string>
+
+    <!-- User project business strings (Chinese-only, marked translatable=false) -->
+    <string name="action_refresh" translatable="false">刷新定位</string>
+    <string name="location_permission_required" translatable="false">需要定位权限才能获取当前位置</string>
+    <string name="grant_permission" translatable="false">授予权限</string>
+    <string name="cq_zone" translatable="false">CQ 分区</string>
+    <string name="itu_zone" translatable="false">ITU 分区</string>
+    <string name="maidenhead" translatable="false">梅登兰德定位</string>
+    <string name="address" translatable="false">地址</string>
+    <string name="latitude" translatable="false">纬度</string>
+    <string name="longitude" translatable="false">经度</string>
+    <string name="location_status" translatable="false">定位状态</string>
+    <string name="location_success" translatable="false">定位成功</string>
+    <string name="zone_info" translatable="false">分区信息</string>
+    <string name="delete" translatable="false">删除</string>
+    <string name="locating" translatable="false">定位中…</string>
+    <string name="location_failed" translatable="false">定位失败，请检查 GPS 与网络</string>
+    <string name="open_settings" translatable="false">去设置</string>
+    <string name="tap_to_locate" translatable="false">点击刷新获取当前位置</string>
+    <string name="about_app" translatable="false">关于本应用</string>
+    <string name="maintainers" translatable="false">维护者</string>
+    <string name="maintainer_role_lead" translatable="false">主要维护者</string>
+    <string name="maintainer_role_contributor" translatable="false">贡献者</string>
+    <string name="satellite_source" translatable="false">卫星数据来源</string>
+    <string name="source_all" translatable="false">全部 (ALL)</string>
+    <string name="source_celestrak" translatable="false">CelesTrak 源</string>
+    <string name="source_satnogs" translatable="false">SatNOGS 源</string>
+    <string name="back" translatable="false">返回</string>
+    <string name="version_info" translatable="false">版本：%s</string>
+    <string name="satellite_source_desc" translatable="false">选择卫星数据的来源，不同来源的卫星目录略有差异</string>
+    <string name="elevation" translatable="false">仰角</string>
+    <string name="aos_azimuth" translatable="false">入境方位</string>
+    <string name="mode" translatable="false">模式</string>
+    <string name="char_count" translatable="false">个字符</string>
+    <string name="minutes" translatable="false">分钟</string>
+    <string name="original_text" translatable="false">原文</string>
+    <string name="morse_code" translatable="false">摩斯电码</string>
+    <string name="input_what_you_hear" translatable="false">输入你听到的内容</string>
+    <string name="about_description" translatable="false">一款基于手机定位自动生成 CQ/ITU 分区和梅登兰德定位的小工具。</string>
+    <string name="nearby_satellites" translatable="false">附近卫星</string>
+    <string name="satellite_count" translatable="false">共 %d 颗</string>
+    <string name="satellite_count_filtered" translatable="false">%1$d / %2$d 颗</string>
+    <string name="no_satellites_filtered" translatable="false">当前筛选条件下无卫星</string>
+    <string name="filter_mode_section" translatable="false">按工作模式</string>
+    <string name="filter_only_in_pass" translatable="false">仅在境卫星</string>
+    <string name="filter_only_upcoming" translatable="false">仅即将入境</string>
+    <string name="filter_only_amsat" translatable="false">仅 AMSAT 收录</string>
+    <string name="filter_only_favorites" translatable="false">仅已关注</string>
+    <string name="filter_more" translatable="false">更多</string>
+    <string name="filter_reset" translatable="false">重置筛选</string>
+    <string name="filter_title" translatable="false">筛选卫星</string>
+    <string name="filter_done" translatable="false">完成</string>
+    <string name="satellite_management" translatable="false">卫星管理</string>
+    <string name="satellite_management_desc" translatable="false">点击卫星可添加或取消特别关注。关注的卫星在即将过境和在境时会以高亮显示。</string>
+    <string name="favorites_count" translatable="false">已关注</string>
+    <string name="favorited" translatable="false">已关注</string>
+    <string name="mode_unknown" translatable="false">未知</string>
+    <string name="max_elevation" translatable="false">最大仰角</string>
+    <string name="aos_time" translatable="false">入境</string>
+    <string name="los_time" translatable="false">出境</string>
+    <string name="time_remaining" translatable="false">剩余</string>
+    <string name="in_pass" translatable="false">在境</string>
+    <string name="upcoming" translatable="false">即将入境</string>
+    <string name="satellite_need_location" translatable="false">获取定位后将显示近期过境卫星</string>
+    <string name="no_satellites" translatable="false">暂无近期过境卫星</string>
+    <string name="satellite_load_failed" translatable="false">卫星信息加载失败：%s</string>
+    <string name="status_heard" translatable="false">活跃</string>
+    <string name="status_telemetry_only" translatable="false">仅遥测</string>
+    <string name="status_not_heard" translatable="false">无信号</string>
+    <string name="status_crew_active" translatable="false">机组活跃</string>
+    <string name="status_no_data" translatable="false">无报告</string>
+    <string name="status_segment_title" translatable="false">今日运行状态（北京时间）</string>
+    <string name="status_segment_carryover" translatable="false">延续</string>
+    <string name="home_location" translatable="false">定位</string>
+    <string name="home_location_desc" translatable="false">查看当前位置及 CQ/ITU/梅登兰德分区</string>
+    <string name="home_satellite" translatable="false">卫星</string>
+    <string name="home_satellite_desc" translatable="false">查看附近过境卫星信息</string>
+    <string name="sat_action_get_location" translatable="false">获取定位</string>
+    <string name="sat_action_update_source" translatable="false">更新卫星源</string>
+    <string name="sat_no_location_time" translatable="false">未获取</string>
+    <string name="sat_no_source_time" translatable="false">未更新</string>
+    <string name="sat_no_city" translatable="false">未知地区</string>
+    <string name="sat_source_expired" translatable="false">已过期</string>
+    <string name="sat_source_fresh" translatable="false">有效</string>
 
     <!-- 日程提醒设置 -->
-    <string name="reminder_section_title">日程提醒</string>
-    <string name="reminder_section_desc">收藏卫星后自动创建过境提醒，在 AOS 前推送通知</string>
-    <string name="reminder_master_switch">启用日程提醒</string>
-    <string name="reminder_lead_time">提前提醒时间</string>
-    <string name="reminder_lead_minutes_format">%1$d 分钟</string>
-    <string name="reminder_repeat_mode">重复选项</string>
-    <string name="reminder_repeat_always">每次过境都提醒</string>
-    <string name="reminder_repeat_daytime">仅白天过境提醒（6:00-22:00）</string>
-    <string name="reminder_sound">通知声音</string>
-    <string name="reminder_vibration">通知振动</string>
-    <string name="reminder_view_list">查看提醒列表</string>
-    <string name="reminder_list_title">提醒列表</string>
-    <string name="reminder_list_empty">暂无提醒。收藏卫星后将自动添加过境提醒。</string>
-    <string name="reminder_item_off">已关闭</string>
-    <string name="reminder_item_on">已启用</string>
-    <string name="reminder_notification_title">%1$s 即将过境</string>
-    <string name="reminder_notification_content">AOS: %1$s | 仰角: %2$d° | 入境方位: %3$d° | 模式: %4$s</string>
-    <string name="reminder_notification_sub">LOS: %1$s | AOS UTC: %2$s</string>
-    <string name="reminder_auto_added_title">已自动添加提醒</string>
-    <string name="reminder_auto_added_text">%1$s：下次过境 %2$s，已添加提醒</string>
-    <string name="reminder_permission_required">需要通知权限才能显示提醒，请前往系统设置开启</string>
+    <string name="reminder_section_title" translatable="false">日程提醒</string>
+    <string name="reminder_section_desc" translatable="false">收藏卫星后自动创建过境提醒，在 AOS 前推送通知</string>
+    <string name="reminder_master_switch" translatable="false">启用日程提醒</string>
+    <string name="reminder_lead_time" translatable="false">提前提醒时间</string>
+    <string name="reminder_lead_minutes_format" translatable="false">%1$d 分钟</string>
+    <string name="reminder_repeat_mode" translatable="false">重复选项</string>
+    <string name="reminder_repeat_always" translatable="false">每次过境都提醒</string>
+    <string name="reminder_repeat_daytime" translatable="false">仅白天过境提醒（6:00-22:00）</string>
+    <string name="reminder_sound" translatable="false">通知声音</string>
+    <string name="reminder_vibration" translatable="false">通知振动</string>
+    <string name="reminder_view_list" translatable="false">查看提醒列表</string>
+    <string name="reminder_list_title" translatable="false">提醒列表</string>
+    <string name="reminder_list_empty" translatable="false">暂无提醒。收藏卫星后将自动添加过境提醒。</string>
+    <string name="reminder_item_off" translatable="false">已关闭</string>
+    <string name="reminder_item_on" translatable="false">已启用</string>
+    <string name="reminder_notification_title" translatable="false">%1$s 即将过境</string>
+    <string name="reminder_notification_content" translatable="false">AOS: %1$s | 仰角: %2$d° | 入境方位: %3$d° | 模式: %4$s</string>
+    <string name="reminder_notification_sub" translatable="false">LOS: %1$s | AOS UTC: %2$s</string>
+    <string name="reminder_auto_added_title" translatable="false">已自动添加提醒</string>
+    <string name="reminder_auto_added_text" translatable="false">%1$s：下次过境 %2$s，已添加提醒</string>
+    <string name="reminder_permission_required" translatable="false">需要通知权限才能显示提醒，请前往系统设置开启</string>
 
     <!-- 天气模块 -->
-    <string name="weather_refresh">刷新天气</string>
-    <string name="weather_loading">天气加载中…</string>
-    <string name="weather_load_failed">天气加载失败</string>
-    <string name="weather_retry">重试</string>
-    <string name="weather_tap_to_load">点击加载天气</string>
-    <string name="weather_unknown_city">未知地区</string>
-    <string name="weather_next_pass_label">下次过境</string>
-    <string name="weather_location_required">需要定位权限才能获取天气</string>
+    <string name="weather_refresh" translatable="false">刷新天气</string>
+    <string name="weather_loading" translatable="false">天气加载中…</string>
+    <string name="weather_load_failed" translatable="false">天气加载失败</string>
+    <string name="weather_retry" translatable="false">重试</string>
+    <string name="weather_tap_to_load" translatable="false">点击加载天气</string>
+    <string name="weather_unknown_city" translatable="false">未知地区</string>
+    <string name="weather_next_pass_label" translatable="false">下次过境</string>
+    <string name="weather_location_required" translatable="false">需要定位权限才能获取天气</string>
 
     <!-- 静态地图模块 -->
-    <string name="map_title">位置地图</string>
-    <string name="map_description">以当前坐标为中心的静态地图</string>
-    <string name="map_load_failed">地图加载失败</string>
-    <string name="map_network_error">网络不可用或 API Key 无效</string>
-    <string name="map_center_marker">当前位置</string>
+    <string name="map_title" translatable="false">位置地图</string>
+    <string name="map_description" translatable="false">以当前坐标为中心的静态地图</string>
+    <string name="map_load_failed" translatable="false">地图加载失败</string>
+    <string name="map_network_error" translatable="false">网络不可用或 API Key 无效</string>
+    <string name="map_center_marker" translatable="false">当前位置</string>
 
     <!-- CW练习模块 -->
-    <string name="cw_practice">CW练习</string>
-    <string name="cw_practice_desc">摩尔斯电码练习工具</string>
-    <string name="free_practice">自由练习</string>
-    <string name="free_practice_desc">自主选择练习内容和参数</string>
-    <string name="tutorial_practice">教程练习</string>
-    <string name="tutorial_practice_desc">结构化的分步练习指导</string>
-    <string name="wpm">速度 (WPM)</string>
-    <string name="frequency">音调频率 (Hz)</string>
-    <string name="character_set">字符集</string>
-    <string name="letters">字母</string>
-    <string name="numbers">数字</string>
-    <string name="symbols">符号</string>
-    <string name="custom">自定义</string>
-    <string name="practice_length">练习长度</string>
-    <string name="practice_duration">练习时长 (分钟)</string>
-    <string name="play_mode">播放模式</string>
-    <string name="continuous">连续</string>
-    <string name="interval">间隔</string>
-    <string name="start_practice">开始练习</string>
-    <string name="stop_practice">停止练习</string>
-    <string name="pause_practice">暂停练习</string>
-    <string name="resume_practice">继续练习</string>
-    <string name="check_results">检查结果</string>
-    <string name="accuracy">准确率</string>
-    <string name="total_practice_time">总练习时长</string>
-    <string name="current_speed">当前速度</string>
-    <string name="koch_course">Koch课程</string>
-    <string name="code_group">字符组练习</string>
-    <string name="callsign_training">呼号训练</string>
-    <string name="text_training">文本训练</string>
-    <string name="lesson">课程</string>
-    <string name="progress">进度</string>
-    <string name="completed">已完成</string>
-    <string name="in_progress">进行中</string>
-    <string name="not_started">未开始</string>
-    <string name="generate_text">生成练习文本</string>
-    <string name="practice">练习</string>
+    <string name="cw_practice" translatable="false">CW练习</string>
+    <string name="cw_practice_desc" translatable="false">摩尔斯电码练习工具</string>
+    <string name="free_practice" translatable="false">自由练习</string>
+    <string name="free_practice_desc" translatable="false">自主选择练习内容和参数</string>
+    <string name="tutorial_practice" translatable="false">教程练习</string>
+    <string name="tutorial_practice_desc" translatable="false">结构化的分步练习指导</string>
+    <string name="wpm" translatable="false">速度 (WPM)</string>
+    <string name="frequency" translatable="false">音调频率 (Hz)</string>
+    <string name="character_set" translatable="false">字符集</string>
+    <string name="letters" translatable="false">字母</string>
+    <string name="numbers" translatable="false">数字</string>
+    <string name="symbols" translatable="false">符号</string>
+    <string name="custom" translatable="false">自定义</string>
+    <string name="practice_length" translatable="false">练习长度</string>
+    <string name="practice_duration" translatable="false">练习时长 (分钟)</string>
+    <string name="play_mode" translatable="false">播放模式</string>
+    <string name="continuous" translatable="false">连续</string>
+    <string name="interval" translatable="false">间隔</string>
+    <string name="start_practice" translatable="false">开始练习</string>
+    <string name="stop_practice" translatable="false">停止练习</string>
+    <string name="pause_practice" translatable="false">暂停练习</string>
+    <string name="resume_practice" translatable="false">继续练习</string>
+    <string name="check_results" translatable="false">检查结果</string>
+    <string name="accuracy" translatable="false">准确率</string>
+    <string name="total_practice_time" translatable="false">总练习时长</string>
+    <string name="current_speed" translatable="false">当前速度</string>
+    <string name="koch_course" translatable="false">Koch课程</string>
+    <string name="code_group" translatable="false">字符组练习</string>
+    <string name="callsign_training" translatable="false">呼号训练</string>
+    <string name="text_training" translatable="false">文本训练</string>
+    <string name="lesson" translatable="false">课程</string>
+    <string name="progress" translatable="false">进度</string>
+    <string name="completed" translatable="false">已完成</string>
+    <string name="in_progress" translatable="false">进行中</string>
+    <string name="not_started" translatable="false">未开始</string>
+    <string name="generate_text" translatable="false">生成练习文本</string>
+    <string name="practice" translatable="false">练习</string>
 
     <!-- 摩斯电码编解码工具 -->
-    <string name="morsecode_title">摩斯电码</string>
-    <string name="morsecode_encode">编码</string>
-    <string name="morsecode_decode">解码</string>
-    <string name="morsecode_input_hint_text">输入文本</string>
-    <string name="morsecode_input_hint_morse">输入摩斯电码</string>
-    <string name="morsecode_support_hint">支持 A-Z 和 0-9</string>
-    <string name="morsecode_reference_table">摩斯电码对照表</string>
-    <string name="morsecode_empty_input">请输入内容</string>
-    <string name="morsecode_copy">复制</string>
-    <string name="morsecode_copied">已复制</string>
-    <string name="morsecode_codec">摩斯电码编解码</string>
-    <string name="morsecode_codec_desc">文本书写与摩斯电码的相互转换</string>
+    <string name="morsecode_title" translatable="false">摩斯电码</string>
+    <string name="morsecode_encode" translatable="false">编码</string>
+    <string name="morsecode_decode" translatable="false">解码</string>
+    <string name="morsecode_input_hint_text" translatable="false">输入文本</string>
+    <string name="morsecode_input_hint_morse" translatable="false">输入摩斯电码</string>
+    <string name="morsecode_support_hint" translatable="false">支持 A-Z 和 0-9</string>
+    <string name="morsecode_reference_table" translatable="false">摩斯电码对照表</string>
+    <string name="morsecode_empty_input" translatable="false">请输入内容</string>
+    <string name="morsecode_copy" translatable="false">复制</string>
+    <string name="morsecode_copied" translatable="false">已复制</string>
+    <string name="morsecode_codec" translatable="false">摩斯电码编解码</string>
+    <string name="morsecode_codec_desc" translatable="false">文本书写与摩斯电码的相互转换</string>
 </resources>

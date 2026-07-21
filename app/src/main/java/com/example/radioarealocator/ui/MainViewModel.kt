@@ -1,7 +1,6 @@
 package com.example.radioarealocator.ui
 
 import android.app.Application
-import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
@@ -436,57 +435,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         reminderStore.removeItem(catalogNumber)
         reminderScheduler.cancel(catalogNumber)
         _reminderItems.value = reminderStore.loadItems()
-    }
-
-    // 背景图 URI：null 表示未设置
-    private val _backgroundUri = mutableStateOf<Uri?>(settingsStore.backgroundUri?.let(Uri::parse))
-    val backgroundUri: State<Uri?> = _backgroundUri
-
-    /**
-     * 设置背景图 URI 并持久化。null 表示清除。
-     * 调用方需先通过 [android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION] 获取持久化读取权限。
-     */
-    fun setBackgroundUri(uri: Uri?) {
-        _backgroundUri.value = uri
-        settingsStore.backgroundUri = uri?.toString()
-    }
-
-    // 卡片透明度（0~100），仅在设置了背景图时生效
-    private val _cardOpacity = mutableStateOf(settingsStore.cardOpacity)
-    val cardOpacity: State<Int> = _cardOpacity
-
-    /**
-     * 设置卡片透明度并持久化，自动钳制到 0~100。
-     */
-    fun setCardOpacity(value: Int) {
-        val clamped = value.coerceIn(0, 100)
-        _cardOpacity.value = clamped
-        settingsStore.cardOpacity = clamped
-    }
-
-    // 背景图不透明度（0~100），仅在设置了背景图时生效
-    private val _backgroundOpacity = mutableStateOf(settingsStore.backgroundOpacity)
-    val backgroundOpacity: State<Int> = _backgroundOpacity
-
-    /**
-     * 设置背景图不透明度并持久化，自动钳制到 0~100。
-     */
-    fun setBackgroundOpacity(value: Int) {
-        val clamped = value.coerceIn(0, 100)
-        _backgroundOpacity.value = clamped
-        settingsStore.backgroundOpacity = clamped
-    }
-
-    // 是否启用莫奈取色（从背景图提取主色调）。关闭后使用默认主题色 #3482FF
-    private val _monetEnabled = mutableStateOf(settingsStore.monetEnabled)
-    val monetEnabled: State<Boolean> = _monetEnabled
-
-    /**
-     * 切换莫奈取色开关并持久化。
-     */
-    fun setMonetEnabled(value: Boolean) {
-        _monetEnabled.value = value
-        settingsStore.monetEnabled = value
     }
 
     val hasLocationPermission: Boolean

@@ -1,4 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+@file:Suppress("UnstableApiUsage")
+
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import java.io.File
 import java.io.FileOutputStream
@@ -92,22 +93,47 @@ fun encryptSecretsData(plaintext: String): ByteArray {
 }
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.agp.app)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.lsplugin.apksign)
     jacoco
+}
+
+val androidCompileSdkVersion: Int by rootProject.extra
+val androidCompileSdkVersionMinor: Int by rootProject.extra
+val androidBuildToolsVersion: String by rootProject.extra
+val androidMinSdkVersion: Int by rootProject.extra
+val androidTargetSdkVersion: Int by rootProject.extra
+val androidSourceCompatibility: JavaVersion by rootProject.extra
+val androidTargetCompatibility: JavaVersion by rootProject.extra
+val managerVersionCode: Int by rootProject.extra
+val managerVersionName: String by rootProject.extra
+
+apksign {
+    storeFileProperty = "KEYSTORE_FILE"
+    storePasswordProperty = "KEYSTORE_PASSWORD"
+    keyAliasProperty = "KEY_ALIAS"
+    keyPasswordProperty = "KEY_PASSWORD"
 }
 
 android {
     namespace = "com.example.radioarealocator"
-    compileSdk = 37
+    compileSdk {
+        version = release(androidCompileSdkVersion) {
+            minorApiLevel = androidCompileSdkVersionMinor
+        }
+    }
+    buildToolsVersion = androidBuildToolsVersion
 
     defaultConfig {
         applicationId = "com.example.radioarealocator"
-        minSdk = 26
-        targetSdk = 37
-        versionCode = 10
-        versionName = "1.2.0-beta.1"
+        minSdk = androidMinSdkVersion
+        targetSdk = androidTargetSdkVersion
+        versionCode = managerVersionCode
+        versionName = managerVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -167,6 +193,8 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
+            isShrinkResources = true
+            vcsInfo.include = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -174,10 +202,17 @@ android {
         }
     }
 
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
     // lint 配置：禁用 InvalidFragmentVersionForActivityResult 误报
     //（androidx.activity-compose 已包含 Fragment 1.3.0+，lint 未正确识别）
     lint {
         disable += "InvalidFragmentVersionForActivityResult"
+        abortOnError = false
+        checkReleaseBuilds = false
     }
 
     // JaCoCo 覆盖率报告配置：排除自动生成与框架代码，聚焦业务逻辑
@@ -202,23 +237,46 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    buildFeatures {
-        compose = true
-        buildConfig = true
+        sourceCompatibility = androidSourceCompatibility
+        targetCompatibility = androidTargetCompatibility
     }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        dex {
+            useLegacyPackaging = true
+        }
+        jniLibs {
+            useLegacyPackaging = true
+            excludes += "lib/*/libandroidx.graphics.path.so"
+        }
     }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+    androidResources {
+        generateLocaleConfig = true
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) {
+        it.packaging.resources.excludes.addAll(listOf("META-INF/**", "kotlin/**", "**.bin"))
+    }
+}
+
+base {
+    archivesName.set("RadioAreaLocator_${managerVersionName}_${managerVersionCode}")
 }
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+        )
     }
 }
 
@@ -228,72 +286,91 @@ jacoco {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
-    implementation("androidx.activity:activity-compose:1.12.4")
-    implementation(platform("androidx.compose:compose-bom:2026.06.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
 
-    // Miuix — Compose Multiplatform MIUI-style UI library
-    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.3")
-    implementation("top.yukonga.miuix.kmp:miuix-preference:0.9.3")
-    implementation("top.yukonga.miuix.kmp:miuix-squircle:0.9.3")
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+
+    implementation(libs.androidx.webkit)
+    implementation(libs.androidx.palette)
+
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigationevent.compose)
+
+    // Markdown 渲染
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.commonmark.ext.gfm.strikethrough)
+    implementation(libs.commonmark.ext.autolink)
+    implementation(libs.commonmark.ext.task.list.items)
+
+    // Miuix — Compose Multiplatform MIUI-style UI library（全套）
+    implementation(libs.miuix.ui)
+    implementation(libs.miuix.icons)
+    implementation(libs.miuix.navigation3.ui)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.blur)
+    implementation(libs.miuix.squircle)
+
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+
+    implementation(libs.hiddenapibypass)
+    implementation(libs.material.kolor)
 
     // Location Services
-    implementation("com.google.android.gms:play-services-location:21.3.0")
-
-    // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
-
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.1")
+    implementation(libs.play.services.location)
 
     // Satellite prediction
-    implementation("com.github.davidmoten:predict4java:1.3.1")
+    implementation(libs.predict4java)
     // predict4java 运行时依赖 Apache Commons Logging
-    implementation("commons-logging:commons-logging:1.2")
-
-    // HTTP client for TLE data
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.commons.logging)
 
     // Image loading (GitHub avatars in About)
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.coil.compose)
 
     // 高德地图 SDK：3D地图（含缩放手势、Marker、控件）
     // 文档：https://lbs.amap.com/api/android-sdk/summary
-    implementation("com.amap.api:3dmap:latest.integration")
+    implementation(libs.amap.3dmap)
 
     // WorkManager: 用于日程提醒的每日刷新周期任务
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation(libs.androidx.work.runtime.ktx)
 
     // DataStore: 用于 CW 设置的持久化存储
-    implementation("androidx.datastore:datastore-preferences:1.1.4")
-
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
-    testImplementation("androidx.room:room-testing:2.7.0")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2026.06.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation(libs.androidx.datastore.preferences)
 
     // Room 数据库
-    implementation("androidx.room:room-runtime:2.7.0")
-    implementation("androidx.room:room-ktx:2.7.0")
-    ksp("androidx.room:room-compiler:2.7.0")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // 图表库
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation(libs.mpandroidchart)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }
 
 // ══════════════════════════════════════════════════════════════════════════

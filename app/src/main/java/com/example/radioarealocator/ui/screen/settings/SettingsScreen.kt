@@ -1,0 +1,57 @@
+package com.example.radioarealocator.ui.screen.settings
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.radioarealocator.ui.LocalUiMode
+import com.example.radioarealocator.ui.MainViewModel
+import com.example.radioarealocator.ui.UiMode
+import com.example.radioarealocator.ui.navigation3.Navigator
+import com.example.radioarealocator.ui.navigation3.Route
+import com.example.radioarealocator.ui.viewmodel.SettingsViewModel
+
+@Composable
+fun SettingPager(
+    navigator: Navigator,
+    bottomInnerPadding: Dp
+) {
+    val settingsViewModel = viewModel<SettingsViewModel>()
+    val mainViewModel = viewModel<MainViewModel>()
+    val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+
+    val satelliteSource by mainViewModel.satelliteSource.collectAsStateWithLifecycle()
+    val reminderSettings by mainViewModel.reminderSettings.collectAsStateWithLifecycle()
+    val reminderItems by mainViewModel.reminderItems.collectAsStateWithLifecycle()
+
+    LifecycleResumeEffect(Unit) {
+        settingsViewModel.refresh()
+        onPauseOrDispose { }
+    }
+
+    val businessState = SettingsBusinessState(
+        satelliteSource = satelliteSource,
+        reminderSettings = reminderSettings,
+        reminderItems = reminderItems,
+    )
+
+    val actions = SettingsScreenActions(
+        onSetCheckUpdate = settingsViewModel::setCheckUpdate,
+        onOpenTheme = { navigator.push(Route.ColorPalette) },
+        onSetUiModeIndex = { index ->
+            settingsViewModel.setUiMode(if (index == 0) UiMode.Miuix.value else UiMode.Material.value)
+        },
+        onOpenAbout = { navigator.push(Route.About) },
+        onSetSatelliteSource = mainViewModel::setSatelliteSource,
+        onUpdateReminderSettings = mainViewModel::updateReminderSettings,
+        onOpenReminderList = { navigator.push(Route.ReminderList) },
+        onOpenCWPractice = { navigator.push(Route.CWPractice) },
+    )
+
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> SettingPagerMiuix(uiState, businessState, actions, bottomInnerPadding)
+        UiMode.Material -> SettingPagerMaterial(uiState, businessState, actions, bottomInnerPadding)
+    }
+}

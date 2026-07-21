@@ -1,0 +1,51 @@
+package com.example.radioarealocator.ui.navigation3
+
+import android.os.Parcelable
+import androidx.navigation3.runtime.NavKey
+import kotlinx.parcelize.Parcelize
+import kotlinx.serialization.Serializable
+
+/**
+ * Type-safe navigation keys for Navigation3.
+ * Each destination is a NavKey (data object/data class) and can be saved/restored in the back stack.
+ */
+sealed interface Route : NavKey, Parcelable {
+    @Parcelize
+    @Serializable
+    data object Main : Route
+
+    @Parcelize
+    @Serializable
+    data object Home : Route
+
+    @Parcelize
+    @Serializable
+    data object Settings : Route
+
+    @Parcelize
+    @Serializable
+    data object About : Route
+
+    @Parcelize
+    @Serializable
+    data object ColorPalette : Route
+
+    @Parcelize
+    @Serializable
+    data object Permissions : Route
+
+    /** CW 练习主入口（菜单：自由练习 / 教程练习 / 摩斯电码编解码） */
+    @Parcelize
+    @Serializable
+    data object CWPractice : Route
+
+    /** 卫星管理：管理关注卫星列表 */
+    @Parcelize
+    @Serializable
+    data object SatelliteManagement : Route
+
+    /** 提醒列表：查看与管理过境提醒 */
+    @Parcelize
+    @Serializable
+    data object ReminderList : Route
+}
