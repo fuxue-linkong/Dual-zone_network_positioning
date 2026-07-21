@@ -1,10 +1,9 @@
 package com.example.radioarealocator.ui
 
-import android.app.Application
 import androidx.compose.runtime.State
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.radioarealocator.data.HitokotoApiService
 import com.example.radioarealocator.data.LocationResult
@@ -40,6 +39,7 @@ import com.example.radioarealocator.data.cw.CharacterSet
 import com.example.radioarealocator.data.cw.MorseCodeGenerator
 import com.example.radioarealocator.data.cw.MorseCodePlayer
 import com.example.radioarealocator.data.zone.ZoneResolver
+import com.example.radioarealocator.radioApp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,28 +57,37 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * 主 ViewModel：定位、卫星过境预测、天气、每日一言、CW 练习、日程提醒。
+ *
+ * 使用普通 [ViewModel] + 全局 [radioApp] 上下文（与项目内 [com.example.radioarealocator.ui.viewmodel.HomeViewModel] 风格一致），
+ * 不继承 [androidx.lifecycle.AndroidViewModel]，避免在 Navigation3 NavDisplay 内调用
+ * `viewModel<MainViewModel>()` 时因 CreationExtras 缺少 `APPLICATION_KEY` 而崩溃。
+ */
+class MainViewModel : ViewModel() {
 
-    private val locationHelper = LocationHelper(application)
+    private val app = radioApp
+
+    private val locationHelper = LocationHelper(app)
     private val satelliteDataSource = SatelliteDataSource()
     private val satellitePredictor = SatellitePredictor()
     // AMSAT 状态独立抓取服务：供状态跟踪器 5 分钟定时拉取，不依赖 TLE 拉取周期
     private val amsatStatusApi = AmsatStatusApiService()
     // 卫星状态持续显示跟踪器：96 个 15 分钟时间槽 + 状态延续算法
     val statusTracker = SatelliteStatusTracker(amsatStatusApi, viewModelScope)
-    private val settingsStore = SettingsStore(application)
-    private val satelliteCache = SatelliteCacheStore(application)
-    private val favoriteStore = FavoriteSatellitesStore(application)
-    private val reminderStore = ReminderStore(application)
+    private val settingsStore = SettingsStore(app)
+    private val satelliteCache = SatelliteCacheStore(app)
+    private val favoriteStore = FavoriteSatellitesStore(app)
+    private val reminderStore = ReminderStore(app)
     private val weatherApiService = WeatherApiService()
-    private val weatherStore = WeatherStore(application)
-    private val reminderScheduler = ReminderScheduler(application)
+    private val weatherStore = WeatherStore(app)
+    private val reminderScheduler = ReminderScheduler(app)
     // 每日一言服务：从 https://v1.hitokoto.cn/ 获取，失败回退本地文案池
     private val hitokotoApi = HitokotoApiService()
 
     // ---- CW练习模块 ----
-    private val cwSettingsStore = CWSettingsStore(application)
-    private val cwProgressStore = CWProgressStore(application)
+    private val cwSettingsStore = CWSettingsStore(app)
+    private val cwProgressStore = CWProgressStore(app)
     private val cwGenerator = MorseCodeGenerator()
     private val cwPlayer = MorseCodePlayer()
 
