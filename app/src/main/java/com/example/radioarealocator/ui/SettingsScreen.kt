@@ -67,11 +67,11 @@ fun SettingsScreen(
     onOpenReminderList: () -> Unit,
     contentPadding: PaddingValues
 ) {
-    val options = listOf("ALL", "CT", "SNOGS")
+    val options = listOf("ALL", "SNOGS", "AMSAT")
     val labels = listOf(
         stringResource(R.string.source_all),
-        stringResource(R.string.source_celestrak),
-        stringResource(R.string.source_satnogs)
+        stringResource(R.string.source_satnogs),
+        stringResource(R.string.source_amsat)
     )
     val selectedIndex = options.indexOf(satelliteSource).coerceAtLeast(0)
 
