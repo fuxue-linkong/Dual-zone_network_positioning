@@ -164,7 +164,8 @@ private fun HomeHeaderMiuix(
         }
     }
 
-    val stateColor = if (state.location.result != null) colorScheme.primary else colorScheme.outline
+    // 状态色与天气卡保持一致：有天气数据 → primary，无 → outline
+    val stateColor = if (state.weather != null) colorScheme.primary else colorScheme.outline
     val zonedNow = now.atZone(ZoneId.systemDefault())
     val localTime = zonedNow.format(timeFormatter)
     val utcTime = now.atZone(ZoneOffset.UTC).format(timeFormatter)
