@@ -79,12 +79,22 @@ jobs:
             --stacktrace \
             --no-daemon 2>&1 | tee build.log
 
+      # 列出实际生成的 APK 路径（lsplugin.apksign 等插件可能重命名/移动 APK）
+      - name: List generated APK files
+        if: always()
+        run: |
+          echo "=== APK files in app/build/outputs ==="
+          find app/build/outputs -name "*.apk" -type f -exec ls -la {} \; || true
+          echo "=== Full outputs/apk tree ==="
+          find app/build/outputs/apk -type f 2>/dev/null || echo "(no outputs/apk directory)"
+
       - name: Upload Debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-${{ github.run_id }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          # 使用通配符：lsplugin.apksign 等插件可能把 APK 输出到非默认路径或改名
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 14
           if-no-files-found: error
 
