@@ -26,8 +26,8 @@
     <string name="maintainer_role_contributor">贡献者</string>
     <string name="satellite_source">卫星数据来源</string>
     <string name="source_all">全部 (ALL)</string>
-    <string name="source_celestrak">CelesTrak 源</string>
     <string name="source_satnogs">SatNOGS 源</string>
+    <string name="source_amsat">AMSAT 源</string>
     <string name="back">返回</string>
     <string name="version_info">版本：%s</string>
     <string name="about_description">一款基于手机定位自动生成 CQ/ITU 分区和梅登兰德定位的小工具。</string>
