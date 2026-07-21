@@ -15,6 +15,7 @@ on:
   push:
     branches:
       - main
+      - miuix
     paths-ignore:
       - 'README.md'
       - 'docs/**'
