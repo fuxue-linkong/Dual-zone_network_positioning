@@ -134,8 +134,6 @@ fun HomePagerMiuix(
                         }
                         // CW 练习入口
                         CwEntryCardMiuix(actions.onCWPracticeClick)
-                        // 应用版本信息
-                        InfoCard(systemInfo = state.systemInfo)
                     }
                     Spacer(Modifier.height(bottomInnerPadding))
                 }
@@ -464,42 +462,5 @@ private fun CwEntryCardMiuix(onClick: () -> Unit) {
             summary = stringResource(R.string.cw_practice_desc),
             onClick = onClick
         )
-    }
-}
-
-@Composable
-private fun InfoCard(systemInfo: SystemInfo) {
-    @Composable
-    fun InfoText(
-        title: String,
-        content: String,
-        bottomPadding: Dp = 24.dp
-    ) {
-        Text(
-            text = title,
-            fontSize = MiuixTheme.textStyles.headline1.fontSize,
-            fontWeight = FontWeight.Medium,
-            color = colorScheme.onSurface
-        )
-        Text(
-            text = content,
-            fontSize = MiuixTheme.textStyles.body2.fontSize,
-            color = colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
-        )
-    }
-
-    Card {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            InfoText(
-                title = stringResource(R.string.home_app_version),
-                content = systemInfo.appVersion,
-                bottomPadding = 0.dp
-            )
-        }
     }
 }

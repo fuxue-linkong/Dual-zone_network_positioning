@@ -4,7 +4,6 @@
 
     <!-- UI Kit UI strings (English default) -->
     <string name="home_sample_notification" translatable="false">This is a sample notification</string>
-    <string name="home_app_version" translatable="false">App version</string>
     <string name="home_example_link_title" translatable="false">This is a sample link</string>
     <string name="home_example_link_subtitle" translatable="false">This is a subtitle of the sample link</string>
     <string name="home_example_link_url" translatable="false">https://github.com/chenaizhang/KernelSU-Style-UI-Kit</string>

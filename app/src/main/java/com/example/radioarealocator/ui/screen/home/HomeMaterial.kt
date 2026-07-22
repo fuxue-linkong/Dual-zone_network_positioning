@@ -111,7 +111,6 @@ fun HomePagerMaterial(
                     CwEntryCard(actions.onCWPracticeClick)
                 }
             }
-            InfoCard(systemInfo = state.systemInfo)
             Spacer(Modifier.height(bottomInnerPadding))
         }
     }
@@ -456,25 +455,3 @@ private fun CwEntryCard(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun InfoCard(systemInfo: SystemInfo) {
-    TonalCard {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 16.dp)
-        ) {
-            @Composable
-            fun InfoCardItem(label: String, content: String) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
-
-            InfoCardItem(stringResource(R.string.home_app_version), systemInfo.appVersion)
-        }
-    }
-}

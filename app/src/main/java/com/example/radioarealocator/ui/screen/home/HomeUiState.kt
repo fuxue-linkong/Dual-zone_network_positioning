@@ -12,7 +12,6 @@ data class HomeUiState(
     val checkUpdateEnabled: Boolean,
     val latestVersionInfo: LatestVersionInfo,
     val currentAppVersionCode: Long,
-    val systemInfo: SystemInfo,
 )
 
 /**

@@ -31,11 +31,6 @@ data class AppVersion(
     val versionCode: Long
 )
 
-@Immutable
-data class SystemInfo(
-    val appVersion: String,
-)
-
 fun getAppVersion(context: Context): AppVersion {
     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)!!
     val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo)

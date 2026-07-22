@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.radioarealocator.radioApp
 import com.example.radioarealocator.ui.screen.home.HomeUiState
-import com.example.radioarealocator.ui.screen.home.SystemInfo
 import com.example.radioarealocator.ui.screen.home.getAppVersion
 import com.example.radioarealocator.ui.util.LatestVersionInfo
 import com.example.radioarealocator.ui.util.checkNewVersion
@@ -41,9 +40,6 @@ class HomeViewModel : ViewModel() {
                 .getBoolean("check_update", true),
             latestVersionInfo = LatestVersionInfo(),
             currentAppVersionCode = appVersion.versionCode,
-            systemInfo = SystemInfo(
-                appVersion = "${appVersion.versionName} (${appVersion.versionCode})",
-            ),
         )
     }
 }
