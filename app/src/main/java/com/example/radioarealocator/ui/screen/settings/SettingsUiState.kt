@@ -3,6 +3,7 @@ package com.example.radioarealocator.ui.screen.settings
 import androidx.compose.runtime.Immutable
 import com.example.radioarealocator.data.reminder.ReminderItem
 import com.example.radioarealocator.data.reminder.ReminderSettings
+import com.example.radioarealocator.ui.util.LatestVersionInfo
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.example.radioarealocator.ui.UiMode
@@ -21,6 +22,13 @@ data class SettingsUiState(
     val enableFloatingBottomBar: Boolean = true,
     val enableFloatingBottomBarBlur: Boolean = true,
     val pageScale: Float = 1.0f,
+    // ── 更新检查与下载 ──
+    val updateChecking: Boolean = false,
+    val updateAvailable: Boolean = false,
+    val updateError: Boolean = false,
+    val latestVersionInfo: LatestVersionInfo = LatestVersionInfo(),
+    /** 下载进度 0-100，-1 表示未在下载，100 表示已完成 */
+    val downloadProgress: Int = -1,
 )
 
 /**
@@ -44,4 +52,8 @@ data class SettingsScreenActions(
     val onSetSatelliteSource: (String) -> Unit = {},
     val onUpdateReminderSettings: (ReminderSettings) -> Unit = {},
     val onOpenReminderList: () -> Unit = {},
+    // 更新相关回调
+    val onCheckUpdateNow: () -> Unit = {},
+    val onDownloadAndInstall: () -> Unit = {},
+    val onClearUpdateResult: () -> Unit = {},
 )

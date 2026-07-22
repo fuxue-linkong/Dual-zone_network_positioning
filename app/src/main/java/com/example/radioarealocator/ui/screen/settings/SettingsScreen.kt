@@ -48,6 +48,9 @@ fun SettingPager(
         onSetSatelliteSource = mainViewModel::setSatelliteSource,
         onUpdateReminderSettings = mainViewModel::updateReminderSettings,
         onOpenReminderList = { navigator.push(Route.ReminderList) },
+        onCheckUpdateNow = settingsViewModel::checkUpdateNow,
+        onDownloadAndInstall = settingsViewModel::downloadAndInstall,
+        onClearUpdateResult = settingsViewModel::clearUpdateResult,
     )
 
     when (LocalUiMode.current) {

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.ContactPage
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.SatelliteAlt
@@ -113,6 +114,19 @@ fun SettingPagerMiuix(
                             },
                             checked = uiState.checkUpdate,
                             onCheckedChange = actions.onSetCheckUpdate
+                        )
+                        ArrowPreference(
+                            title = stringResource(id = R.string.settings_check_update_now),
+                            summary = stringResource(id = R.string.settings_check_update_now_summary),
+                            startAction = {
+                                Icon(
+                                    Icons.Rounded.Download,
+                                    modifier = Modifier.padding(end = 6.dp),
+                                    contentDescription = stringResource(id = R.string.settings_check_update_now),
+                                    tint = colorScheme.onBackground
+                                )
+                            },
+                            onClick = actions.onCheckUpdateNow
                         )
                     }
 
@@ -320,5 +334,6 @@ fun SettingPagerMiuix(
                 }
             }
         }
+        UpdateDialogs(uiState = uiState, actions = actions)
     }
 }

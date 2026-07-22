@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContactPage
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SatelliteAlt
@@ -79,14 +80,30 @@ fun SettingPagerMaterial(
             Spacer(modifier = Modifier.height(8.dp))
             SegmentedColumn(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                content = listOf {
-                    SegmentedSwitchItem(
-                        icon = Icons.Filled.Update,
-                        title = stringResource(id = R.string.settings_check_update),
-                        summary = stringResource(id = R.string.settings_check_update_summary),
-                        checked = uiState.checkUpdate,
-                        onCheckedChange = actions.onSetCheckUpdate
-                    )
+                content = buildList {
+                    add {
+                        SegmentedSwitchItem(
+                            icon = Icons.Filled.Update,
+                            title = stringResource(id = R.string.settings_check_update),
+                            summary = stringResource(id = R.string.settings_check_update_summary),
+                            checked = uiState.checkUpdate,
+                            onCheckedChange = actions.onSetCheckUpdate
+                        )
+                    }
+                    add {
+                        SegmentedListItem(
+                            onClick = actions.onCheckUpdateNow,
+                            headlineContent = { Text(stringResource(id = R.string.settings_check_update_now)) },
+                            supportingContent = { Text(stringResource(id = R.string.settings_check_update_now_summary)) },
+                            leadingContent = { Icon(Icons.Filled.Download, stringResource(id = R.string.settings_check_update_now)) },
+                            trailingContent = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    null
+                                )
+                            }
+                        )
+                    }
                 }
             )
 
@@ -289,6 +306,7 @@ fun SettingPagerMaterial(
                     snackbarHostState = snackBarHost,
                 )
             }
+            UpdateDialogs(uiState = uiState, actions = actions)
             Spacer(modifier = Modifier.height(bottomInnerPadding))
         }
     }
