@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import android.os.Build
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.work.Configuration
 import com.amap.api.maps.MapsInitializer
 import com.example.radioarealocator.data.crypto.SecretManager
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +40,7 @@ lateinit var radioApp: RadioAreaLocatorApplication
  *
  * 未调用隐私合规接口会导致 errorCode 555570（隐私合规校验失败）及 native library 加载失败。
  */
-class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner {
+class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner, Configuration.Provider {
 
     companion object {
         fun setEnableOnBackInvokedCallback(appInfo: ApplicationInfo, enable: Boolean) {
@@ -145,4 +146,20 @@ class RadioAreaLocatorApplication : Application(), ViewModelStoreOwner {
 
     override val viewModelStore: ViewModelStore
         get() = appViewModelStore
+
+    /**
+     * WorkManager 按需初始化配置。
+     *
+     * AndroidManifest 中已禁用 WorkManagerInitializer（androidx.startup），
+     * 改为由 Application 实现 [Configuration.Provider]。
+     * 首次调用 [WorkManager.getInstance] 时，WorkManager 会读取此配置自动完成初始化，
+     * 避免在 ContentProvider 阶段（冷启动关键路径）初始化 WorkManager。
+     *
+     * 这样 ReminderBootReceiver（开机/应用更新时触发）和 ReminderScheduler
+     * 都能安全调用 WorkManager.getInstance()。
+     */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .build()
 }

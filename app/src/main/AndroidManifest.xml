@@ -85,8 +85,9 @@
         </receiver>
 
         <!-- 禁用 WorkManager 自动初始化（androidx.startup），
-             改为在 ReminderScheduler 首次调用 WorkManager.getInstance(context) 时按需初始化。
-             这样可避免启动阶段与高德 SDK、Compose 首帧等抢占主线程资源。 -->
+             改为由 Application 实现 Configuration.Provider 接口按需初始化。
+             首次调用 WorkManager.getInstance() 时自动用 Application 提供的 Configuration 初始化，
+             避免在 ContentProvider 阶段（冷启动关键路径）初始化 WorkManager。 -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
