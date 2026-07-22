@@ -471,11 +471,6 @@ fun MainScreen(
                             contentPadding = padding
                         )
                         4 -> MorseCodeScreen(
-                            bgPage = MaterialTheme.colorScheme.background,
-                            bgCard = MaterialTheme.colorScheme.surface,
-                            primaryColor = MaterialTheme.colorScheme.primary,
-                            textPrimary = MaterialTheme.colorScheme.onSurface,
-                            textSecondary = MaterialTheme.colorScheme.onSurfaceVariant,
                             contentPadding = padding
                         )
                     }

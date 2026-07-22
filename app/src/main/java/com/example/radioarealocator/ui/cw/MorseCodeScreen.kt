@@ -46,7 +46,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -54,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
 import kotlinx.coroutines.launch
 
@@ -99,11 +97,6 @@ private fun decode(morse: String): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MorseCodeScreen(
-    bgPage: Color,
-    bgCard: Color,
-    primaryColor: Color,
-    textPrimary: Color,
-    textSecondary: Color,
     contentPadding: PaddingValues
 ) {
     var mode by remember { mutableStateOf(true) }
@@ -113,6 +106,9 @@ fun MorseCodeScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
 
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
@@ -126,7 +122,7 @@ fun MorseCodeScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = bgCard
+                color = colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -141,8 +137,8 @@ fun MorseCodeScreen(
                                 onClick = {},
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = primaryColor,
-                                    contentColor = Color.White
+                                    containerColor = colorScheme.primary,
+                                    contentColor = colorScheme.onPrimary
                                 )
                             ) {
                                 Text(stringResource(R.string.morsecode_encode))
@@ -152,7 +148,7 @@ fun MorseCodeScreen(
                                 onClick = { mode = true; input = ""; output = "" },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = textSecondary
+                                    contentColor = colorScheme.onSurfaceVariant
                                 )
                             ) {
                                 Text(stringResource(R.string.morsecode_encode))
@@ -164,8 +160,8 @@ fun MorseCodeScreen(
                                 onClick = {},
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = primaryColor,
-                                    contentColor = Color.White
+                                    containerColor = colorScheme.primary,
+                                    contentColor = colorScheme.onPrimary
                                 )
                             ) {
                                 Text(stringResource(R.string.morsecode_decode))
@@ -175,7 +171,7 @@ fun MorseCodeScreen(
                                 onClick = { mode = false; input = ""; output = "" },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = textSecondary
+                                    contentColor = colorScheme.onSurfaceVariant
                                 )
                             ) {
                                 Text(stringResource(R.string.morsecode_decode))
@@ -194,10 +190,10 @@ fun MorseCodeScreen(
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f)
+                        focusedContainerColor = colorScheme.surface,
+                        unfocusedContainerColor = colorScheme.surface,
+                        focusedBorderColor = colorScheme.primary,
+                        unfocusedBorderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = if (mode) KeyboardType.Text else KeyboardType.Ascii
@@ -208,8 +204,8 @@ fun MorseCodeScreen(
 
                     Text(
                         text = stringResource(R.string.morsecode_support_hint),
-                        color = textSecondary,
-                        fontSize = 12.sp
+                        style = typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
                     )
 
                     Button(
@@ -229,8 +225,8 @@ fun MorseCodeScreen(
                             .height(56.dp),
                         shape = RoundedCornerShape(28.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = primaryColor,
-                            contentColor = Color.White
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         Icon(
@@ -265,17 +261,17 @@ fun MorseCodeScreen(
                                 Icon(
                                     imageVector = Icons.Filled.ContentCopy,
                                     contentDescription = stringResource(R.string.morsecode_copy),
-                                    tint = primaryColor
+                                    tint = colorScheme.primary
                                 )
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                        unfocusedBorderColor = textSecondary.copy(alpha = 0.3f),
-                        focusedTextColor = textPrimary,
-                        unfocusedTextColor = textPrimary
+                        focusedContainerColor = colorScheme.surface,
+                        unfocusedContainerColor = colorScheme.surface,
+                        focusedBorderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        unfocusedBorderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        focusedTextColor = colorScheme.onSurface,
+                        unfocusedTextColor = colorScheme.onSurface
                     ),
                         singleLine = false,
                         maxLines = 4
@@ -286,7 +282,7 @@ fun MorseCodeScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = bgCard
+                color = colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -294,9 +290,9 @@ fun MorseCodeScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.morsecode_reference_table),
-                        color = textPrimary,
+                        style = typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        color = colorScheme.onSurface
                     )
 
                     FlowRow(
@@ -307,9 +303,9 @@ fun MorseCodeScreen(
                         morseMap.forEach { (char, code) ->
                             Text(
                                 text = "$char $code",
-                                color = textSecondary,
+                                style = typography.bodySmall,
+                                color = colorScheme.onSurfaceVariant,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 13.sp,
                                 modifier = Modifier.widthIn(min = 72.dp),
                                 textAlign = TextAlign.Start
                             )
