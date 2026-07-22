@@ -22,8 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.radioarealocator.R
+import com.example.radioarealocator.ui.appViewModel
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
 import com.example.radioarealocator.ui.util.BlurredBar
@@ -43,7 +43,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 @Composable
 fun CWPracticeRouteScreen() {
     val navigator = LocalNavigator.current
-    val cwViewModel = viewModel<CWPracticeViewModel>()
+    val cwViewModel = appViewModel<CWPracticeViewModel>()
     val settings by cwViewModel.settings.collectAsStateWithLifecycle()
 
     var page by rememberSaveable { mutableStateOf(CWPage.Main) }

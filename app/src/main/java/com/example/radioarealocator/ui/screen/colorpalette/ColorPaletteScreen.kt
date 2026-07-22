@@ -6,12 +6,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.example.radioarealocator.RadioAreaLocatorApplication
 import com.example.radioarealocator.ui.LocalUiMode
 import com.example.radioarealocator.ui.UiMode
+import com.example.radioarealocator.ui.appViewModel
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.ColorMode
 import com.example.radioarealocator.ui.viewmodel.SettingsViewModel
@@ -21,7 +21,7 @@ fun ColorPaletteScreen() {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val activity = LocalActivity.current
-    val viewModel = viewModel<SettingsViewModel>()
+    val viewModel = appViewModel<SettingsViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentPaletteStyle = try {
         PaletteStyle.valueOf(uiState.colorStyle)

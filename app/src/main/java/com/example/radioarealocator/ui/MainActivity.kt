@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.HasDefaultViewModelProviderFactory
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -389,4 +390,25 @@ private fun WithApplicationViewModelStoreOwner(content: @Composable () -> Unit) 
     } else {
         content()
     }
+}
+
+/**
+ * 创建带 [Application] 的 [ViewModelProvider.Factory]，确保 [viewModel] 调用时
+ * [AndroidViewModelFactory] 能拿到 Application（即使 CreationExtras 为空）。
+ *
+ * 根因：Navigation3 NavDisplay entry 的 ViewModelStoreOwner 默认不实现
+ * [HasDefaultViewModelProviderFactory]，`viewModel<T>()` 回退到
+ * `AndroidViewModelFactory()`（无 Application），在 lifecycle 2.10 中
+ * 即使 T 是普通 [ViewModel] 也会抛 `APPLICATION_KEY` 异常。
+ *
+ * 本函数通过传入显式 factory 绕过该问题，不依赖 [LocalViewModelStoreOwner]。
+ */
+@Composable
+inline fun <reified VM : ViewModel> appViewModel(
+    key: String? = null,
+): VM {
+    val context = LocalContext.current
+    @Suppress("DEPRECATION")
+    val factory = remember { ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application) }
+    return viewModel(key = key, factory = factory)
 }
