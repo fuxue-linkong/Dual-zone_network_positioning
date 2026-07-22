@@ -891,16 +891,28 @@ private fun SatelliteDetailContent(
     }
     val totalCount = satelliteState.satellites.size
 
-    // 统一的倒计时时钟：仅当有在境卫星时才每秒更新，
-    // 避免每颗在境卫星各自启动 LaunchedEffect 导致 N 次/秒重组
+    // 统一的倒计时时钟：仅当有在境卫星时才每 5 秒更新，
+    // 避免每颗在境卫星各自启动 LaunchedEffect 导致 N 次/秒重组。
+    // 5 秒间隔在列表级精度足够（分:秒显示），大幅降低重组频率
     var inPassNowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val hasInPassSatellites = filteredSatellites.any { it.isCurrentlyVisible }
     LaunchedEffect(hasInPassSatellites) {
         if (hasInPassSatellites) {
             while (true) {
                 inPassNowMillis = System.currentTimeMillis()
-                delay(1000)
+                delay(5000)
             }
+        }
+    }
+
+    // 预计算每颗卫星的有效状态，避免在 items 块内逐项创建新对象触发重组
+    val statusCache = remember(statusEntries, filteredSatellites) {
+        filteredSatellites.associate { sat ->
+            val amsatName = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER[sat.catalogNumber]
+            val statusQuery = if (amsatName != null) statusTracker.queryStatus(amsatName) else null
+            val effectiveStatus = statusQuery?.status?.takeIf { it.isNotBlank() } ?: sat.status
+            val isInherited = statusQuery?.isInherited ?: false
+            sat.catalogNumber to (effectiveStatus to isInherited)
         }
     }
 
@@ -980,14 +992,11 @@ private fun SatelliteDetailContent(
                     items = filteredSatellites,
                     key = { it.catalogNumber }
                 ) { sat ->
-                    // 查询状态跟踪器：获取实时状态值与延续标记。
-                    // 跟踪器无该卫星记录时（首次抓取前或长期无报告）回退到卫星源附带的初始状态
-                    val amsatName = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER[sat.catalogNumber]
-                    val statusQuery = if (amsatName != null) statusTracker.queryStatus(amsatName) else null
-                    val effectiveStatus = statusQuery?.status?.takeIf { it.isNotBlank() } ?: sat.status
-                    val isInherited = statusQuery?.isInherited ?: false
+                    // 从预计算缓存读取状态，避免每项重组时重新查询和创建新对象
+                    val (effectiveStatus, isInherited) = statusCache[sat.catalogNumber] ?: (sat.status to false)
                     SatelliteItem(
-                        satellite = sat.copy(status = effectiveStatus),
+                        satellite = sat,
+                        effectiveStatus = effectiveStatus,
                         isFavorite = sat.catalogNumber in favorites,
                         onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
                         nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L,
@@ -1897,6 +1906,7 @@ private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 @Composable
 private fun SatelliteItem(
     satellite: SatelliteInfo,
+    effectiveStatus: String = satellite.status,
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
     nowMillis: Long = 0L,
@@ -2030,8 +2040,8 @@ private fun SatelliteItem(
                 if (satellite.source.isNotEmpty()) {
                     SourceChip(source = satellite.source)
                 }
-                if (satellite.status.isNotEmpty()) {
-                    StatusChip(status = satellite.status, isStatusInherited = isStatusInherited)
+                if (effectiveStatus.isNotEmpty()) {
+                    StatusChip(status = effectiveStatus, isStatusInherited = isStatusInherited)
                 }
                 if (satellite.modes.isEmpty()) {
                     ModeChip(mode = stringResource(R.string.mode_unknown))
