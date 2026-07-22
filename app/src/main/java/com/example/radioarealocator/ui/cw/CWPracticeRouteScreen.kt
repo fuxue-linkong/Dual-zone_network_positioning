@@ -63,6 +63,7 @@ fun CWPracticeRouteScreen() {
         CWPage.Main -> stringResource(R.string.cw_practice)
         CWPage.FreeSettings -> stringResource(R.string.free_practice)
         CWPage.Tutorial -> stringResource(R.string.tutorial_practice)
+        CWPage.TutorialPractice -> stringResource(R.string.tutorial_practice)
         CWPage.MorseCode -> stringResource(R.string.morsecode_codec)
     }
 
@@ -119,13 +120,48 @@ fun CWPracticeRouteScreen() {
                     contentPadding = innerPadding
                 )
 
-                CWPage.Tutorial -> TutorialListScreen(
-                    onLessonClick = { lessonId ->
-                        // 教程入口暂未实现完整课程数据，点击后切回自由练习设置页
-                        page = CWPage.FreeSettings
-                    },
-                    contentPadding = innerPadding
-                )
+                CWPage.Tutorial -> {
+                    val courseProgress by cwViewModel.courseProgress.collectAsStateWithLifecycle()
+                    TutorialListScreen(
+                        onLessonClick = { courseId ->
+                            // 生成对应课程的教程内容并进入教程练习页
+                            cwViewModel.generateTutorialText(courseId)
+                            page = CWPage.TutorialPractice
+                        },
+                        courseProgress = courseProgress,
+                        contentPadding = innerPadding
+                    )
+                }
+
+                CWPage.TutorialPractice -> {
+                    val currentText by cwViewModel.currentText.collectAsStateWithLifecycle()
+                    val morseCode by cwViewModel.morseCode.collectAsStateWithLifecycle()
+                    val userInput by cwViewModel.userInput.collectAsStateWithLifecycle()
+                    val isPlaying by cwViewModel.isPlaying.collectAsStateWithLifecycle()
+                    val isPaused by cwViewModel.isPaused.collectAsStateWithLifecycle()
+                    val accuracy by cwViewModel.accuracy.collectAsStateWithLifecycle()
+                    val courseTitle by cwViewModel.currentCourseTitle.collectAsStateWithLifecycle()
+                    val lessonInfo by cwViewModel.currentLessonInfo.collectAsStateWithLifecycle()
+                    PracticeScreen(
+                        currentText = currentText,
+                        morseCode = morseCode,
+                        userInput = userInput,
+                        isPlaying = isPlaying,
+                        isPaused = isPaused,
+                        accuracy = accuracy,
+                        courseTitle = courseTitle,
+                        lessonInfo = lessonInfo,
+                        isTutorialMode = true,
+                        onUserInputChange = cwViewModel::updateUserInput,
+                        onGenerateText = { /* 教程内容由课程决定，不支持手动生成 */ },
+                        onStartPractice = cwViewModel::startPractice,
+                        onPausePractice = cwViewModel::pausePractice,
+                        onResumePractice = cwViewModel::resumePractice,
+                        onStopPractice = cwViewModel::stopPractice,
+                        onCheckResults = cwViewModel::checkResults,
+                        contentPadding = innerPadding
+                    )
+                }
 
                 CWPage.MorseCode -> MorseCodeScreen(
                     bgPage = colorScheme.surface,
@@ -140,4 +176,4 @@ fun CWPracticeRouteScreen() {
     }
 }
 
-private enum class CWPage { Main, FreeSettings, Tutorial, MorseCode }
+private enum class CWPage { Main, FreeSettings, Tutorial, TutorialPractice, MorseCode }
