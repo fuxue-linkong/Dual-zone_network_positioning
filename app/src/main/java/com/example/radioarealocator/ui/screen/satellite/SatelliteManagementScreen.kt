@@ -782,7 +782,7 @@ private fun SatelliteManagementItem(
                         Icon(
                             imageVector = Icons.Rounded.Star,
                             contentDescription = null,
-                            tint = colorScheme.tertiary,
+                            tint = colorScheme.onTertiaryContainer,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -801,7 +801,7 @@ private fun SatelliteManagementItem(
                         Icon(
                             imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                             contentDescription = null,
-                            tint = if (isFavorite) colorScheme.tertiary else colorScheme.onSurfaceVariantSummary
+                            tint = if (isFavorite) colorScheme.onTertiaryContainer else colorScheme.onSurfaceVariantSummary
                         )
                     }
                 }
@@ -867,13 +867,13 @@ private fun SatelliteManagementItem(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(colorScheme.tertiary)
+                        .background(colorScheme.tertiaryContainer)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.favorited),
                         fontSize = 11.sp,
-                        color = colorScheme.onTertiary
+                        color = colorScheme.onTertiaryContainer
                     )
                 }
             }
