@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,9 +68,11 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -378,7 +381,13 @@ private fun ActionRow(
             colors = ButtonDefaults.buttonColorsPrimary()
         ) {
             if (isLoading) {
-                Text(buttonText)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = colorScheme.onPrimary
+                    )
+                )
             } else {
                 Text(buttonText)
             }
@@ -678,11 +687,11 @@ private fun FilterSwitchRow(label: String, checked: Boolean, onClick: () -> Unit
         ) {
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 2.dp)
+                    .padding(start = 2.dp)
                     .size(18.dp)
                     .clip(CircleShape)
                     .background(Color.White)
-                    .then(if (checked) Modifier.padding(start = 18.dp) else Modifier)
+                    .then(if (checked) Modifier.offset(x = 18.dp) else Modifier)
             )
         }
     }
@@ -867,13 +876,13 @@ private fun SatelliteManagementItem(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(colorScheme.tertiaryContainer)
+                        .background(colorScheme.onTertiaryContainer)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.favorited),
                         fontSize = 11.sp,
-                        color = colorScheme.onTertiaryContainer
+                        color = colorScheme.tertiaryContainer
                     )
                 }
             }
