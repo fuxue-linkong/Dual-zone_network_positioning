@@ -80,10 +80,9 @@ import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SegmentStatus
 import com.example.radioarealocator.ui.LocationUiState
-import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.SatelliteFilter
 import com.example.radioarealocator.ui.SatelliteUiState
-import com.example.radioarealocator.ui.appViewModel
+import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.applyFilter
 import com.example.radioarealocator.ui.isSatelliteSourceExpired
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
@@ -101,7 +100,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun SatelliteManagementMaterial() {
     val navigator = LocalNavigator.current
-    val mainViewModel = appViewModel<MainViewModel>()
+    val mainViewModel = LocalMainViewModel.current
     val locationState by mainViewModel.locationState
     val satelliteState by mainViewModel.satelliteState
     val favorites by mainViewModel.favoriteSatellites

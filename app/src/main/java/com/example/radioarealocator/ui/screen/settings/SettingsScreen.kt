@@ -6,8 +6,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.radioarealocator.ui.LocalUiMode
-import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.UiMode
+import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.appViewModel
 import com.example.radioarealocator.ui.navigation3.Navigator
 import com.example.radioarealocator.ui.navigation3.Route
@@ -19,7 +19,7 @@ fun SettingPager(
     bottomInnerPadding: Dp
 ) {
     val settingsViewModel = appViewModel<SettingsViewModel>()
-    val mainViewModel = appViewModel<MainViewModel>()
+    val mainViewModel = LocalMainViewModel.current
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
     // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可

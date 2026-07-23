@@ -18,9 +18,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.dropUnlessResumed
 import com.example.radioarealocator.R
-import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.ReminderListScreen
-import com.example.radioarealocator.ui.appViewModel
+import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
 import com.example.radioarealocator.ui.util.BlurredBar
@@ -39,7 +38,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 @Composable
 fun ReminderListRouteScreen() {
     val navigator = LocalNavigator.current
-    val mainViewModel = appViewModel<MainViewModel>()
+    val mainViewModel = LocalMainViewModel.current
     // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可
     val items by mainViewModel.reminderItems
 

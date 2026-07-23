@@ -126,6 +126,8 @@ class MainActivity : ComponentActivity() {
             val density = remember(systemDensity, uiState.pageScale) {
                 Density(systemDensity.density * uiState.pageScale, systemDensity.fontScale)
             }
+            // Activity 级 MainViewModel：所有页面共享同一实例，退出子页面不丢失状态
+            val mainViewModel = appViewModel<MainViewModel>()
 
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
@@ -135,6 +137,7 @@ class MainActivity : ComponentActivity() {
                 LocalEnableFloatingBottomBar provides uiState.enableFloatingBottomBar,
                 LocalEnableFloatingBottomBarBlur provides uiState.enableFloatingBottomBarBlur,
                 LocalUiMode provides uiMode,
+                LocalMainViewModel provides mainViewModel,
             ) {
                 RadioAreaLocatorTheme(appSettings = appSettings, uiMode = uiMode) {
                     val mainScreenEntry = @Composable {
@@ -187,6 +190,15 @@ class MainActivity : ComponentActivity() {
 }
 
 val LocalMainPagerState = staticCompositionLocalOf<MainPagerState> { error("LocalMainPagerState not provided") }
+
+/**
+ * Activity 级共享的 [MainViewModel]。
+ *
+ * Navigation3 的 NavDisplay 每个 entry 是独立的 ViewModelStoreOwner，若各页面分别
+ * `appViewModel<MainViewModel>()` 会得到不同实例，退出页面时实例销毁导致内存态丢失。
+ * 此 CompositionLocal 在 Activity 级创建唯一实例，所有页面共享同一状态。
+ */
+val LocalMainViewModel = staticCompositionLocalOf<MainViewModel> { error("LocalMainViewModel not provided") }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable

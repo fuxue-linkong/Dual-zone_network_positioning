@@ -12,7 +12,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.radioarealocator.permission.PermissionManager
 import com.example.radioarealocator.ui.LocalUiMode
-import com.example.radioarealocator.ui.MainViewModel
+import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.appViewModel
 import com.example.radioarealocator.ui.UiMode
 import com.example.radioarealocator.ui.navigation3.Navigator
@@ -26,7 +26,7 @@ fun HomePager(
     isCurrentPage: Boolean = true
 ) {
     val homeViewModel = appViewModel<HomeViewModel>()
-    val mainViewModel = appViewModel<MainViewModel>()
+    val mainViewModel = LocalMainViewModel.current
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val context = androidx.compose.ui.platform.LocalContext.current

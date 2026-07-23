@@ -41,9 +41,8 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.AMapCard
 import com.example.radioarealocator.ui.LocalUiMode
-import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.UiMode
-import com.example.radioarealocator.ui.appViewModel
+import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
@@ -68,7 +67,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Composable
 fun LocationDetailScreen() {
     val navigator = LocalNavigator.current
-    val mainViewModel = appViewModel<MainViewModel>()
+    val mainViewModel = LocalMainViewModel.current
     val locationState by mainViewModel.locationState
     val onBack = dropUnlessResumed { navigator.pop() }
 
