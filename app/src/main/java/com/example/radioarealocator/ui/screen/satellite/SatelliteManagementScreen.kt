@@ -1,6 +1,7 @@
 package com.example.radioarealocator.ui.screen.satellite
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -736,14 +737,12 @@ private fun SatelliteManagementItem(
         }
     }
 
-    // 强调色：在境优先 primaryContainer，收藏次之 tertiaryContainer
+    // 强调色：收藏用 tertiaryContainer 背景；在境仅加 primary 边框，背景保持 surface
     val cardContainerColor = when {
-        satellite.isCurrentlyVisible -> colorScheme.primaryContainer
         isFavorite -> colorScheme.tertiaryContainer
         else -> colorScheme.surface
     }
     val cardContentColor = when {
-        satellite.isCurrentlyVisible -> colorScheme.onPrimaryContainer
         isFavorite -> colorScheme.onTertiaryContainer
         else -> colorScheme.onSurface
     }
@@ -751,6 +750,17 @@ private fun SatelliteManagementItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (satellite.isCurrentlyVisible) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(onClick = onToggleFavorite),
         colors = CardDefaults.defaultColors(
             color = cardContainerColor.copy(alpha = LocalCardAlpha.current),

@@ -726,12 +726,10 @@ private fun SatelliteItemMaterial(
     }
 
     val cardContainerColor = when {
-        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.primaryContainer
         isFavorite -> MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.surface
     }
     val cardContentColor = when {
-        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.onPrimaryContainer
         isFavorite -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.onSurface
     }
@@ -740,7 +738,13 @@ private fun SatelliteItemMaterial(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (isFavorite) {
+                if (satellite.isCurrentlyVisible) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else if (isFavorite) {
                     Modifier.border(
                         width = 1.5.dp,
                         color = MaterialTheme.colorScheme.tertiary,
