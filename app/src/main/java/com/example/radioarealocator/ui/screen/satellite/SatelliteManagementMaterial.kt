@@ -1,6 +1,7 @@
 package com.example.radioarealocator.ui.screen.satellite
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,24 +13,48 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,52 +77,28 @@ import com.example.radioarealocator.R
 import com.example.radioarealocator.data.satellite.SatelliteCatalog
 import com.example.radioarealocator.data.satellite.SatelliteInfo
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
-import com.example.radioarealocator.data.satellite.SegmentStatus
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
+import com.example.radioarealocator.data.satellite.SegmentStatus
+import com.example.radioarealocator.ui.LocationUiState
 import com.example.radioarealocator.ui.MainViewModel
+import com.example.radioarealocator.ui.SatelliteFilter
+import com.example.radioarealocator.ui.SatelliteUiState
 import com.example.radioarealocator.ui.appViewModel
 import com.example.radioarealocator.ui.isSatelliteSourceExpired
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
-import com.example.radioarealocator.ui.theme.LocalEnableBlur
-import com.example.radioarealocator.ui.util.BlurredBar
-import com.example.radioarealocator.ui.util.rememberBlurBackdrop
 import kotlinx.coroutines.delay
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * 卫星管理页入口：按当前界面风格分发到 Miuix / Material 实现。
+ * 卫星管理页 Material3 风格。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SatelliteManagementScreen() {
-    when (com.example.radioarealocator.ui.LocalUiMode.current) {
-        com.example.radioarealocator.ui.UiMode.Miuix -> SatelliteManagementMiuix()
-        com.example.radioarealocator.ui.UiMode.Material -> SatelliteManagementMaterial()
-    }
-}
-
-/**
- * 卫星管理页 Miuix 风格：展示附近过境卫星，支持筛选、收藏、实时 AMSAT 状态、
- * BJT 分段时间线、在境倒计时等。
- */
-@Composable
-fun SatelliteManagementMiuix() {
+fun SatelliteManagementMaterial() {
     val navigator = LocalNavigator.current
     val mainViewModel = appViewModel<MainViewModel>()
     val locationState by mainViewModel.locationState
@@ -104,39 +106,26 @@ fun SatelliteManagementMiuix() {
     val favorites by mainViewModel.favoriteSatellites
     val filter by mainViewModel.satelliteFilter
 
-    val enableBlur = LocalEnableBlur.current
-    val backdrop = rememberBlurBackdrop(enableBlur)
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         topBar = {
-            BlurredBar(backdrop) {
-                top.yukonga.miuix.kmp.basic.TopAppBar(
-                    color = barColor,
-                    title = stringResource(R.string.satellite_management),
-                    navigationIcon = {
-                        Box(modifier = Modifier.padding(start = 12.dp)) {
-                            IconButton(onClick = dropUnlessResumed { navigator.pop() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = null,
-                                    tint = colorScheme.onBackground
-                                )
-                            }
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            }
+            TopAppBar(
+                title = { Text(stringResource(R.string.satellite_management)) },
+                navigationIcon = {
+                    IconButton(onClick = dropUnlessResumed { navigator.pop() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
         },
-        popupHost = { },
-        contentWindowInsets = WindowInsets.systemBars
-            .add(WindowInsets.displayCutout)
-            .only(WindowInsetsSides.Horizontal)
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        SatelliteManagementContent(
+        SatelliteManagementContentMaterial(
             locationState = locationState,
             satelliteState = satelliteState,
             filter = filter,
@@ -146,36 +135,36 @@ fun SatelliteManagementMiuix() {
             onFilterChange = mainViewModel::updateSatelliteFilter,
             onGetLocation = mainViewModel::refreshLocationOnly,
             onUpdateSource = mainViewModel::refreshSatelliteSourceOnly,
-            contentPadding = innerPadding
+            contentPadding = innerPadding,
+            nestedScrollConnection = scrollBehavior.nestedScrollConnection
         )
     }
 }
 
 @Composable
-private fun SatelliteManagementContent(
-    locationState: com.example.radioarealocator.ui.LocationUiState,
-    satelliteState: com.example.radioarealocator.ui.SatelliteUiState,
-    filter: com.example.radioarealocator.ui.SatelliteFilter,
+private fun SatelliteManagementContentMaterial(
+    locationState: LocationUiState,
+    satelliteState: SatelliteUiState,
+    filter: SatelliteFilter,
     favorites: Set<Int>,
     statusTracker: SatelliteStatusTracker,
     onToggleFavorite: (Int) -> Unit,
-    onFilterChange: (com.example.radioarealocator.ui.SatelliteFilter) -> Unit,
+    onFilterChange: (SatelliteFilter) -> Unit,
     onGetLocation: () -> Unit,
     onUpdateSource: () -> Unit,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    nestedScrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 ) {
-    // 订阅 AMSAT 状态字典，状态变化时触发重组以更新 effectiveStatus / isInherited
     @Suppress("UnusedVariable")
     val statusEntries = statusTracker.statusMap.value
 
-    // 应用筛选
     val filteredSatellites = remember(satelliteState.satellites, filter, favorites) {
         satelliteState.satellites.applyFilter(filter, favorites)
     }
     val totalCount = satelliteState.satellites.size
     val favoriteCount = satelliteState.satellites.count { it.catalogNumber in favorites }
 
-    // 统一倒计时时钟：仅当有在境卫星时每 5 秒更新，避免每颗卫星各自 LaunchedEffect
+    // 统一倒计时时钟
     var inPassNowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val hasInPassSatellites = filteredSatellites.any { it.isCurrentlyVisible }
     LaunchedEffect(hasInPassSatellites) {
@@ -187,7 +176,7 @@ private fun SatelliteManagementContent(
         }
     }
 
-    // 预计算每颗卫星的有效状态（含延续标记），避免 items 块内逐项查询触发重组
+    // 预计算状态缓存
     val statusCache = remember(statusEntries, filteredSatellites) {
         filteredSatellites.associate { sat ->
             val amsatName = SatelliteCatalog.AMSAT_STATUS_NAME_BY_CATALOG_NUMBER[sat.catalogNumber]
@@ -198,7 +187,7 @@ private fun SatelliteManagementContent(
         }
     }
 
-    // 排序：收藏优先 → 在境优先 → AOS 升序
+    // 排序
     val sortedSatellites = remember(filteredSatellites, favorites) {
         filteredSatellites.sortedWith(
             compareByDescending<SatelliteInfo> { it.catalogNumber in favorites }
@@ -210,16 +199,14 @@ private fun SatelliteManagementContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
-            .overScrollVertical()
-            .scrollEndHaptic(),
+            .nestedScroll(nestedScrollConnection)
+            .padding(contentPadding),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        overscrollEffect = null,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // 数据源刷新卡
         item {
-            SatelliteActionCard(
+            SatelliteActionCardMaterial(
                 isLoading = locationState.isLoading,
                 isSatelliteLoading = satelliteState.isSatelliteLoading,
                 lastLocationTime = locationState.lastLocationUpdateTime,
@@ -232,7 +219,7 @@ private fun SatelliteManagementContent(
 
         // 统计 + 描述 + 筛选入口
         item {
-            SatelliteHeaderCard(
+            SatelliteHeaderCardMaterial(
                 totalCount = totalCount,
                 filteredCount = filteredSatellites.size,
                 favoriteCount = favoriteCount,
@@ -241,27 +228,30 @@ private fun SatelliteManagementContent(
             )
         }
 
-        // 占位态 / 列表
         when {
             satelliteState.isSatelliteLoading && filteredSatellites.isEmpty() -> {
-                item { SatellitePlaceholderCard { Text(stringResource(R.string.processing)) } }
+                item { SatellitePlaceholderCardMaterial { CircularProgressIndicator() } }
             }
             satelliteState.satelliteError != null -> {
                 item {
-                    SatellitePlaceholderCard {
+                    SatellitePlaceholderCardMaterial {
                         Text(
                             text = stringResource(R.string.satellite_load_failed, satelliteState.satelliteError),
-                            color = colorScheme.onError
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
             }
             locationState.result == null -> {
-                item { SatellitePlaceholderCard { Text(stringResource(R.string.satellite_need_location)) } }
+                item {
+                    SatellitePlaceholderCardMaterial {
+                        Text(stringResource(R.string.satellite_need_location))
+                    }
+                }
             }
             filteredSatellites.isEmpty() -> {
                 item {
-                    SatellitePlaceholderCard {
+                    SatellitePlaceholderCardMaterial {
                         Text(
                             stringResource(
                                 if (filter.isActive) R.string.no_satellites_filtered
@@ -275,7 +265,7 @@ private fun SatelliteManagementContent(
                 items(items = sortedSatellites, key = { it.catalogNumber }) { sat ->
                     val (effectiveStatus, isInherited) = statusCache[sat.catalogNumber]
                         ?: (sat.status to false)
-                    SatelliteManagementItem(
+                    SatelliteItemMaterial(
                         satellite = sat,
                         effectiveStatus = effectiveStatus,
                         isFavorite = sat.catalogNumber in favorites,
@@ -293,7 +283,7 @@ private fun SatelliteManagementContent(
 // ---- 数据源刷新卡 ----
 
 @Composable
-private fun SatelliteActionCard(
+private fun SatelliteActionCardMaterial(
     isLoading: Boolean,
     isSatelliteLoading: Boolean,
     lastLocationTime: Instant?,
@@ -307,8 +297,8 @@ private fun SatelliteActionCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.defaultColors(
-            color = colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
         )
     ) {
         Column(
@@ -317,8 +307,7 @@ private fun SatelliteActionCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 获取定位
-            ActionRow(
+            ActionRowMaterial(
                 buttonText = stringResource(R.string.sat_action_get_location),
                 isLoading = isLoading,
                 enabled = !isLoading,
@@ -330,8 +319,7 @@ private fun SatelliteActionCard(
                 },
                 secondaryText = lastLocationCity.ifBlank { stringResource(R.string.sat_no_city) }
             )
-            // 更新卫星源
-            ActionRow(
+            ActionRowMaterial(
                 buttonText = stringResource(R.string.sat_action_update_source),
                 isLoading = isSatelliteLoading,
                 enabled = !isSatelliteLoading,
@@ -347,9 +335,9 @@ private fun SatelliteActionCard(
                     stringResource(R.string.sat_source_fresh)
                 },
                 secondaryColor = if (isSatelliteSourceExpired(lastSatelliteTime)) {
-                    colorScheme.onError
+                    MaterialTheme.colorScheme.error
                 } else {
-                    colorScheme.onSurfaceVariantSummary
+                    MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
         }
@@ -357,14 +345,14 @@ private fun SatelliteActionCard(
 }
 
 @Composable
-private fun ActionRow(
+private fun ActionRowMaterial(
     buttonText: String,
     isLoading: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
     primaryText: String,
     secondaryText: String,
-    secondaryColor: Color = colorScheme.onSurfaceVariantSummary
+    secondaryColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -374,10 +362,14 @@ private fun ActionRow(
         Button(
             onClick = onClick,
             enabled = enabled,
-            colors = ButtonDefaults.buttonColorsPrimary()
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) {
             if (isLoading) {
-                Text(buttonText)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             } else {
                 Text(buttonText)
             }
@@ -385,12 +377,12 @@ private fun ActionRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = primaryText,
-                fontSize = 14.sp,
-                color = colorScheme.onSurface
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = secondaryText,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = secondaryColor,
                 modifier = Modifier.padding(top = 2.dp)
             )
@@ -401,17 +393,17 @@ private fun ActionRow(
 // ---- 统计 + 描述 + 筛选入口 ----
 
 @Composable
-private fun SatelliteHeaderCard(
+private fun SatelliteHeaderCardMaterial(
     totalCount: Int,
     filteredCount: Int,
     favoriteCount: Int,
-    filter: com.example.radioarealocator.ui.SatelliteFilter,
-    onFilterChange: (com.example.radioarealocator.ui.SatelliteFilter) -> Unit
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.defaultColors(
-            color = colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
         )
     ) {
         Column(
@@ -421,27 +413,26 @@ private fun SatelliteHeaderCard(
         ) {
             Text(
                 text = stringResource(R.string.satellite_management_desc),
-                fontSize = 14.sp,
-                color = colorScheme.onSurfaceVariantSummary
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ManagementStat(
+                ManagementStatMaterial(
                     label = stringResource(R.string.satellite_count, totalCount),
                     value = totalCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
-                ManagementStat(
+                ManagementStatMaterial(
                     label = stringResource(R.string.favorites_count),
                     value = favoriteCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
             }
             Spacer(Modifier.height(8.dp))
-            // 筛选计数 + 筛选按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -450,259 +441,266 @@ private fun SatelliteHeaderCard(
                 if (filter.isActive && totalCount > 0) {
                     Text(
                         text = stringResource(R.string.satellite_count_filtered, filteredCount, totalCount),
-                        fontSize = 12.sp,
-                        color = colorScheme.onSurfaceVariantSummary
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                SatelliteFilterButton(filter = filter, onFilterChange = onFilterChange)
+                SatelliteFilterButtonMaterial(filter = filter, onFilterChange = onFilterChange)
             }
         }
     }
 }
 
 @Composable
-private fun ManagementStat(label: String, value: String, modifier: Modifier = Modifier) {
+private fun ManagementStatMaterial(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
             text = value,
-            fontSize = 22.sp,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = colorScheme.primary
+            color = MaterialTheme.colorScheme.primary
         )
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = colorScheme.onSurfaceVariantSummary
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 // ---- 筛选弹窗 ----
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SatelliteFilterButton(
-    filter: com.example.radioarealocator.ui.SatelliteFilter,
-    onFilterChange: (com.example.radioarealocator.ui.SatelliteFilter) -> Unit
+private fun SatelliteFilterButtonMaterial(
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .clickable { expanded = true }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.FilterList,
-            contentDescription = null,
-            tint = if (filter.isActive) colorScheme.primary else colorScheme.onSurfaceVariantSummary
-        )
-        Text(
-            text = stringResource(R.string.filter_title),
-            fontSize = 13.sp,
-            color = if (filter.isActive) colorScheme.primary else colorScheme.onSurfaceVariantSummary
-        )
-        if (filter.isActive) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(colorScheme.primary)
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .border(
+                    width = 1.dp,
+                    color = if (filter.isActive) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(10.dp)
+                )
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.FilterList,
+                contentDescription = null,
+                tint = if (filter.isActive) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.filter_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (filter.isActive) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (filter.isActive) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
+
+        if (expanded) {
+            SatelliteFilterDialogMaterial(
+                filter = filter,
+                onFilterChange = onFilterChange,
+                onDismiss = { expanded = false }
             )
         }
     }
-
-    if (expanded) {
-        SatelliteFilterDialog(
-            filter = filter,
-            onFilterChange = onFilterChange,
-            onDismiss = { expanded = false }
-        )
-    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SatelliteFilterDialog(
-    filter: com.example.radioarealocator.ui.SatelliteFilter,
-    onFilterChange: (com.example.radioarealocator.ui.SatelliteFilter) -> Unit,
+private fun SatelliteFilterDialogMaterial(
+    filter: SatelliteFilter,
+    onFilterChange: (SatelliteFilter) -> Unit,
     onDismiss: () -> Unit
 ) {
-    top.yukonga.miuix.kmp.window.WindowDialog(
-        show = true,
-        title = stringResource(R.string.filter_title),
-        onDismissRequest = onDismiss,
-        content = {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp
+        ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 重置按钮
-                if (filter.isActive) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(
-                            onClick = { onFilterChange(com.example.radioarealocator.ui.SatelliteFilter()) },
-                            text = stringResource(R.string.filter_reset)
-                        )
+                // 标题区
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.filter_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (filter.isActive) {
+                        TextButton(onClick = { onFilterChange(SatelliteFilter()) }) {
+                            Text(
+                                text = stringResource(R.string.filter_reset),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
+                HorizontalDivider()
 
-                // 模式多选区
-                Text(
-                    text = stringResource(R.string.filter_mode_section),
-                    fontSize = 13.sp,
-                    color = colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
-                FILTER_MODE_OPTIONS.forEach { mode ->
-                    val selected = mode.value in filter.modes
-                    FilterSelectableRow(
-                        label = mode.label,
-                        selected = selected,
-                        onClick = {
-                            val newModes = if (selected) filter.modes - mode.value
-                            else filter.modes + mode.value
-                            onFilterChange(filter.copy(modes = newModes))
+                // 内容区
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.filter_mode_section),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+                    )
+                    FILTER_MODE_OPTIONS_M.forEach { mode ->
+                        val selected = mode.value in filter.modes
+                        FilterCheckRowMaterial(
+                            label = mode.label,
+                            checked = selected,
+                            onToggle = {
+                                val newModes = if (selected) filter.modes - mode.value
+                                else filter.modes + mode.value
+                                onFilterChange(filter.copy(modes = newModes))
+                            }
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    FilterSwitchRowMaterial(
+                        label = stringResource(R.string.filter_only_in_pass),
+                        checked = filter.onlyInPass,
+                        onToggle = {
+                            onFilterChange(filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false))
                         }
+                    )
+                    FilterSwitchRowMaterial(
+                        label = stringResource(R.string.filter_only_upcoming),
+                        checked = filter.onlyUpcoming,
+                        onToggle = {
+                            onFilterChange(filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false))
+                        }
+                    )
+                    FilterSwitchRowMaterial(
+                        label = stringResource(R.string.filter_only_amsat),
+                        checked = filter.onlyAmsat,
+                        onToggle = { onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat)) }
+                    )
+                    FilterSwitchRowMaterial(
+                        label = stringResource(R.string.filter_only_favorites),
+                        checked = filter.onlyFavorites,
+                        onToggle = { onFilterChange(filter.copy(onlyFavorites = !filter.onlyFavorites)) }
                     )
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                // 开关筛选区
-                FilterSwitchRow(
-                    label = stringResource(R.string.filter_only_in_pass),
-                    checked = filter.onlyInPass,
-                    onClick = {
-                        onFilterChange(filter.copy(onlyInPass = !filter.onlyInPass, onlyUpcoming = false))
-                    }
-                )
-                FilterSwitchRow(
-                    label = stringResource(R.string.filter_only_upcoming),
-                    checked = filter.onlyUpcoming,
-                    onClick = {
-                        onFilterChange(filter.copy(onlyUpcoming = !filter.onlyUpcoming, onlyInPass = false))
-                    }
-                )
-                FilterSwitchRow(
-                    label = stringResource(R.string.filter_only_amsat),
-                    checked = filter.onlyAmsat,
-                    onClick = { onFilterChange(filter.copy(onlyAmsat = !filter.onlyAmsat)) }
-                )
-                FilterSwitchRow(
-                    label = stringResource(R.string.filter_only_favorites),
-                    checked = filter.onlyFavorites,
-                    onClick = { onFilterChange(filter.copy(onlyFavorites = !filter.onlyFavorites)) }
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                // 完成按钮
+                // 底部按钮区
+                HorizontalDivider()
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onDismiss,
-                        colors = ButtonDefaults.buttonColorsPrimary()
-                    ) {
+                    Button(onClick = onDismiss) {
                         Text(stringResource(R.string.filter_done))
                     }
                 }
             }
         }
-    )
-}
-
-@Composable
-private fun FilterSelectableRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = colorScheme.onSurface
-        )
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (selected) colorScheme.primary else Color.Transparent)
-                .then(
-                    if (selected) Modifier
-                    else Modifier.background(colorScheme.onSurfaceVariantSummary.copy(alpha = 0.3f))
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (selected) {
-                Text(
-                    text = "✓",
-                    fontSize = 13.sp,
-                    color = colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
     }
 }
 
 @Composable
-private fun FilterSwitchRow(label: String, checked: Boolean, onClick: () -> Unit) {
+private fun FilterCheckRowMaterial(label: String, checked: Boolean, onToggle: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            fontSize = 14.sp,
-            color = colorScheme.onSurface
+            style = MaterialTheme.typography.bodyMedium
         )
-        Box(
-            modifier = Modifier
-                .size(width = 40.dp, height = 22.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(if (checked) colorScheme.primary else colorScheme.onSurfaceVariantSummary.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 2.dp)
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .then(if (checked) Modifier.padding(start = 18.dp) else Modifier)
+        Checkbox(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary
             )
-        }
+        )
     }
 }
 
-private data class FilterModeOption(val value: String, val label: String)
+@Composable
+private fun FilterSwitchRowMaterial(label: String, checked: Boolean, onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+}
 
-private val FILTER_MODE_OPTIONS = listOf(
-    FilterModeOption("FM", "FM"),
-    FilterModeOption("SSTV", "SSTV"),
-    FilterModeOption("DSTAR", "D-Star"),
-    FilterModeOption("CW", "CW"),
-    FilterModeOption("USB", "USB"),
-    FilterModeOption("LSB", "LSB")
+private data class FilterModeOptionM(val value: String, val label: String)
+
+private val FILTER_MODE_OPTIONS_M = listOf(
+    FilterModeOptionM("FM", "FM"),
+    FilterModeOptionM("SSTV", "SSTV"),
+    FilterModeOptionM("DSTAR", "D-Star"),
+    FilterModeOptionM("CW", "CW"),
+    FilterModeOptionM("USB", "USB"),
+    FilterModeOptionM("LSB", "LSB")
 )
 
 // ---- 卫星列表项 ----
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SatelliteManagementItem(
+private fun SatelliteItemMaterial(
     satellite: SatelliteInfo,
     effectiveStatus: String,
     isFavorite: Boolean,
@@ -712,47 +710,56 @@ private fun SatelliteManagementItem(
     onToggleFavorite: () -> Unit
 ) {
     val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
-        val formatter = satelliteTimeFormatter
+        val formatter = satelliteTimeFormatterM
         val zone = ZoneId.systemDefault()
         if (satellite.isCurrentlyVisible) {
             val losTime = satellite.losTime.atZone(zone).format(formatter)
             val now = if (nowMillis > 0) Instant.ofEpochMilli(nowMillis) else Instant.now()
             val remainingSeconds = Duration.between(now, satellite.losTime).seconds
-            val remainingText = formatRemainingTime(remainingSeconds)
-            SatelliteTimeInfo.InPass(losTime, remainingText)
+            val remainingText = formatRemainingTimeM(remainingSeconds)
+            SatelliteTimeInfoM.InPass(losTime, remainingText)
         } else {
             val aosTime = satellite.aosTime.atZone(zone).format(formatter)
-            SatelliteTimeInfo.Upcoming(aosTime)
+            SatelliteTimeInfoM.Upcoming(aosTime)
         }
     }
 
-    // 强调色：在境优先 primaryContainer，收藏次之 tertiaryContainer
     val cardContainerColor = when {
-        satellite.isCurrentlyVisible -> colorScheme.primaryContainer
-        isFavorite -> colorScheme.tertiaryContainer
-        else -> colorScheme.surface
+        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.primaryContainer
+        isFavorite -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.surface
     }
     val cardContentColor = when {
-        satellite.isCurrentlyVisible -> colorScheme.onPrimaryContainer
-        isFavorite -> colorScheme.onTertiaryContainer
-        else -> colorScheme.onSurface
+        satellite.isCurrentlyVisible -> MaterialTheme.colorScheme.onPrimaryContainer
+        isFavorite -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggleFavorite),
-        colors = CardDefaults.defaultColors(
-            color = cardContainerColor.copy(alpha = LocalCardAlpha.current),
+            .then(
+                if (isFavorite) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = cardContainerColor.copy(alpha = LocalCardAlpha.current),
             contentColor = cardContentColor
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onToggleFavorite)
                 .padding(16.dp)
         ) {
-            // 第一行：状态点 + 名 + 收藏星 + 仰角 + 收藏按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -767,21 +774,21 @@ private fun SatelliteManagementItem(
                             .size(10.dp)
                             .clip(CircleShape)
                             .background(
-                                if (satellite.isCurrentlyVisible) colorScheme.primary
-                                else colorScheme.onSurfaceVariantSummary
+                                if (satellite.isCurrentlyVisible) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline
                             )
                     )
                     Text(
                         text = satellite.name,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = cardContentColor
                     )
                     if (isFavorite) {
                         Icon(
-                            imageVector = Icons.Rounded.Star,
+                            imageVector = Icons.Filled.Star,
                             contentDescription = null,
-                            tint = colorScheme.tertiary,
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -792,15 +799,17 @@ private fun SatelliteManagementItem(
                 ) {
                     Text(
                         text = "${satellite.maxElevation.toInt()}°",
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = cardContentColor
                     )
-                    IconButton(onClick = onToggleFavorite) {
+                    IconButton(onClick = onToggleFavorite, modifier = Modifier.size(48.dp)) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = null,
-                            tint = if (isFavorite) colorScheme.tertiary else colorScheme.onSurfaceVariantSummary
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isFavorite) MaterialTheme.colorScheme.tertiary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -808,51 +817,48 @@ private fun SatelliteManagementItem(
 
             Spacer(Modifier.height(8.dp))
 
-            // Chips 流：Source / Status / Mode
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (satellite.source.isNotEmpty()) {
-                    SourceChip(source = satellite.source)
+                    SourceChipM(source = satellite.source)
                 }
                 if (effectiveStatus.isNotEmpty()) {
-                    StatusChip(status = effectiveStatus, isStatusInherited = isStatusInherited)
+                    StatusChipM(status = effectiveStatus, isStatusInherited = isStatusInherited)
                 }
                 if (satellite.modes.isEmpty()) {
-                    ModeChip(mode = stringResource(R.string.mode_unknown))
+                    ModeChipM(mode = stringResource(R.string.mode_unknown))
                 } else {
-                    satellite.modes.forEach { mode -> ModeChip(mode = mode) }
+                    satellite.modes.forEach { mode -> ModeChipM(mode = mode) }
                 }
             }
 
-            // BJT 分段状态时间线
-            SatelliteStatusSegments(statusSegments)
+            SatelliteStatusSegmentsM(statusSegments)
 
             Spacer(Modifier.height(10.dp))
 
-            // 时间徽章
             when (timeInfo) {
-                is SatelliteTimeInfo.InPass -> {
+                is SatelliteTimeInfoM.InPass -> {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        TimeBadge(
+                        TimeBadgeM(
                             label = stringResource(R.string.los_time),
                             value = timeInfo.losTime,
                             isActive = true
                         )
-                        TimeBadge(
+                        TimeBadgeM(
                             label = stringResource(R.string.time_remaining),
                             value = timeInfo.remainingText,
                             isActive = true
                         )
                     }
                 }
-                is SatelliteTimeInfo.Upcoming -> {
-                    TimeBadge(
+                is SatelliteTimeInfoM.Upcoming -> {
+                    TimeBadgeM(
                         label = stringResource(R.string.aos_time),
                         value = timeInfo.aosTime,
                         isActive = false
@@ -860,19 +866,18 @@ private fun SatelliteManagementItem(
                 }
             }
 
-            // 收藏徽章
             if (isFavorite) {
                 Spacer(Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(colorScheme.tertiary)
+                        .background(MaterialTheme.colorScheme.tertiary)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.favorited),
-                        fontSize = 11.sp,
-                        color = colorScheme.onTertiary
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiary
                     )
                 }
             }
@@ -882,14 +887,14 @@ private fun SatelliteManagementItem(
 
 // ---- 时间相关辅助 ----
 
-private val satelliteTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+private val satelliteTimeFormatterM = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
-private sealed class SatelliteTimeInfo {
-    data class InPass(val losTime: String, val remainingText: String) : SatelliteTimeInfo()
-    data class Upcoming(val aosTime: String) : SatelliteTimeInfo()
+private sealed class SatelliteTimeInfoM {
+    data class InPass(val losTime: String, val remainingText: String) : SatelliteTimeInfoM()
+    data class Upcoming(val aosTime: String) : SatelliteTimeInfoM()
 }
 
-private fun formatRemainingTime(seconds: Long): String {
+private fun formatRemainingTimeM(seconds: Long): String {
     if (seconds <= 0) return "0秒"
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
@@ -897,13 +902,14 @@ private fun formatRemainingTime(seconds: Long): String {
 }
 
 @Composable
-private fun TimeBadge(label: String, value: String, isActive: Boolean) {
+private fun TimeBadgeM(label: String, value: String, isActive: Boolean) {
     val containerColor = if (isActive) {
-        colorScheme.primary.copy(alpha = 0.15f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
     } else {
-        colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceVariant
     }
-    val contentColor = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariantSummary
+    val contentColor = if (isActive) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
         modifier = Modifier
@@ -915,12 +921,12 @@ private fun TimeBadge(label: String, value: String, isActive: Boolean) {
     ) {
         Text(
             text = "$label：",
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = contentColor
         )
         Text(
             text = value,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = contentColor
         )
@@ -930,18 +936,18 @@ private fun TimeBadge(label: String, value: String, isActive: Boolean) {
 // ---- Chips ----
 
 @Composable
-private fun SourceChip(source: String) {
+private fun SourceChipM(source: String) {
     val (bgColor, contentColor) = when (source) {
-        "CT" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "SNOGS" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        "ALL" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
-        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
+        "CT" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        "SNOGS" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        "ALL" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(text = source, bgColor = bgColor, contentColor = contentColor)
+    ChipM(text = source, bgColor = bgColor, contentColor = contentColor)
 }
 
 @Composable
-private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
+private fun StatusChipM(status: String, isStatusInherited: Boolean = false) {
     val baseText = when (status) {
         "Heard" -> stringResource(R.string.status_heard)
         "Telemetry Only" -> stringResource(R.string.status_telemetry_only)
@@ -951,31 +957,31 @@ private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
     }
     val displayText = if (isStatusInherited) "$baseText *" else baseText
     val (bgColor, contentColor) = when (status) {
-        "Heard" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
-        "Telemetry Only" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer to colorScheme.onErrorContainer
-        "Crew Active" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
+        "Heard" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     val finalBg = if (isStatusInherited) bgColor.copy(alpha = 0.85f) else bgColor
     val finalContent = if (isStatusInherited) contentColor.copy(alpha = 0.85f) else contentColor
-    Chip(text = displayText, bgColor = finalBg, contentColor = finalContent)
+    ChipM(text = displayText, bgColor = finalBg, contentColor = finalContent)
 }
 
 @Composable
-private fun ModeChip(mode: String) {
+private fun ModeChipM(mode: String) {
     val (bgColor, contentColor) = when (mode.uppercase()) {
-        "FM" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
-        "SSTV" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "DSTAR" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        "CW" -> colorScheme.onErrorContainer to colorScheme.onErrorContainer
-        else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
+        "FM" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        "SSTV" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        "DSTAR" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        "CW" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(text = mode, bgColor = bgColor, contentColor = contentColor)
+    ChipM(text = mode, bgColor = bgColor, contentColor = contentColor)
 }
 
 @Composable
-private fun Chip(text: String, bgColor: Color, contentColor: Color) {
+private fun ChipM(text: String, bgColor: Color, contentColor: Color) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -984,7 +990,7 @@ private fun Chip(text: String, bgColor: Color, contentColor: Color) {
     ) {
         Text(
             text = text,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = contentColor,
             fontWeight = FontWeight.Medium
         )
@@ -994,7 +1000,7 @@ private fun Chip(text: String, bgColor: Color, contentColor: Color) {
 // ---- BJT 分段状态时间线 ----
 
 @Composable
-private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
+private fun SatelliteStatusSegmentsM(segments: List<SegmentStatus>?) {
     if (segments.isNullOrEmpty()) return
     val today = SatelliteStatusSegmenter.dateOf(Instant.now())
     val daySegments = remember(segments, today) {
@@ -1006,8 +1012,8 @@ private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.status_segment_title),
-            fontSize = 11.sp,
-            color = colorScheme.onSurfaceVariantSummary
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(4.dp))
         Row(
@@ -1015,14 +1021,14 @@ private fun SatelliteStatusSegments(segments: List<SegmentStatus>?) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             daySegments.forEach { seg ->
-                SegmentCell(segment = seg, modifier = Modifier.weight(1f))
+                SegmentCellM(segment = seg, modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
+private fun SegmentCellM(segment: SegmentStatus, modifier: Modifier = Modifier) {
     val displayText = when (segment.status) {
         "Heard" -> stringResource(R.string.status_heard)
         "Telemetry Only" -> stringResource(R.string.status_telemetry_only)
@@ -1032,18 +1038,18 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
         else -> segment.status
     }
     val bgColor = when (segment.status) {
-        "Heard" -> colorScheme.primaryContainer
-        "Telemetry Only" -> colorScheme.secondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer
-        "Crew Active" -> colorScheme.tertiaryContainer
-        else -> colorScheme.surfaceVariant
+        "Heard" -> MaterialTheme.colorScheme.primaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.secondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.errorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val contentColor = when (segment.status) {
-        "Heard" -> colorScheme.onPrimaryContainer
-        "Telemetry Only" -> colorScheme.onSecondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer
-        "Crew Active" -> colorScheme.onTertiaryContainer
-        else -> colorScheme.onSurfaceVariantSummary
+        "Heard" -> MaterialTheme.colorScheme.onPrimaryContainer
+        "Telemetry Only" -> MaterialTheme.colorScheme.onSecondaryContainer
+        "Not Heard" -> MaterialTheme.colorScheme.onErrorContainer
+        "Crew Active" -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val rangeLabel = remember(segment.segment) {
         "${segment.segment.startHour.toString().padStart(2, '0')}" +
@@ -1058,13 +1064,13 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = rangeLabel,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = contentColor,
             fontWeight = FontWeight.SemiBold
         )
         Text(
             text = displayText,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = contentColor
         )
     }
@@ -1073,11 +1079,11 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
 // ---- 占位卡 ----
 
 @Composable
-private fun SatellitePlaceholderCard(content: @Composable () -> Unit) {
+private fun SatellitePlaceholderCardMaterial(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.defaultColors(
-            color = colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
         )
     ) {
         Box(
