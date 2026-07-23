@@ -55,6 +55,7 @@ import com.example.radioarealocator.data.satellite.SegmentStatus
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.ui.MainViewModel
 import com.example.radioarealocator.ui.appViewModel
+import com.example.radioarealocator.ui.applyFilter
 import com.example.radioarealocator.ui.isSatelliteSourceExpired
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
