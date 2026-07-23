@@ -203,11 +203,8 @@ class CWPracticeViewModel : ViewModel() {
                 duration = _settings.value.practiceDuration
             )
             progressStore.insertProgress(progress)
-
-            // 教程模式：80%以上算通过，自动推进下一课
-            if (courseId > 0 && accuracy >= 80f) {
-                advanceCourseProgress()
-            }
+            // 达标后由用户点击"下一课"按钮触发 advanceCourseProgress，
+            // 避免成绩刚显示就被清空，用户来不及看到结果
         }
     }
 
@@ -294,7 +291,11 @@ class CWPracticeViewModel : ViewModel() {
         }
     }
 
-    private fun advanceCourseProgress() {
+    /**
+     * 教程模式：推进到下一课。由用户点击"下一课"按钮触发。
+     * 若已是最后一课则不推进，仅刷新课程进度。
+     */
+    fun advanceCourseProgress() {
         val courseId = _currentCourseId.value
         val lessonId = _currentLessonId.value
 

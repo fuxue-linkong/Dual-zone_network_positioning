@@ -48,9 +48,14 @@ fun CWPracticeRouteScreen() {
 
     var page by rememberSaveable { mutableStateOf(CWPage.Main) }
 
-    // 子页面返回逻辑：先回主菜单，主菜单再退回上一级路由
+    // 子页面返回逻辑：教程练习页回教程列表，其余回主菜单；主菜单再退回上一级路由
     BackHandler(enabled = page != CWPage.Main) {
-        page = CWPage.Main
+        if (page == CWPage.TutorialPractice) {
+            cwViewModel.stopPractice()
+            page = CWPage.Tutorial
+        } else {
+            page = CWPage.Main
+        }
     }
 
     val enableBlur = LocalEnableBlur.current
@@ -69,6 +74,7 @@ fun CWPracticeRouteScreen() {
 
     val onBack: () -> Unit = when (page) {
         CWPage.Main -> dropUnlessResumed { navigator.pop() }
+        CWPage.TutorialPractice -> { { cwViewModel.stopPractice(); page = CWPage.Tutorial } }
         else -> { { page = CWPage.Main } }
     }
 
@@ -159,6 +165,7 @@ fun CWPracticeRouteScreen() {
                         onResumePractice = cwViewModel::resumePractice,
                         onStopPractice = cwViewModel::stopPractice,
                         onCheckResults = cwViewModel::checkResults,
+                        onNextLesson = cwViewModel::advanceCourseProgress,
                         contentPadding = innerPadding
                     )
                 }

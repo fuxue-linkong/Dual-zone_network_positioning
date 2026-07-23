@@ -247,6 +247,7 @@
     <string name="in_progress" translatable="false">进行中</string>
     <string name="not_started" translatable="false">未开始</string>
     <string name="generate_text" translatable="false">生成练习文本</string>
+    <string name="next_lesson" translatable="false">下一课</string>
     <string name="practice" translatable="false">练习</string>
 
     <!-- 摩斯电码编解码工具 -->

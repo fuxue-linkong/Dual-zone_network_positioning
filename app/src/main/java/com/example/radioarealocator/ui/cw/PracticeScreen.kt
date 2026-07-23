@@ -46,6 +46,7 @@ fun PracticeScreen(
     onResumePractice: () -> Unit,
     onStopPractice: () -> Unit,
     onCheckResults: () -> Unit,
+    onNextLesson: () -> Unit = {},
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -229,6 +230,17 @@ fun PracticeScreen(
                                 backgroundColor = MiuixTheme.colorScheme.surfaceVariant
                             )
                         )
+                        // 教程模式达标后显示"下一课"按钮，由用户主动推进
+                        if (isTutorialMode && accuracy >= 80f) {
+                            Button(
+                                onClick = onNextLesson,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp)
+                            ) {
+                                Text(stringResource(R.string.next_lesson))
+                            }
+                        }
                     }
                 }
             }
