@@ -22,6 +22,7 @@ name: Release Build APK
 on:
   push:
     tags:
+      # 正式版打包走 miuix 分支上的 v* 标签
       - 'v*'
   workflow_dispatch:
     inputs:
@@ -87,7 +88,38 @@ jobs:
         with:
           fetch-depth: 0     # 完整历史，便于生成变更日志
 
+      # 校验：tag 必须打在 miuix 分支的提交上（正式版打包走 miuix 分支）
+      # 若 tag 的提交不在 miuix 分支历史中，则跳过整个构建流程
+      - name: Verify tag is on miuix branch
+        id: verify_branch
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          # 获取 miuix 分支的最新提交
+          git fetch origin miuix:refs/remotes/origin/miuix 2>/dev/null || true
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/miuix 2>/dev/null; then
+            echo "Tag commit $GITHUB_SHA is on miuix branch. Proceeding with release."
+            echo "skip_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Tag commit $GITHUB_SHA is not on miuix branch. Skipping build (正式版打包走 miuix 分支)."
+            echo "skip_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 手动触发时，默认不跳过
+      - name: Mark no skip for manual trigger
+        id: verify_manual
+        if: ${{ github.event_name != 'push' }}
+        run: echo "skip_build=false" >> "$GITHUB_OUTPUT"
+
+      # 若 skip_build=true，提前优雅退出（不视为失败）
+      - name: Skip build if tag not on miuix branch
+        if: ${{ steps.verify_branch.outputs.skip_build == 'true' }}
+        run: |
+          echo "::notice::Build skipped: tag not on miuix branch. 正式版打包走 miuix 分支。"
+          # 提前结束本 job（后续步骤通过 if 跳过）
+          exit 0
+
       - name: Set up JDK 21
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -95,6 +127,7 @@ jobs:
           cache: gradle
 
       - name: Setup Gradle
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
@@ -104,6 +137,7 @@ jobs:
       # 自动检测 prerelease：tag 包含 -beta/-rc/-alpha 视为预发布
       - name: Resolve release parameters
         id: params
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             TAG="${GITHUB_REF#refs/tags/}"
@@ -140,6 +174,7 @@ jobs:
 
       - name: Update version
         id: version
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
           TAG="${{ steps.params.outputs.tag }}"
           VERSION_NAME="${{ github.event.inputs.version_name || '' }}"
@@ -166,6 +201,7 @@ jobs:
 
       # 解码签名密钥（使用 25 年长效证书，确保跨版本签名一致）
       - name: Decode keystore
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -185,6 +221,7 @@ jobs:
 
       # 构建 Release APK（使用注入的签名 secrets）
       - name: Build Release APK
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/signing/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -200,6 +237,7 @@ jobs:
       # 签名验证：使用 apksigner 验证 v1+v2+v3 签名方案，输出指纹供一致性检查
       - name: Verify APK signature and output fingerprint
         id: signature
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -260,6 +298,7 @@ jobs:
 
       # 签名一致性检查：输出到 Step Summary，便于跨版本对比
       - name: Check signature consistency
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
           echo "## Signature Info" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -274,7 +313,7 @@ jobs:
           echo "> If this fingerprint differs from the previous Release, users must uninstall the old version first." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build reports on failure
-        if: failure()
+        if: ${{ failure() && steps.verify_branch.outputs.skip_build != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: build-reports-${{ steps.params.outputs.tag }}
@@ -286,11 +325,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Rename APK
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk \
              RadioAreaLocator-${{ steps.params.outputs.tag }}.apk
 
       - name: Upload signature report
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: signature-report-${{ steps.params.outputs.tag }}
@@ -300,7 +341,7 @@ jobs:
 
       # 手动触发时将版本号 bump 提交回仓库（标签触发时跳过，因为 tag 已包含版本号）
       - name: Commit version bump
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_version == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_version == 'true' && steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -309,13 +350,14 @@ jobs:
             echo "No version changes to commit"
           else
             git commit -m "chore: bump version to ${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.version_code }})"
-            git push origin HEAD:main
+            git push origin HEAD:miuix
           fi
 
       # 创建 GitHub Release，包含 APK、签名指纹、自动变更日志
       # prerelease 标志：由上方步骤自动检测（tag 后缀）或用户手动指定
       - name: Create Release
         id: release
+        if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.params.outputs.tag }}
