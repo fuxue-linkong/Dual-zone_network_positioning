@@ -15,6 +15,7 @@ import com.example.radioarealocator.data.reminder.ReminderSettings
 import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.data.reminder.RepeatMode
 import com.example.radioarealocator.data.satellite.AmsatStatusApiService
+import com.example.radioarealocator.data.satellite.AmsatPageScraper
 import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
 import com.example.radioarealocator.data.satellite.SatelliteCatalog
@@ -73,8 +74,10 @@ class MainViewModel : ViewModel() {
     private val satellitePredictor = SatellitePredictor()
     // AMSAT 状态独立抓取服务：供状态跟踪器 5 分钟定时拉取，不依赖 TLE 拉取周期
     private val amsatStatusApi = AmsatStatusApiService()
+    // AMSAT 页面抓取器：作为 API 的备选数据源
+    private val amsatPageScraper = AmsatPageScraper()
     // 卫星状态持续显示跟踪器：96 个 15 分钟时间槽 + 状态延续算法
-    val statusTracker = SatelliteStatusTracker(amsatStatusApi, viewModelScope)
+    val statusTracker = SatelliteStatusTracker(amsatStatusApi, amsatPageScraper, viewModelScope)
     private val settingsStore = SettingsStore(app)
     private val satelliteCache = SatelliteCacheStore(app)
     private val favoriteStore = FavoriteSatellitesStore(app)
