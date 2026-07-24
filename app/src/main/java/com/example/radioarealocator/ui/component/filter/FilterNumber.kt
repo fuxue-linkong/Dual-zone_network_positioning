@@ -23,8 +23,6 @@ class FilterNumber(
         maxValue: Int = Int.MAX_VALUE,
     ): TextFieldValue {
         val inputString = inputTextFieldValue.text
-        lastInputTextFieldValue.text
-
         val newString = StringBuilder()
         val supportNegative = minValue < 0
         var isNegative = false
@@ -74,7 +72,7 @@ class FilterNumber(
             textRange = TextRange(newString.length)
         }
 
-        return lastInputTextFieldValue.copy(
+        return inputTextFieldValue.copy(
             text = newString.toString(),
             selection = textRange
         )
