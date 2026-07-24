@@ -252,11 +252,15 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          APK_PATH="app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$APK_PATH" ]; then
-            echo "::error::Release APK not found at $APK_PATH"
+          # lsplugin.apksign 可能改变输出路径，用 find 动态定位
+          APK_PATH=$(find app/build/outputs/apk -name "*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "::error::Release APK not found in app/build/outputs/apk"
+            find app/build/outputs -name "*.apk" -type f || true
             exit 1
           fi
+          echo "Found APK: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
           # 定位 apksigner（GitHub Actions 预装 build-tools）
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -1)
@@ -337,7 +341,7 @@ jobs:
       - name: Rename APK
         if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk \
+          cp "${{ steps.signature.outputs.apk_path }}" \
              RadioAreaLocator-${{ steps.params.outputs.tag }}.apk
 
       - name: Upload signature report
