@@ -972,7 +972,7 @@ private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
     val (bgColor, contentColor) = when (status) {
         "Heard" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
         "Telemetry Only" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer to colorScheme.onErrorContainer
+        "Not Heard" -> colorScheme.errorContainer to colorScheme.onErrorContainer
         "Crew Active" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
     }
@@ -987,7 +987,7 @@ private fun ModeChip(mode: String) {
         "FM" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
         "SSTV" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
         "DSTAR" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        "CW" -> colorScheme.onErrorContainer to colorScheme.onErrorContainer
+        "CW" -> colorScheme.errorContainer to colorScheme.onErrorContainer
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
     }
     Chip(text = mode, bgColor = bgColor, contentColor = contentColor)
