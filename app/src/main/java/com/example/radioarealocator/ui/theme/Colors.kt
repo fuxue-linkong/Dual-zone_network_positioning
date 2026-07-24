@@ -5,21 +5,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
 val keyColorOptions = listOf(
-    Color(0xFFF44336).toArgb(),
-    Color(0xFFE91E63).toArgb(),
-    Color(0xFF9C27B0).toArgb(),
-    Color(0xFF673AB7).toArgb(),
-    Color(0xFF3F51B5).toArgb(),
-    Color(0xFF2196F3).toArgb(),
-    Color(0xFF00BCD4).toArgb(),
-    Color(0xFF009688).toArgb(),
-    Color(0xFF4FAF50).toArgb(),
-    Color(0xFFFFEB3B).toArgb(),
-    Color(0xFFFFC107).toArgb(),
-    Color(0xFFFF9800).toArgb(),
-    Color(0xFF795548).toArgb(),
-    Color(0xFF607D8F).toArgb(),
-    Color(0xFFFF9CA8).toArgb(),
+    Color(0xFFEF5350).toArgb(),  // Red 400
+    Color(0xFFEC407A).toArgb(),  // Pink 400
+    Color(0xFFAB47BC).toArgb(),  // Purple 400
+    Color(0xFF7E57C2).toArgb(),  // Deep Purple 400
+    Color(0xFF5C6BC0).toArgb(),  // Indigo 400
+    Color(0xFF42A5F5).toArgb(),  // Blue 400
+    Color(0xFF26C6DA).toArgb(),  // Cyan 400
+    Color(0xFF26A69A).toArgb(),  // Teal 400
+    Color(0xFF66BB6A).toArgb(),  // Green 400
+    Color(0xFFFFEE58).toArgb(),  // Yellow 400
+    Color(0xFFFFCA28).toArgb(),  // Amber 400
+    Color(0xFFFFA726).toArgb(),  // Orange 400
+    Color(0xFF8D6E63).toArgb(),  // Brown 400
+    Color(0xFF78909C).toArgb(),  // Blue Grey 400
+    Color(0xFFF48FB1).toArgb(),  // Sakura (Pink 200)
 )
 
 // 背景图功能已移除，卡片透明度固定为完全不透明。保留 CompositionLocal 以兼容旧业务代码。
