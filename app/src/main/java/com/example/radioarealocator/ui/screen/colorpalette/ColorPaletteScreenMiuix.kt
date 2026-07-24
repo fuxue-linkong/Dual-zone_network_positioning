@@ -435,25 +435,27 @@ private fun ThemePreviewCardMiuix(
     val screenRatio = screenWidth / screenHeight
 
     val seedColor = if (keyColor == 0) colorScheme.primary else Color(keyColor)
-    val effectiveStyle = if (keyColor == 0) PaletteStyle.TonalSpot else paletteStyle
-    val effectiveSpec = if (keyColor == 0) ColorSpec.SpecVersion.Default else colorSpec
-    val dynamicCs = rememberDynamicColorScheme(
-        seedColor = seedColor,
-        isDark = isDark,
-        style = effectiveStyle,
-        specVersion = effectiveSpec,
-    )
+    val dynamicCs = if (keyColor != 0) {
+        rememberDynamicColorScheme(
+            seedColor = seedColor,
+            isDark = isDark,
+            style = paletteStyle,
+            specVersion = colorSpec,
+        )
+    } else {
+        null
+    }
 
-    val bgColor = if (miuixMonet) dynamicCs.background else colorScheme.surface
-    val textColor = if (miuixMonet) dynamicCs.onSurface else colorScheme.onBackground
+    val bgColor = if (miuixMonet && dynamicCs != null) dynamicCs.background else colorScheme.surface
+    val textColor = if (miuixMonet && dynamicCs != null) dynamicCs.onSurface else colorScheme.onBackground
     val accentCardColor = when {
-        miuixMonet -> dynamicCs.secondaryContainer
+        miuixMonet && dynamicCs != null -> dynamicCs.secondaryContainer
         isDark -> Color(0xFF1A3825)
         else -> Color(0xFFDFFAE4)
     }
-    val cardColor = if (miuixMonet) dynamicCs.surfaceContainerHighest else colorScheme.surfaceVariant
-    val navBarColor = if (miuixMonet) dynamicCs.surfaceContainer else colorScheme.surface
-    val iconColor = if (miuixMonet) dynamicCs.primary else colorScheme.primary
+    val cardColor = if (miuixMonet && dynamicCs != null) dynamicCs.surfaceContainerHighest else colorScheme.surfaceVariant
+    val navBarColor = if (miuixMonet && dynamicCs != null) dynamicCs.surfaceContainer else colorScheme.surface
+    val iconColor = if (miuixMonet && dynamicCs != null) dynamicCs.primary else colorScheme.primary
     val navSelectedColor = colorScheme.onSurfaceContainer
     val navUnselectedColor = colorScheme.onSurfaceContainer.copy(alpha = 0.5f)
 
