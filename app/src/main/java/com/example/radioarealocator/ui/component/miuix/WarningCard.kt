@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.radioarealocator.ui.theme.SafeColors
 import com.example.radioarealocator.ui.theme.isInDarkTheme
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -33,8 +34,8 @@ fun WarningCard(
         colors = CardDefaults.defaultColors(
             color = color ?: when {
                 isDynamicColor -> colorScheme.errorContainer
-                isInDarkTheme() -> Color(0XFF310808)
-                else -> Color(0xFFF8E2E2)
+                isInDarkTheme() -> SafeColors.errorContainerDark
+                else -> SafeColors.errorContainer
             }
         ),
         showIndication = onClick != null,
@@ -49,7 +50,7 @@ fun WarningCard(
         ) {
             Text(
                 text = message,
-                color = if (isDynamicColor) colorScheme.onErrorContainer else Color(0xFFF72727),
+                color = if (isDynamicColor) colorScheme.onErrorContainer else SafeColors.errorIcon,
                 fontSize = 14.sp
             )
             action?.invoke()

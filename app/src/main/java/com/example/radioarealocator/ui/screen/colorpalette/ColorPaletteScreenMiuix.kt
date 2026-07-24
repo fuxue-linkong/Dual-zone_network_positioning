@@ -63,6 +63,7 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.example.radioarealocator.R
 import com.example.radioarealocator.ui.component.miuix.ScaleDialog
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
+import com.example.radioarealocator.ui.theme.SafeColors
 import com.example.radioarealocator.ui.theme.keyColorOptions
 import com.example.radioarealocator.ui.util.BlurredBar
 import com.example.radioarealocator.ui.util.rememberBlurBackdrop
@@ -450,8 +451,8 @@ private fun ThemePreviewCardMiuix(
     val textColor = if (miuixMonet && dynamicCs != null) dynamicCs.onSurface else colorScheme.onBackground
     val accentCardColor = when {
         miuixMonet && dynamicCs != null -> dynamicCs.secondaryContainer
-        isDark -> Color(0xFF1A3825)
-        else -> Color(0xFFDFFAE4)
+        isDark -> SafeColors.successContainer.copy(alpha = 0.15f)
+        else -> SafeColors.successContainer
     }
     val cardColor = if (miuixMonet && dynamicCs != null) dynamicCs.surfaceContainerHighest else colorScheme.surfaceVariant
     val navBarColor = if (miuixMonet && dynamicCs != null) dynamicCs.surfaceContainer else colorScheme.surface
