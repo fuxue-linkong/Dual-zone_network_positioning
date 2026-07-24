@@ -47,6 +47,7 @@ import com.example.radioarealocator.permission.PermissionState
 import com.example.radioarealocator.ui.WeatherCard
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
+import com.example.radioarealocator.ui.theme.SafeColors
 import com.example.radioarealocator.ui.util.BlurredBar
 import com.example.radioarealocator.ui.util.rememberBlurBackdrop
 import kotlinx.coroutines.delay
@@ -249,9 +250,9 @@ private fun PermissionCardMiuix(
     onClick: () -> Unit,
 ) {
     val requiredGranted = state.requiredGranted
-    val iconColor = if (requiredGranted) Color(0xFF36D167) else Color(0xFFF72727)
-    val containerColor = if (requiredGranted) Color(0xFFDFFAE4) else Color(0xFFF8E2E2)
-    val textColor = Color(0xFF111111)
+    val iconColor = if (requiredGranted) SafeColors.successIcon else SafeColors.errorIcon
+    val containerColor = if (requiredGranted) SafeColors.successContainer else SafeColors.errorContainer
+    val textColor = SafeColors.textPrimaryLight
     val summary =
         if (requiredGranted) {
             stringResource(R.string.permission_ready)
