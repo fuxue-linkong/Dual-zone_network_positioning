@@ -186,16 +186,26 @@ jobs:
             VERSION_NAME="${TAG#v}"
           fi
 
+          # 读取根 build.gradle.kts 中的 extra 版本定义
+          CURRENT_CODE=$(sed -nE "s/^val managerVersionCode by extra\(([0-9]+)\).*/\1/p" build.gradle.kts)
+          CURRENT_NAME=$(sed -nE "s/^val managerVersionName by extra\(\"([^\"]*)\"\).*/\1/p" build.gradle.kts)
+
+          if [ -z "$CURRENT_CODE" ] || [ -z "$CURRENT_NAME" ]; then
+            echo "::error::无法从 build.gradle.kts 解析当前版本（managerVersionCode/managerVersionName）"
+            exit 1
+          fi
+
           # 推断 version_code：当前值 +1
           if [ -z "$VERSION_CODE" ]; then
-            CURRENT_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts)
             VERSION_CODE=$((CURRENT_CODE + 1))
           fi
 
-          sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
-          sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
+          # 更新根 build.gradle.kts 中 extra 定义的版本
+          sed -i "s/^val managerVersionCode by extra([0-9]*)/val managerVersionCode by extra(${VERSION_CODE})/" build.gradle.kts
+          sed -i "s/^val managerVersionName by extra(\"[^\"]*\")/val managerVersionName by extra(\"${VERSION_NAME}\")/" build.gradle.kts
 
-          echo "Updated versionCode=$VERSION_CODE, versionName=$VERSION_NAME"
+          echo "Read current: versionName=${CURRENT_NAME}, versionCode=${CURRENT_CODE}"
+          echo "Updated versionCode=${VERSION_CODE}, versionName=${VERSION_NAME}"
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
