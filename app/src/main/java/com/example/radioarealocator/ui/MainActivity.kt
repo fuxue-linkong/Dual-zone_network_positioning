@@ -82,7 +82,6 @@ import com.example.radioarealocator.ui.theme.LocalEnableBlur
 import com.example.radioarealocator.ui.theme.LocalEnableFloatingBottomBar
 import com.example.radioarealocator.ui.theme.LocalEnableFloatingBottomBarBlur
 import com.example.radioarealocator.ui.util.rememberBlurBackdrop
-import com.example.radioarealocator.ui.util.rememberContentReady
 import com.example.radioarealocator.ui.viewmodel.MainActivityViewModel
 import com.example.radioarealocator.ui.viewmodel.MainPagerConfig
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -243,20 +242,19 @@ fun MainScreen(
     CompositionLocalProvider(
         LocalMainPagerState provides mainPagerState
     ) {
-        val contentReady = rememberContentReady()
         val pagerContent = @Composable { bottomInnerPadding: Dp ->
             Box(modifier = if (blurBackdrop != null) Modifier.layerBackdrop(blurBackdrop) else Modifier) {
                 HorizontalPager(
                     modifier = Modifier
                         .then(if (enableFloatingBottomBar && enableFloatingBottomBarBlur) Modifier.layerBackdrop(backdrop) else Modifier),
                     state = mainPagerState.pagerState,
-                    beyondViewportPageCount = if (contentReady) 1 else 0,
+                    beyondViewportPageCount = 1,
                     userScrollEnabled = userScrollEnabled,
                 ) { page ->
                     val isCurrentPage = page == settledPage
                     when (page) {
-                        0 -> if (isCurrentPage || contentReady) HomePager(navController, bottomInnerPadding, isCurrentPage)
-                        1 -> if (isCurrentPage || contentReady) SettingPager(navController, bottomInnerPadding)
+                        0 -> HomePager(navController, bottomInnerPadding, isCurrentPage)
+                        1 -> SettingPager(navController, bottomInnerPadding)
                     }
                 }
             }
