@@ -8,8 +8,13 @@ name: CI Build APK
 # 行业规范：
 #   - 最小权限（workflow 级别 contents: read）
 #   - 构建产物用 artifact 上传，不提交回仓库（避免污染历史 + 循环触发）
-#   - 可缓存（JDK + Gradle）
+#   - 可缓存（JDK + Gradle + Robolectric SDK）
 #   - 完整 Step Summary
+#
+# 加速策略（方案 A）：
+#   - 合并 test + build 为单 job，复用 Gradle 缓存和编译产物
+#   - 缓存 Robolectric android-all-*.jar，避免偶发下载 hang
+#   - 保留 test.yml 给 release.yml 单独调用
 # ─────────────────────────────────────────────────────────────
 on:
   push:
@@ -38,21 +43,13 @@ env:
   GRADLE_VERSION: '9.4.1'
 
 jobs:
-  # 先测试：复用 test.yml（CI 不强制覆盖率）
-  test:
-    name: Run Unit Tests
-    uses: ./.github/workflows/test.yml
-    permissions:
-      contents: read
-
-  # 后打包：构建 Debug APK 供内部测试（产物用 artifact 上传）
-  build:
-    name: Build Debug APK
-    needs: test
+  # 合并 test + build 为单 job：复用 Gradle 缓存和编译产物，节省 2-3 分钟
+  test-and-build:
+    name: Test & Build APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     # bot 提交跳过构建，避免循环触发
-    if: ${{ always() && (github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]') && needs.test.result != 'failure' }}
+    if: ${{ github.event_name != 'push' || github.event.head_commit.author.name != 'github-actions[bot]' }}
     permissions:
       contents: read
     steps:
@@ -70,9 +67,45 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
-          cache-read-only: false
+          cache-read-only: false # 可写缓存（行业惯例：分支构建可写）
 
+      # Robolectric SDK 缓存：避免 fresh runner 重新下载 android-all-34.jar（~50MB）
+      # 失败原因之一是网络抖动导致下载 hang，触发 15 分钟超时
+      - name: Cache Robolectric SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository/org/robolectric
+            ~/.gradle/caches/modules-2/files-2.1/org.robolectric
+          key: robolectric-sdk-${{ runner.os }}-v1
+
+      # 单元测试：复用已编译产物，Gradle 缓存命中后直接执行测试
+      - name: Run unit tests
+        id: test
+        run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest \
+            --console=plain \
+            --stacktrace \
+            --no-daemon 2>&1 | tee test-output.log
+
+      # 测试失败时上传报告，并标记跳过后续构建步骤
+      - name: Upload test reports on failure
+        if: failure() && steps.test.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports-${{ github.run_id }}
+          path: |
+            app/build/reports/tests
+            app/build/test-results
+            test-output.log
+          retention-days: 30
+          if-no-files-found: warn
+
+      # 构建 Debug APK：复用 test 阶段已编译的 .class，加速 assembleDebug
       - name: Build Debug APK
+        id: build
+        if: success()
         run: |
           set -o pipefail
           gradle assembleDebug \
@@ -80,17 +113,27 @@ jobs:
             --stacktrace \
             --no-daemon 2>&1 | tee build.log
 
+      # 列出实际生成的 APK 路径（lsplugin.apksign 等插件可能重命名/移动 APK）
+      - name: List generated APK files
+        if: always() && steps.build.outcome != 'skipped'
+        run: |
+          echo "=== APK files in app/build/outputs ==="
+          find app/build/outputs -name "*.apk" -type f -exec ls -la {} \; || true
+          echo "=== Full outputs/apk tree ==="
+          find app/build/outputs/apk -type f 2>/dev/null || echo "(no outputs/apk directory)"
+
       - name: Upload Debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-${{ github.run_id }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          # 使用通配符：lsplugin.apksign 等插件可能把 APK 输出到非默认路径或改名
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 14
           if-no-files-found: error
 
       - name: Upload build log
-        if: always()
+        if: always() && steps.build.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: build-log-${{ github.run_id }}
@@ -99,7 +142,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload build reports on failure
-        if: failure()
+        if: failure() && steps.build.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: build-reports-${{ github.run_id }}
@@ -118,19 +161,38 @@ jobs:
           echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Test | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Build | ${{ job.status }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Test | ${{ steps.test.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ${{ steps.build.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ job.status }}" = "success" ]; then
+
+          # 测试结果摘要（如果 test-output.log 存在）
+          if compgen -G "app/build/test-results/testDebugUnitTest/TEST-*.xml" > /dev/null; then
+            echo "### Unit Test Results" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Module | Tests | Failures | Skipped |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-------|----------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            for f in app/build/test-results/testDebugUnitTest/TEST-*.xml; do
+              module=$(basename "$f" | sed 's/^TEST-//' | sed 's/\.xml$//')
+              tests=$(grep -oP 'tests="\K[^"]+' "$f" | head -1)
+              failures=$(grep -oP 'failures="\K[^"]+' "$f" | head -1)
+              skipped=$(grep -oP 'skipped="\K[^"]+' "$f" | head -1)
+              echo "| $module | $tests | $failures | $skipped |" >> "$GITHUB_STEP_SUMMARY"
+            done
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
             echo "✅ CI build succeeded, Debug APK generated as artifact." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "❌ Unit tests failed, build skipped." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "❌ CI build failed, download build-reports artifact for details." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # 状态通知：汇总测试与构建结果（skipped 视为正常，避免 bot 提交误报）
+  # 状态通知：汇总构建结果（不再依赖独立 test job）
   notify:
     name: Status Notification
-    needs: [test, build]
+    needs: [test-and-build]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -143,17 +205,10 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Unit Tests | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Debug Build | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Test & Build | ${{ needs.test-and-build.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # skipped 视为正常（如 bot 提交时 build job 被跳过）
-          TEST_OK=false
-          BUILD_OK=false
-          { [ "${{ needs.test.result }}" = "success" ] || [ "${{ needs.test.result }}" = "skipped" ]; } && TEST_OK=true
-          { [ "${{ needs.build.result }}" = "success" ] || [ "${{ needs.build.result }}" = "skipped" ]; } && BUILD_OK=true
-
-          if [ "$TEST_OK" = "true" ] && [ "$BUILD_OK" = "true" ]; then
+          if [ "${{ needs.test-and-build.result }}" = "success" ] || [ "${{ needs.test-and-build.result }}" = "skipped" ]; then
             echo "✅ Overall: success" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "❌ Overall: failure" >> "$GITHUB_STEP_SUMMARY"

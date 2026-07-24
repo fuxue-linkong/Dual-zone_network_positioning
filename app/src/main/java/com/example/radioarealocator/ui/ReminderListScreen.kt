@@ -12,15 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.SatelliteAlt
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,15 +22,17 @@ import androidx.compose.ui.unit.dp
 import com.example.radioarealocator.R
 import com.example.radioarealocator.data.reminder.ReminderItem
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/**
- * 提醒列表页面。
- *
- * 展示所有已自动生成的提醒项，每项可单独启用/禁用或删除。
- */
 @Composable
 fun ReminderListScreen(
     items: List<ReminderItem>,
@@ -81,13 +75,13 @@ private fun EmptyState() {
             Icon(
                 imageVector = Icons.Default.SatelliteAlt,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
+                tint = MiuixTheme.colorScheme.outline,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
                 text = stringResource(R.string.reminder_list_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceSecondary
             )
         }
     }
@@ -115,15 +109,14 @@ private fun ReminderItemRow(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (item.enabled) {
-                MaterialTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = if (item.enabled) {
+                MiuixTheme.colorScheme.surface.copy(alpha = LocalCardAlpha.current)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f * LocalCardAlpha.current)
+                MiuixTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f * LocalCardAlpha.current)
             },
-            contentColor = MaterialTheme.colorScheme.onSurface
+            contentColor = MiuixTheme.colorScheme.onSurface
         )
     ) {
         Column(
@@ -139,18 +132,18 @@ private fun ReminderItemRow(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.SemiBold,
                         color = if (item.enabled) {
-                            MaterialTheme.colorScheme.onSurface
+                            MiuixTheme.colorScheme.onSurface
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            MiuixTheme.colorScheme.onSurfaceSecondary
                         }
                     )
                     Text(
                         text = "NORAD: ${item.catalogNumber}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
                     )
                 }
                 Switch(
@@ -160,19 +153,19 @@ private fun ReminderItemRow(
             }
             Text(
                 text = "AOS: $aosLocal (UTC $aosUtc)",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(top = 8.dp)
             )
             Text(
-                text = "LOS: $losLocal | 仰角: ${item.maxElevation.toInt()}° | 入境方位: ${item.aosAzimuth}°",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "LOS: $losLocal | ${stringResource(R.string.elevation)}: ${item.maxElevation.toInt()}° | ${stringResource(R.string.aos_azimuth)}: ${item.aosAzimuth}°",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceSecondary
             )
             Text(
-                text = "工作模式: $modeText",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "${stringResource(R.string.mode)}: $modeText",
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceSecondary
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -182,7 +175,7 @@ private fun ReminderItemRow(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.delete),
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MiuixTheme.colorScheme.error
                     )
                 }
             }

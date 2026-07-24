@@ -1,11 +1,9 @@
 package com.example.radioarealocator.ui
 
-import android.app.Application
-import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.radioarealocator.data.HitokotoApiService
 import com.example.radioarealocator.data.LocationResult
@@ -17,7 +15,6 @@ import com.example.radioarealocator.data.reminder.ReminderSettings
 import com.example.radioarealocator.data.reminder.ReminderStore
 import com.example.radioarealocator.data.reminder.RepeatMode
 import com.example.radioarealocator.data.satellite.AmsatStatusApiService
-import com.example.radioarealocator.data.satellite.AmsatPageScraper
 import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
 import com.example.radioarealocator.data.satellite.SatelliteCatalog
@@ -42,6 +39,7 @@ import com.example.radioarealocator.data.cw.CharacterSet
 import com.example.radioarealocator.data.cw.MorseCodeGenerator
 import com.example.radioarealocator.data.cw.MorseCodePlayer
 import com.example.radioarealocator.data.zone.ZoneResolver
+import com.example.radioarealocator.radioApp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,30 +57,37 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * 主 ViewModel：定位、卫星过境预测、天气、每日一言、CW 练习、日程提醒。
+ *
+ * 使用普通 [ViewModel] + 全局 [radioApp] 上下文（与项目内 [com.example.radioarealocator.ui.viewmodel.HomeViewModel] 风格一致），
+ * 不继承 [androidx.lifecycle.AndroidViewModel]，避免在 Navigation3 NavDisplay 内调用
+ * `viewModel<MainViewModel>()` 时因 CreationExtras 缺少 `APPLICATION_KEY` 而崩溃。
+ */
+class MainViewModel : ViewModel() {
 
-    private val locationHelper = LocationHelper(application)
+    private val app = radioApp
+
+    private val locationHelper = LocationHelper(app)
     private val satelliteDataSource = SatelliteDataSource()
     private val satellitePredictor = SatellitePredictor()
     // AMSAT 状态独立抓取服务：供状态跟踪器 5 分钟定时拉取，不依赖 TLE 拉取周期
     private val amsatStatusApi = AmsatStatusApiService()
-    // AMSAT 网页抓取器：从 https://www.amsat.org/status/ 解析最近 15 分钟时间槽数据
-    private val amsatPageScraper = AmsatPageScraper()
     // 卫星状态持续显示跟踪器：96 个 15 分钟时间槽 + 状态延续算法
-    val statusTracker = SatelliteStatusTracker(amsatStatusApi, amsatPageScraper, viewModelScope)
-    private val settingsStore = SettingsStore(application)
-    private val satelliteCache = SatelliteCacheStore(application)
-    private val favoriteStore = FavoriteSatellitesStore(application)
-    private val reminderStore = ReminderStore(application)
+    val statusTracker = SatelliteStatusTracker(amsatStatusApi, viewModelScope)
+    private val settingsStore = SettingsStore(app)
+    private val satelliteCache = SatelliteCacheStore(app)
+    private val favoriteStore = FavoriteSatellitesStore(app)
+    private val reminderStore = ReminderStore(app)
     private val weatherApiService = WeatherApiService()
-    private val weatherStore = WeatherStore(application)
-    private val reminderScheduler = ReminderScheduler(application)
+    private val weatherStore = WeatherStore(app)
+    private val reminderScheduler = ReminderScheduler(app)
     // 每日一言服务：从 https://v1.hitokoto.cn/ 获取，失败回退本地文案池
     private val hitokotoApi = HitokotoApiService()
 
     // ---- CW练习模块 ----
-    private val cwSettingsStore = CWSettingsStore(application)
-    private val cwProgressStore = CWProgressStore(application)
+    private val cwSettingsStore = CWSettingsStore(app)
+    private val cwProgressStore = CWProgressStore(app)
     private val cwGenerator = MorseCodeGenerator()
     private val cwPlayer = MorseCodePlayer()
 
@@ -344,9 +349,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 30 分钟自动刷新间隔
         private const val WEATHER_REFRESH_INTERVAL_MS = 30L * 60 * 1000
 
-        // 地址解析去抖时长：位置停止变化 2 秒后才触发 Geocoder 反查，
+        // 地址解析去抖时长：位置停止变化 3 秒后才触发 Geocoder 反查，
         // 平衡实时性与性能（移动过程中持续触发会造成卡顿）
-        private const val ADDRESS_DEBOUNCE_MS = 2_000L
+        private const val ADDRESS_DEBOUNCE_MS = 3_000L
         // 位置监听失败后的自动重试参数（指数退避）
         private const val LOCATION_RETRY_BASE_MS = 2_000L
         private const val LOCATION_RETRY_MAX_MS = 30_000L
@@ -439,45 +444,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         reminderStore.removeItem(catalogNumber)
         reminderScheduler.cancel(catalogNumber)
         _reminderItems.value = reminderStore.loadItems()
-    }
-
-    // 背景图 URI：null 表示未设置
-    private val _backgroundUri = mutableStateOf<Uri?>(settingsStore.backgroundUri?.let(Uri::parse))
-    val backgroundUri: State<Uri?> = _backgroundUri
-
-    /**
-     * 设置背景图 URI 并持久化。null 表示清除。
-     * 调用方需先通过 [android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION] 获取持久化读取权限。
-     */
-    fun setBackgroundUri(uri: Uri?) {
-        _backgroundUri.value = uri
-        settingsStore.backgroundUri = uri?.toString()
-    }
-
-    // 卡片透明度（0~100），仅在设置了背景图时生效
-    private val _cardOpacity = mutableStateOf(settingsStore.cardOpacity)
-    val cardOpacity: State<Int> = _cardOpacity
-
-    /**
-     * 设置卡片透明度并持久化，自动钳制到 0~100。
-     */
-    fun setCardOpacity(value: Int) {
-        val clamped = value.coerceIn(0, 100)
-        _cardOpacity.value = clamped
-        settingsStore.cardOpacity = clamped
-    }
-
-    // 背景图不透明度（0~100），仅在设置了背景图时生效
-    private val _backgroundOpacity = mutableStateOf(settingsStore.backgroundOpacity)
-    val backgroundOpacity: State<Int> = _backgroundOpacity
-
-    /**
-     * 设置背景图不透明度并持久化，自动钳制到 0~100。
-     */
-    fun setBackgroundOpacity(value: Int) {
-        val clamped = value.coerceIn(0, 100)
-        _backgroundOpacity.value = clamped
-        settingsStore.backgroundOpacity = clamped
     }
 
     val hasLocationPermission: Boolean
@@ -713,7 +679,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        refreshJob?.cancel()
         locationOnlyJob?.cancel()
         _locationState.value = _locationState.value.copy(
             isLoading = true,
@@ -765,8 +730,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun refreshSatelliteSourceOnly() {
         satelliteOnlyJob?.cancel()
-        segmentStatusJob?.cancel()
-        segmentStatusFetchedAt = null
         _satelliteState.value = _satelliteState.value.copy(
             isSatelliteLoading = true,
             satelliteError = null

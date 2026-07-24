@@ -14,7 +14,7 @@ name: Deploy Website to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - miuix
     paths:
       - 'website/**'
       - '.github/workflows/deploy-pages.yml'

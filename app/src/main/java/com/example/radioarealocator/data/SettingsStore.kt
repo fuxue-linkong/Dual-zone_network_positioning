@@ -4,41 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * 应用设置持久化存储。保存用户选择的背景图 URI、卫星源等设置。
+ * 应用设置持久化存储。保存卫星源、最后位置、每日一言获取日期等业务设置。
+ *
+ * 注：主题相关设置（colorMode、keyColor、paletteStyle、colorSpec、uiMode 等）由
+ * [com.example.radioarealocator.data.repository.SettingsRepositoryImpl] 统一管理，
+ * 存放在名为 "settings" 的 SharedPreferences 中。
  */
 class SettingsStore(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    /**
-     * 背景图 URI 字符串。null 表示未设置。
-     */
-    var backgroundUri: String?
-        get() = prefs.getString(KEY_BACKGROUND_URI, null)
-        set(value) {
-            prefs.edit().putString(KEY_BACKGROUND_URI, value).apply()
-        }
-
-    /**
-     * 卡片透明度（0~100）。0 完全透明，100 完全不透明。
-     * 仅在设置了背景图时生效。默认 100。
-     */
-    var cardOpacity: Int
-        get() = prefs.getInt(KEY_CARD_OPACITY, 100).coerceIn(0, 100)
-        set(value) {
-            prefs.edit().putInt(KEY_CARD_OPACITY, value.coerceIn(0, 100)).apply()
-        }
-
-    /**
-     * 背景图不透明度（0~100）。0 完全透明（不可见），100 完全显示。
-     * 仅在设置了背景图时生效。默认 100。
-     */
-    var backgroundOpacity: Int
-        get() = prefs.getInt(KEY_BACKGROUND_OPACITY, 100).coerceIn(0, 100)
-        set(value) {
-            prefs.edit().putInt(KEY_BACKGROUND_OPACITY, value.coerceIn(0, 100)).apply()
-        }
 
     /**
      * 卫星 TLE 数据来源："ALL" / "CT" / "SNOGS"。默认 ALL。
@@ -88,9 +63,6 @@ class SettingsStore(context: Context) {
 
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
-        private const val KEY_BACKGROUND_URI = "background_uri"
-        private const val KEY_CARD_OPACITY = "card_opacity"
-        private const val KEY_BACKGROUND_OPACITY = "background_opacity"
         private const val KEY_SATELLITE_SOURCE = "satellite_source"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"
