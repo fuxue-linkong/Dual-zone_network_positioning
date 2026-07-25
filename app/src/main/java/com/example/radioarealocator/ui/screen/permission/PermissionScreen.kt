@@ -22,9 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,6 +94,16 @@ fun PermissionScreen() {
         onLocation = {
             permissionLauncher.launch(manager.locationRuntimePermission())
         },
+        onNotification = {
+            if (manager.shouldRequestNotificationRuntime()) {
+                permissionLauncher.launch(manager.notificationRuntimePermission())
+            } else {
+                settingsLauncher.launch(manager.notificationSettingsIntent())
+            }
+        },
+        onExactAlarm = {
+            settingsLauncher.launch(manager.exactAlarmSettingsIntent())
+        },
     )
     val onBack = dropUnlessResumed { navigator.pop() }
 
@@ -103,6 +115,8 @@ fun PermissionScreen() {
 
 private data class PermissionActions(
     val onLocation: () -> Unit,
+    val onNotification: () -> Unit,
+    val onExactAlarm: () -> Unit,
 )
 
 @Composable
@@ -177,6 +191,28 @@ private fun PermissionScreenMiuix(
                         true,
                         Icons.Default.LocationOn,
                         actions.onLocation,
+                    )
+                }
+            }
+            item {
+                MiuixCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                ) {
+                    PermissionRowMiuix(
+                        stringResource(R.string.permission_notification),
+                        state.notification,
+                        required = false,
+                        Icons.Default.Notifications,
+                        actions.onNotification,
+                    )
+                    PermissionRowMiuix(
+                        stringResource(R.string.permission_exact_alarm),
+                        state.exactAlarm,
+                        required = false,
+                        Icons.Default.Alarm,
+                        actions.onExactAlarm,
                     )
                 }
             }
@@ -300,6 +336,20 @@ private fun PermissionScreenMaterial(
                             true,
                             Icons.Default.LocationOn,
                             actions.onLocation,
+                        )
+                        PermissionRowMaterial(
+                            stringResource(R.string.permission_notification),
+                            state.notification,
+                            required = false,
+                            Icons.Default.Notifications,
+                            actions.onNotification,
+                        )
+                        PermissionRowMaterial(
+                            stringResource(R.string.permission_exact_alarm),
+                            state.exactAlarm,
+                            required = false,
+                            Icons.Default.Alarm,
+                            actions.onExactAlarm,
                         )
                     }
                 }

@@ -64,6 +64,13 @@ class ReminderNotificationHelper(private val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
+    fun recreateChannel(settings: ReminderSettings) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.deleteNotificationChannel(CHANNEL_ID)
+        }
+        createChannel(settings)
+    }
+
     /**
      * 发送过境提醒通知。通知 ID 使用卫星 NORAD 编号，避免不同卫星通知互相覆盖。
      */

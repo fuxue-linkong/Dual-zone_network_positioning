@@ -17,6 +17,7 @@
     <string name="permission_battery">Battery Whitelist</string>
     <string name="permission_overlay">Overlay</string>
     <string name="permission_location">Location</string>
+    <string name="permission_exact_alarm">Exact Alarms</string>
     <string name="permission_granted">Granted</string>
     <string name="permission_required">Required</string>
     <string name="permission_optional">Optional</string>

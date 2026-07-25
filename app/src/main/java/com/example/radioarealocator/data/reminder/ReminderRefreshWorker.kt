@@ -84,10 +84,13 @@ class ReminderRefreshWorker(
                 hoursAhead = 48
             )
 
-            // 过滤出收藏卫星的未来过境
+            // 过滤出收藏卫星的未来过境（AOS 在未来）。
+            // 旧逻辑用 !isCurrentlyVisible 过滤，但预测器对在境卫星返回的是下次过境，
+            // 旧过滤会把下次过境一起丢弃。改以 AOS 时间为准。
             val favorites = favoriteStore.load()
+            val nowMillis = System.currentTimeMillis()
             val futureFavorites = satellites.filter {
-                it.catalogNumber in favorites && !it.isCurrentlyVisible
+                it.catalogNumber in favorites && it.aosTime.toEpochMilli() > nowMillis
             }
 
             if (futureFavorites.isNotEmpty()) {

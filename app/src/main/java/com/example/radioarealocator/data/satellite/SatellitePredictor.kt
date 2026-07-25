@@ -91,28 +91,22 @@ class SatellitePredictor {
 
             val predictor = PassPredictor(tle, groundStation)
 
-            // 判断当前是否在境内（仰角 > 0）
+            // 判断当前是否在境内（仰角 > 0），仅作为元数据，不影响下次过境计算
             val currentPos = predictor.getSatPos(now)
             val isCurrentlyVisible = currentPos != null && currentPos.elevation > 0
 
-            // 在境时获取当前过境（含出境时间），即将入境时获取下次过境
-            val nextPass = if (isCurrentlyVisible) {
-                predictor.nextSatPass(now, true)
-            } else {
-                predictor.nextSatPass(now, false)
-            }
+            // 始终取"下次过境"（AOS > now），确保 AOS 在未来，
+            // 这样 UI 列表与提醒项都不会因为在境卫星被过滤而丢失下次过境。
+            // nextSatPass(now, false) 在当前在境时会跳过本次过境、返回下一次。
+            val nextPass = predictor.nextSatPass(now, false)
             if (nextPass == null || nextPass.startTime == null || nextPass.endTime == null) return null
+            // 防御：若实现差异导致返回的 startTime 仍 < now，则跳过避免提醒无法调度
+            if (nextPass.startTime.before(now)) return null
 
             // 只取预测窗口内的过境
             if (nextPass.startTime.after(searchEnd)) return null
 
-            // 在境卫星的 AOS 已过去（nextPass.startTime < now），
-            // 用当前时间近似 AOS，避免 UI 显示错误的过去时间。
-            val aosInstant = if (isCurrentlyVisible && nextPass.startTime.before(now)) {
-                now.toInstant()
-            } else {
-                nextPass.startTime.toInstant()
-            }
+            val aosInstant = nextPass.startTime.toInstant()
 
             SatelliteInfo(
                 name = tle.name.trim().ifEmpty { tle.catnum.toString() },

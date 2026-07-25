@@ -9,6 +9,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -93,9 +96,22 @@ class MainActivity : ComponentActivity() {
 
     private val intentState = MutableStateFlow(0)
 
+    /**
+     * 通知权限运行时请求（Android 13+）。
+     *
+     * POST_NOTIFICATIONS 在 Android 13+ 必须运行时申请，否则 notificationManager.notify
+     * 会被系统静默丢弃。在 onCreate 阶段注册 launcher，进入主界面后立即触发一次请求。
+     * 用户拒绝后不再自动重复打扰，可在"权限"页面手动重试。
+     */
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Android 13+ 首次进入即请求通知权限；用户拒绝后下次仍可经权限页面再次请求
+        requestNotificationPermissionIfNeeded()
 
         setContent {
             val viewModel = viewModel<MainActivityViewModel>()
@@ -185,6 +201,15 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         // Increment intentState to trigger LaunchedEffect re-execution
         intentState.value += 1
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
+        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }
 

@@ -73,15 +73,26 @@ class ReminderScheduler(private val context: Context) {
         )
 
         try {
-            // Android 12+ 要求 SCHEDULE_EXACT_ALARM 或 USE_EXACT_ALARM 权限
-            // setExactAndAllowWhileIdle 在 Doze 下仍能唤醒
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pendingIntent
-            )
+            // Android 12+ 要求 SCHEDULE_EXACT_ALARM 或 USE_EXACT_ALARM 权限。
+            // setExactAndAllowWhileIdle 在 Doze 下仍能唤醒，且触发误差很小。
+            // Android 14+ 新装 App 默认不授予精确闹钟权限，需先检查 canScheduleExactAlarms，
+            // 未授权时回退到非精确闹钟（误差可达数分钟到数十分钟），避免直接抛 SecurityException
+            // 导致本次调度被静默丢弃（旧实现 catch 后回退、但每次都先抛异常打日志不是好做法）。
+            if (alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            }
         } catch (_: SecurityException) {
-            // 用户未授予精确闹钟权限，回退到非精确闹钟
+            // 极少数 OEM 标准实现异常：回退到非精确闹钟保证至少能触发
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerAtMillis,
@@ -113,6 +124,19 @@ class ReminderScheduler(private val context: Context) {
     }
 
     /**
+     * 查询当前是否具备精确闹钟调度能力（Android 12+）。
+     * Android 11- 始终返回 true。
+     * 供权限管理 UI 判断是否需要引导用户前往系统设置授权。
+     */
+    fun hasExactAlarmCapability(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    }
+
+    /**
      * 取消指定卫星的提醒。
      */
     fun cancel(catalogNumber: Int) {
@@ -132,12 +156,13 @@ class ReminderScheduler(private val context: Context) {
     }
 
     /**
-     * 取消所有提醒。
+     * 取消所有已注册的提醒。
+     *
+     * 由于 Android 不支持枚举已注册的 PendingIntent，调用方必须传入当前所有需清理的
+     * catalogNumber 列表（通常为 ReminderStore.loadItems 的全量）。WorkManager 周期任务一并取消。
      */
-    fun cancelAll() {
-        // 由于无法枚举已注册的 PendingIntent，仅能取消已知的
-        // 实际取消依赖调用方传入 catalogNumber 列表
-        // WorkManager 取消
+    fun cancelAll(catalogNumbers: List<Int>) {
+        catalogNumbers.forEach { cancel(it) }
         WorkManager.getInstance(context)
             .cancelUniqueWork(WORK_DAILY_REFRESH)
     }

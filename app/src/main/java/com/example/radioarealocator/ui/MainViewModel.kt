@@ -10,6 +10,7 @@ import com.example.radioarealocator.data.LocationResult
 import com.example.radioarealocator.data.SettingsStore
 import com.example.radioarealocator.data.location.LocationHelper
 import com.example.radioarealocator.data.reminder.ReminderItem
+import com.example.radioarealocator.data.reminder.ReminderNotificationHelper
 import com.example.radioarealocator.data.reminder.ReminderScheduler
 import com.example.radioarealocator.data.reminder.ReminderSettings
 import com.example.radioarealocator.data.reminder.ReminderStore
@@ -422,6 +423,9 @@ class MainViewModel : ViewModel() {
     fun updateReminderSettings(settings: ReminderSettings) {
         reminderStore.saveSettings(settings)
         _reminderSettings.value = settings
+        // 声音/振动设置变化时通知渠道不可直接改 importance，
+        // 必须 deleteNotificationChannel + 重建才能让新设置立即生效。
+        ReminderNotificationHelper(app).recreateChannel(settings)
         // 重新调度所有提醒（设置变更可能影响触发时间或是否调度）
         reminderScheduler.scheduleAll(_reminderItems.value, settings)
     }
@@ -915,8 +919,12 @@ class MainViewModel : ViewModel() {
         if (favorites.isEmpty()) return
 
         val settings = _reminderSettings.value
+        // 仅对未来过境创建提醒：AOS 必须在未来。
+        // 旧逻辑用 !isCurrentlyVisible 过滤，但预测器对在境卫星返回的是下次过境，
+        // 旧过滤会把下次过境一起丢弃。改以 AOS 时间为准。
+        val nowMillis = java.lang.System.currentTimeMillis()
         val futureFavorites = satellites.filter {
-            it.catalogNumber in favorites && !it.isCurrentlyVisible
+            it.catalogNumber in favorites && it.aosTime.toEpochMilli() > nowMillis
         }
         if (futureFavorites.isEmpty()) return
 
