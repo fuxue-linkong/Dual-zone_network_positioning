@@ -54,4 +54,29 @@
     }, { rootMargin: '-40% 0px -55% 0px' });
 
     sections.forEach(sec => navObserver.observe(sec));
+
+    // 动态获取 GitHub Releases 最新版本并更新 badge
+    (function () {
+        const badge = document.getElementById('release-badge');
+        if (!badge) return;
+
+        const REPO = 'fuxue-linkong/Dual-zone_network_positioning';
+        const API  = `https://api.github.com/repos/${REPO}/releases/latest`;
+
+        fetch(API, { headers: { 'Accept': 'application/vnd.github+json' } })
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
+                const tag = data.tag_name || 'unknown';
+                const isPre = !!data.prerelease;
+                const suffix = isPre ? ' · 预发布' : ' · 现已上线';
+                badge.textContent = tag + suffix;
+            })
+            .catch(() => {
+                // 网络失败时回退显示静态文本
+                badge.textContent = 'v2.0.1 · 现已上线';
+            });
+    })();
 })();
