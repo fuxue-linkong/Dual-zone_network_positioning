@@ -2,33 +2,29 @@ name: CI Build APK
 
 # ─────────────────────────────────────────────────────────────
 # 持续集成工作流（对应发布流程第 1-2 步）
-#   1. 修复 bug、实现新功能 → push 触发单元测试
+#   1. push 触发单元测试
 #   2. 内部测试 → 构建 Debug APK 作为 artifact 供开发团队验证
 #
 # 行业规范：
-#   - 最小权限（workflow 级别 contents: read）
+#   - 最小权限（workflow / job 级别 contents: read）
 #   - 构建产物用 artifact 上传，不提交回仓库（避免污染历史 + 循环触发）
 #   - 可缓存（JDK + Gradle + Robolectric SDK）
-#   - 完整 Step Summary
+#   - bot 提交跳过，避免循环触发
 #
-# 加速策略（方案 A）：
-#   - 合并 test + build 为单 job，复用 Gradle 缓存和编译产物
-#   - 缓存 Robolectric android-all-*.jar，避免偶发下载 hang
-#   - 保留 test.yml 给 release.yml 单独调用
+# 主分支：miuix（原 main 已废弃）。PR 全部基于 miuix。
 # ─────────────────────────────────────────────────────────────
 on:
   push:
     branches:
-      - main
       - miuix
     paths-ignore:
       - 'README.md'
       - 'docs/**'
       - '.github/*.md'
       - 'log/**'
+      - 'website/**'
   workflow_dispatch:
 
-# 行业规范：workflow 级别最小权限
 permissions:
   contents: read
 
@@ -37,7 +33,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# 集中环境变量
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=false"
   GRADLE_VERSION: '9.4.1'
@@ -189,7 +184,7 @@ jobs:
             echo "❌ CI build failed, download build-reports artifact for details." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # 状态通知：汇总构建结果（不再依赖独立 test job）
+  # 状态通知：汇总构建结果
   notify:
     name: Status Notification
     needs: [test-and-build]

@@ -4,11 +4,12 @@ name: Deploy Website to GitHub Pages
 # GitHub Pages 部署工作流
 #
 # 触发条件：
-#   - main 分支上 website/ 目录变更时自动部署
+#   - miuix 分支上 website/ 目录变更时自动部署
 #   - 支持手动触发（workflow_dispatch）
 #
 # 前置配置：
 #   仓库 Settings → Pages → Source 选择 "GitHub Actions"
+#   仓库 Settings → Pages → Build and deployment → Branch 限定为 miuix
 # ─────────────────────────────────────────────────────────────
 
 on:
@@ -20,19 +21,14 @@ on:
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
-# GitHub Pages 部署需要写权限
+# workflow 级最小权限，pages/id-token 写权限下沉到 deploy job
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # 同一时间只允许一次部署，排队中的新部署会取消旧的
 concurrency:
   group: pages
   cancel-in-progress: true
-
-env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
 jobs:
   deploy:
@@ -42,6 +38,10 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # Pages 部署必需的写权限：仅此 job 持有
+    permissions:
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -61,6 +61,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Publish deployment summary
+        if: always()
         run: |
           echo "## GitHub Pages Deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -69,5 +70,10 @@ jobs:
           echo "| Branch | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Pages URL | ${{ steps.deployment.outputs.page_url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy outcome | ${{ steps.deployment.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ Website deployed successfully." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
+            echo "✅ Website deployed successfully." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Deployment failed." >> "$GITHUB_STEP_SUMMARY"
+          fi

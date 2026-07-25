@@ -1,14 +1,16 @@
 name: Unit Tests
 
 # ─────────────────────────────────────────────────────────────
-# 可复用单元测试工作流（被 ci.yml / release.yml 调用）
-# 对应发布流程：所有阶段的基础质量门禁
+# 可复用单元测试工作流（被 release.yml 通过 workflow_call 调用）
+# 也可独立 push/PR 触发，作为基础质量门禁。
+#
+# 主分支：miuix（原 main 已废弃）。所有 PR 基于 miuix。
 # 行业规范：最小权限、可缓存、可复用、完整摘要
 # ─────────────────────────────────────────────────────────────
 on:
   push:
     branches:
-      - main
+      - miuix
       - 'fix/**'
       - 'feature/**'
     paths-ignore:
@@ -16,9 +18,10 @@ on:
       - 'docs/**'
       - '.github/*.md'
       - 'log/**'
+      - 'website/**'
   pull_request:
     branches:
-      - main
+      - miuix
   workflow_call:
     inputs:
       fail-on-coverage:

@@ -1,28 +1,31 @@
 name: Release Build APK
 
 # ─────────────────────────────────────────────────────────────
-# 发布工作流（对应发布流程第 3-5 步）
-#   3. 修复完成后，发布 beta 版到 GitHub（tag: v1.2.0-beta.1）
-#   4. 根据用户反馈继续修复，再次发布 beta 版（tag: v1.2.0-beta.2）
-#   5. 最后稳定后，发布正式版（tag: v1.2.0）
+# 发布工作流（对应发布流程第3-5步）
+#   3. 发布 beta 版（tag: v1.2.0-beta.1）
+#   4. 根据反馈继续发布 beta（tag: v1.2.0-beta.2）
+#   5. 稳定后发布正式版（tag: v1.2.0）
 #
 # Tag 规范：
-#   - Beta 预发布：v1.2.0-beta.1, v1.2.0-beta.2 ...
-#   - RC 候选版：  v1.2.0-rc.1 ...
-#   - 正式发布：   v1.2.0
+#   - Beta:  v1.2.0-beta.1, v1.2.0-beta.2 ...
+#   - RC:    v1.2.0-rc.1 ...
+#   - 正式: v1.2.0
+#
+# 主分支：miuix（原 main 已废弃）
+# 正式版打包仅允许 miuix 分支的 tag。
+# 手动触发时，必须从 miuix 分支运行，否则拒绝。
 #
 # 行业规范：
-#   - 最小权限（workflow 级别 contents: read，build job 提升为 contents: write）
+#   - 最小权限（workflow 级 contents: read，build job 提升为 contents: write）
 #   - 签名密钥用 GitHub Secrets（25 年长效证书，跨版本一致）
 #   - 自动从 tag 检测 prerelease 状态
-#   - 签名验证（apksigner v1+v2+v3）+ 指纹一致性检查
+#   - 签名验证（apksigner v1+v2+v3）+ 指纹一致性
 #   - Release notes 自动生成（generate_release_notes）
-#   - 构建可缓存（JDK + Gradle）
+#   - bot 提交跳过，避免循环触发
 # ─────────────────────────────────────────────────────────────
 on:
   push:
     tags:
-      # 正式版打包走 miuix 分支上的 v* 标签
       - 'v*'
   workflow_dispatch:
     inputs:
@@ -35,7 +38,7 @@ on:
         required: false
         type: string
       version_code:
-        description: '版本代号（整数），留空则自动在现有基础上 +1'
+        description: '版本代号（整数），留空则自动在现有基础上+1'
         required: false
         type: string
       commit_version:
@@ -49,22 +52,21 @@ on:
         type: boolean
         default: false
 
-# 行业规范：workflow 级别最小权限，build job 提升为 contents: write
+# workflow 级最小权限，build job 按需提升
 permissions:
   contents: read
 
-# 并发控制：发布流程不取消进行中的运行，避免中断发布
+# 发布流程不取消进行中的运行，避免中断发布
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-# 集中环境变量
 env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=false"
   GRADLE_VERSION: '9.4.1'
 
 jobs:
-  # 先测试：复用 test.yml，发布流程强制覆盖率检查
+  # 复用 test.yml 的单元测试，发布流程强制覆盖率检查
   test:
     name: Run Unit Tests
     uses: ./.github/workflows/test.yml
@@ -81,42 +83,47 @@ jobs:
     # 测试失败时跳过构建（但 notify 仍运行）
     if: ${{ always() && needs.test.result != 'failure' }}
     permissions:
-      contents: write       # 创建 Release、提交 version bump
+      contents: write   # 创建 Release、提交 version bump
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0     # 完整历史，便于生成变更日志
+          fetch-depth: 0
 
-      # 校验：tag 必须打在 miuix 分支的提交上（正式版打包走 miuix 分支）
-      # 若 tag 的提交不在 miuix 分支历史中，则跳过整个构建流程
-      - name: Verify tag is on miuix branch
+      # ── 分支校验（tag / 手动触发统一）────────────────────
+      # tag 触发：必须是 miuix 分支上的 tag
+      # 手动触发：必须从 miuix 分支运行
+      - name: Verify branch is miuix
         id: verify_branch
-        if: ${{ github.event_name == 'push' }}
         run: |
-          # 获取 miuix 分支的最新提交
-          git fetch origin miuix:refs/remotes/origin/miuix 2>/dev/null || true
-          if git merge-base --is-ancestor "$GITHUB_SHA" origin/miuix 2>/dev/null; then
-            echo "Tag commit $GITHUB_SHA is on miuix branch. Proceeding with release."
-            echo "skip_build=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::Tag commit $GITHUB_SHA is not on miuix branch. Skipping build (正式版打包走 miuix 分支)."
-            echo "skip_build=true" >> "$GITHUB_OUTPUT"
+          EVENT="${{ github.event_name }}"
+
+          if [ "$EVENT" = "push" ]; then
+            # tag 触发：获取 miuix 分支，校验 tag commit 是否是其祖先
+            if ! git fetch origin miuix:refs/remotes/origin/miuix; then
+              echo "::error::Failed to fetch miuix branch from origin"
+              exit 1
+            fi
+            if git merge-base --is-ancestor "$GITHUB_SHA" origin/miuix; then
+              echo "✅ Tag commit $GITHUB_SHA is on miuix branch."
+              echo "skip_build=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice::Tag commit $GITHUB_SHA is not on miuix branch. Skipping build (正式版打包走 miuix 分支)."
+              echo "skip_build=true" >> "$GITHUB_OUTPUT"
+            fi
+
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            # 手动触发：必须从 miuix 分支运行
+            if [ "$GITHUB_REF_NAME" = "miuix" ]; then
+              echo "✅ Manual trigger on miuix branch."
+              echo "skip_build=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Manual release must be triggered from miuix branch, got: $GITHUB_REF_NAME"
+              exit 1
+            fi
           fi
 
-      # 手动触发时，默认不跳过
-      - name: Mark no skip for manual trigger
-        id: verify_manual
-        if: ${{ github.event_name != 'push' }}
-        run: echo "skip_build=false" >> "$GITHUB_OUTPUT"
-
-      # 若 skip_build=true，提前优雅退出（不视为失败）
-      - name: Skip build if tag not on miuix branch
-        if: ${{ steps.verify_branch.outputs.skip_build == 'true' }}
-        run: |
-          echo "::notice::Build skipped: tag not on miuix branch. 正式版打包走 miuix 分支。"
-          # 提前结束本 job（后续步骤通过 if 跳过）
-          exit 0
+      # ── 后续所有步骤：skip_build=false 时执行 ──────────
 
       - name: Set up JDK 21
         if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
@@ -133,7 +140,7 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
           cache-read-only: false
 
-      # 解析发布参数：tag 触发时从 $GITHUB_REF 推断，手动触发从 inputs 读取
+      # 解析发布参数：tag 触发时从$GITHUB_REF 推断，手动触发从 inputs 读取
       # 自动检测 prerelease：tag 包含 -beta/-rc/-alpha 视为预发布
       - name: Resolve release parameters
         id: params
@@ -158,7 +165,7 @@ jobs:
             echo "Detected stable tag: $TAG"
           fi
 
-          # 手动触发时，若用户显式指定 prerelease，则优先使用用户指定值
+          # 手动触发时，用户显式指定优先
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
               IS_PRERELEASE=true
@@ -170,7 +177,6 @@ jobs:
           fi
 
           echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-          echo "Final prerelease flag: $IS_PRERELEASE"
 
       - name: Update version
         id: version
@@ -180,9 +186,8 @@ jobs:
           VERSION_NAME="${{ github.event.inputs.version_name || '' }}"
           VERSION_CODE="${{ github.event.inputs.version_code || '' }}"
 
-          # 从 tag 推断 version_name（去除前缀 v 和预发布后缀）
+          # 从 tag 推断 version_name（去除前缀 v）
           if [ -z "$VERSION_NAME" ]; then
-            # v1.2.0-beta.1 → 1.2.0-beta.1
             VERSION_NAME="${TAG#v}"
           fi
 
@@ -195,7 +200,7 @@ jobs:
             exit 1
           fi
 
-          # 推断 version_code：当前值 +1
+          # 推断 version_code：当前值+1
           if [ -z "$VERSION_CODE" ]; then
             VERSION_CODE=$((CURRENT_CODE + 1))
           fi
@@ -209,7 +214,7 @@ jobs:
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      # 解码签名密钥（使用 25 年长效证书，确保跨版本签名一致）
+      # 解码签名密钥（25 年长效证书，确保跨版本签名一致）
       - name: Decode keystore
         if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
         env:
@@ -244,7 +249,7 @@ jobs:
             --stacktrace \
             --no-daemon 2>&1 | tee build.log
 
-      # 签名验证：使用 apksigner 验证 v1+v2+v3 签名方案，输出指纹供一致性检查
+      # 签名验证：apksigner v1+v2+v3，输出指纹供一致性检查
       - name: Verify APK signature and output fingerprint
         id: signature
         if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
@@ -270,12 +275,12 @@ jobs:
           fi
           echo "Using apksigner: $APKSIGNER"
 
-          # 1. 验证 APK 签名有效性（v1+v2+v3 方案）
+          # 验证 APK 签名有效性（v1+v2+v3 方案）
           echo "=== Verify APK signature ==="
           "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
 
-          # 2. 提取签名指纹用于一致性对比
-          #    keytool 在不同平台输出格式可能为 "SHA1:" 或 "SHA-1:"，用正则兼容
+          # 提取签名指纹用于一致性对比
+          # keytool 输出格式可能为 "SHA1:" 或 "SHA-1:"，用正则兼容
           echo ""
           echo "=== Signature fingerprint ==="
           FINGERPRINT_SHA1=$(keytool -printcert -jarfile "$APK_PATH" | grep -E "SHA-?1:" | head -1 | awk '{print $NF}')
@@ -283,13 +288,13 @@ jobs:
           echo "SHA-1:   $FINGERPRINT_SHA1"
           echo "SHA-256: $FINGERPRINT_SHA256"
 
-          # 3. 验证指纹提取成功
+          # 验证指纹提取成功
           if [ -z "$FINGERPRINT_SHA1" ] || [ -z "$FINGERPRINT_SHA256" ]; then
             echo "::warning::Fingerprint extraction failed. Dumping raw keytool output for debugging:"
             keytool -printcert -jarfile "$APK_PATH" || true
           fi
 
-          # 4. 将指纹写入文件，作为 artifact 上传供后续对比
+          # 将指纹写入文件，作为 artifact 上传供后续对比
           mkdir -p signing-report
           cat > signing-report/signature-fingerprint.txt <<EOF
           RadioAreaLocator Release APK Signature Fingerprint
@@ -350,10 +355,10 @@ jobs:
         with:
           name: signature-report-${{ steps.params.outputs.tag }}
           path: signing-report/signature-fingerprint.txt
-          retention-days: 90        # 签名报告保留 90 天，便于长期追溯
+          retention-days: 90
           if-no-files-found: error
 
-      # 手动触发时将版本号 bump 提交回仓库（标签触发时跳过，因为 tag 已包含版本号）
+      # 手动触发时将版本号 bump 提交回仓库（tag 触发时跳过，因为 tag 已包含版本号）
       - name: Commit version bump
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_version == 'true' && steps.verify_branch.outputs.skip_build != 'true' }}
         run: |
@@ -368,7 +373,6 @@ jobs:
           fi
 
       # 创建 GitHub Release，包含 APK、签名指纹、自动变更日志
-      # prerelease 标志：由上方步骤自动检测（tag 后缀）或用户手动指定
       - name: Create Release
         id: release
         if: ${{ steps.verify_branch.outputs.skip_build != 'true' }}
@@ -422,7 +426,7 @@ jobs:
             echo "❌ Release failed, check logs above or download build-reports artifact" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # 状态通知：汇总测试与构建结果（skipped 视为正常，避免 bot 提交误报）
+  # 状态通知：汇总测试与构建结果（skipped 视为正常，如 bot 提交时 job 被跳过）
   notify:
     name: Status Notification
     needs: [test, build]
@@ -442,7 +446,7 @@ jobs:
           echo "| Release Build | ${{ needs.build.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # skipped 视为正常（如 bot 提交时 job 被跳过）
+          # skipped 视为正常（如 tag 不在 miuix 上时 build 被跳过）
           TEST_OK=false
           BUILD_OK=false
           { [ "${{ needs.test.result }}" = "success" ] || [ "${{ needs.test.result }}" = "skipped" ]; } && TEST_OK=true
