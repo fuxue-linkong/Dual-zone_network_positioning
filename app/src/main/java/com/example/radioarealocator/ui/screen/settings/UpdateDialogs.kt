@@ -165,7 +165,7 @@ private fun UpdateErrorDialog(actions: SettingsScreenActions) {
                     MiuixText(text = stringResource(R.string.update_download_failed))
                     BottomSheetDialogButtons(
                         confirmText = stringResource(R.string.update_retry),
-                        onConfirm = actions.onClearUpdateResult,
+                        onConfirm = { /* retry handled by caller */ },
                         dismissText = stringResource(R.string.cancel),
                         onDismiss = actions.onClearUpdateResult,
                     )
