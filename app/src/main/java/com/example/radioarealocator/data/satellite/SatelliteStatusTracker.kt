@@ -60,6 +60,9 @@ class SatelliteStatusTracker(
     private val _statusMap = mutableStateOf<Map<String, SatelliteStatusEntry>>(emptyMap())
     val statusMap: State<Map<String, SatelliteStatusEntry>> = _statusMap
 
+    /** 是否启用 AMSAT 状态数据源。关闭后 refresh() 跳过 AMSAT API 调用。 */
+    var amsatStatusEnabled: Boolean = true
+
     private var refreshJob: Job? = null
 
     // 串行化 refresh：防止定时循环与 refreshOnce 并发执行时丢失更新（lost update）
@@ -99,6 +102,14 @@ class SatelliteStatusTracker(
 
     private suspend fun refresh() {
         try {
+            // AMSAT 状态源关闭时，清空状态字典并跳过网络请求
+            if (!amsatStatusEnabled) {
+                refreshMutex.withLock {
+                    _statusMap.value = emptyMap()
+                }
+                return
+            }
+
             // 优先从网页抓取最近 15 分钟时间槽的数据（更精确）
             val pageReports = try {
                 pageScraper.fetchRecentReports()

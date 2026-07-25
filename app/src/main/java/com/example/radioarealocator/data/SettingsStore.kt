@@ -25,6 +25,15 @@ class SettingsStore(context: Context) {
         }
 
     /**
+     * 是否启用 AMSAT 状态数据源（www.amsat.org/status）。默认 true。
+     */
+    var amsatStatusEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AMSAT_STATUS_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_AMSAT_STATUS_ENABLED, value).apply()
+        }
+
+    /**
      * 最后已知纬度。供后台 Worker 做过境预测时使用，避免依赖应用进程存活。
      * 使用 String 存储 Double，避免 Float 精度丢失（Float 仅 ~7 位有效数字）。
      */
@@ -67,5 +76,6 @@ class SettingsStore(context: Context) {
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"
         private const val KEY_DAILY_QUOTE_EPOCH_DAY = "daily_quote_epoch_day"
+        private const val KEY_AMSAT_STATUS_ENABLED = "amsat_status_enabled"
     }
 }

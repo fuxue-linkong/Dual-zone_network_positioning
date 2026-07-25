@@ -79,7 +79,10 @@ class MainViewModel : ViewModel() {
     private val amsatPageScraper = AmsatPageScraper()
     // 卫星状态持续显示跟踪器：96 个 15 分钟时间槽 + 状态延续算法
     val statusTracker = SatelliteStatusTracker(amsatStatusApi, amsatPageScraper, viewModelScope)
-    private val settingsStore = SettingsStore(app)
+    private val settingsStore = SettingsStore(app).also {
+        // 同步 AMSAT 开关初始状态到 tracker
+        statusTracker.amsatStatusEnabled = it.amsatStatusEnabled
+    }
     private val satelliteCache = SatelliteCacheStore(app)
     private val favoriteStore = FavoriteSatellitesStore(app)
     private val reminderStore = ReminderStore(app)
@@ -153,6 +156,15 @@ class MainViewModel : ViewModel() {
     fun setSatelliteSource(source: String) {
         _satelliteSource.value = source
         settingsStore.satelliteSource = source
+    }
+
+    private val _amsatStatusEnabled = mutableStateOf(settingsStore.amsatStatusEnabled)
+    val amsatStatusEnabled: State<Boolean> = _amsatStatusEnabled
+
+    fun setAmsatStatusEnabled(enabled: Boolean) {
+        _amsatStatusEnabled.value = enabled
+        settingsStore.amsatStatusEnabled = enabled
+        statusTracker.amsatStatusEnabled = enabled
     }
 
     /**

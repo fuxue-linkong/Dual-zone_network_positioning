@@ -38,6 +38,7 @@ data class SettingsUiState(
 @Immutable
 data class SettingsBusinessState(
     val satelliteSource: String = "ALL",
+    val amsatStatusEnabled: Boolean = true,
     val reminderSettings: ReminderSettings = ReminderSettings(),
     val reminderItems: List<ReminderItem> = emptyList(),
 )
@@ -50,6 +51,7 @@ data class SettingsScreenActions(
     val onOpenAbout: () -> Unit,
     // 业务相关回调
     val onSetSatelliteSource: (String) -> Unit = {},
+    val onSetAmsatStatusEnabled: (Boolean) -> Unit = {},
     val onUpdateReminderSettings: (ReminderSettings) -> Unit = {},
     val onOpenReminderList: () -> Unit = {},
     // 更新相关回调

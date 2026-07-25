@@ -24,6 +24,7 @@ fun SettingPager(
 
     // MainViewModel 的状态是 Compose State<T>（非 StateFlow），直接用 by 委托即可
     val satelliteSource by mainViewModel.satelliteSource
+    val amsatStatusEnabled by mainViewModel.amsatStatusEnabled
     val reminderSettings by mainViewModel.reminderSettings
     val reminderItems by mainViewModel.reminderItems
 
@@ -34,6 +35,7 @@ fun SettingPager(
 
     val businessState = SettingsBusinessState(
         satelliteSource = satelliteSource,
+        amsatStatusEnabled = amsatStatusEnabled,
         reminderSettings = reminderSettings,
         reminderItems = reminderItems,
     )
@@ -46,6 +48,7 @@ fun SettingPager(
         },
         onOpenAbout = { navigator.push(Route.About) },
         onSetSatelliteSource = mainViewModel::setSatelliteSource,
+        onSetAmsatStatusEnabled = mainViewModel::setAmsatStatusEnabled,
         onUpdateReminderSettings = mainViewModel::updateReminderSettings,
         onOpenReminderList = { navigator.push(Route.ReminderList) },
         onCheckUpdateNow = settingsViewModel::checkUpdateNow,

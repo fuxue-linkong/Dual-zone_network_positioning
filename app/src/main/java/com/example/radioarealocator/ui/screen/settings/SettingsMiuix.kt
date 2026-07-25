@@ -202,6 +202,12 @@ fun SettingPagerMiuix(
                                 )
                             }
                         )
+                        SwitchPreference(
+                            title = stringResource(id = R.string.amsat_status_toggle),
+                            summary = stringResource(id = R.string.amsat_status_toggle_desc),
+                            checked = businessState.amsatStatusEnabled,
+                            onCheckedChange = actions.onSetAmsatStatusEnabled
+                        )
                     }
 
                     // 业务设置：日程提醒

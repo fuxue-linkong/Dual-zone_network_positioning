@@ -39,6 +39,10 @@
     <string name="update_check_failed">Update check failed, please check your network.</string>
     <string name="update_current_version">Current version</string>
     <string name="update_latest_version">Latest version</string>
+    <string name="update_changelog_title">Changelog</string>
+    <string name="update_retry">Retry</string>
+    <string name="amsat_status_toggle">Enable AMSAT Status</string>
+    <string name="amsat_status_toggle_desc">Fetch real-time satellite status from www.amsat.org/status</string>
     <string name="settings_enable_predictive_back">Predictive back gesture</string>
     <string name="settings_enable_predictive_back_summary">Enable predictive back gesture support.</string>
     <string name="save_log">Save logs</string>
