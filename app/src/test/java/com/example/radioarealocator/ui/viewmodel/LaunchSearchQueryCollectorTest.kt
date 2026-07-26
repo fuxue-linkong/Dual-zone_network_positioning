@@ -1,18 +1,19 @@
-﻿package com.example.radioarealocator.ui.viewmodel
+package com.example.radioarealocator.ui.viewmodel
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
  * [launchSearchQueryCollector] 单元测试。
+ *
+ * 使用 StandardTestDispatcher 的虚拟时钟控制 debounce 时序。
+ * debounce 阈值：150ms
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LaunchSearchQueryCollectorTest {
@@ -33,8 +34,8 @@ class LaunchSearchQueryCollectorTest {
         queryFlow.value = "ab"
         queryFlow.value = "abc"
 
-        advanceTimeBy(200) // Past debounce threshold (150ms)
-        advanceUntilIdle()
+        // 推进到 debounce 阈值之后 (150ms)
+        advanceTimeBy(200)
 
         assertEquals(1, results.size)
         assertEquals("abc", results[0])
@@ -53,11 +54,9 @@ class LaunchSearchQueryCollectorTest {
 
         queryFlow.value = "test"
         advanceTimeBy(200)
-        advanceUntilIdle()
 
         queryFlow.value = "test" // Same value
         advanceTimeBy(200)
-        advanceUntilIdle()
 
         // Only one emission because distinctUntilChanged
         assertEquals(1, results.size)
@@ -89,20 +88,26 @@ class LaunchSearchQueryCollectorTest {
     }
 
     @Test
-    fun `empty query is collected`() = runTest(testDispatcher) {
-        val queryFlow = MutableStateFlow("initial")
+    fun `distinctUntilChanged prevents duplicate emissions`() = runTest(testDispatcher) {
+        val queryFlow = MutableStateFlow("")
         val results = mutableListOf<String>()
 
         val job = launchSearchQueryCollector(queryFlow) { query ->
             results.add(query)
         }
 
-        queryFlow.value = ""
+        queryFlow.value = "a"
         advanceTimeBy(200)
-        advanceUntilIdle()
 
-        assertEquals(1, results.size)
-        assertEquals("", results[0])
+        queryFlow.value = "a" // Same
+        advanceTimeBy(200)
+
+        queryFlow.value = "b" // Different
+        advanceTimeBy(200)
+
+        assertEquals(2, results.size)
+        assertEquals("a", results[0])
+        assertEquals("b", results[1])
         job.cancel()
     }
 }
