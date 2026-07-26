@@ -168,20 +168,6 @@ fun SettingPagerMaterial(
                 }
             )
 
-            // AMSAT 状态开关
-            SegmentedColumn(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                content = listOf {
-                    SegmentedSwitchItem(
-                        icon = Icons.Filled.SatelliteAlt,
-                        title = stringResource(id = R.string.amsat_status_toggle),
-                        summary = stringResource(id = R.string.amsat_status_toggle_desc),
-                        checked = businessState.amsatStatusEnabled,
-                        onCheckedChange = actions.onSetAmsatStatusEnabled
-                    )
-                }
-            )
-
             // 业务设置：日程提醒
             SegmentedColumn(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
