@@ -61,6 +61,7 @@ import com.example.radioarealocator.ui.isSatelliteSourceExpired
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import com.example.radioarealocator.ui.theme.LocalEnableBlur
+import com.example.radioarealocator.ui.theme.SafeColors
 import com.example.radioarealocator.ui.util.BlurredBar
 import com.example.radioarealocator.ui.util.rememberBlurBackdrop
 import kotlinx.coroutines.delay
@@ -972,7 +973,7 @@ private fun StatusChip(status: String, isStatusInherited: Boolean = false) {
     val (bgColor, contentColor) = when (status) {
         "Heard" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
         "Telemetry Only" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "Not Heard" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+        "Not Heard" -> SafeColors.errorContainer to SafeColors.errorIcon
         "Crew Active" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
     }
@@ -987,7 +988,7 @@ private fun ModeChip(mode: String) {
         "FM" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
         "SSTV" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
         "DSTAR" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        "CW" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+        "CW" -> SafeColors.errorContainer to SafeColors.errorIcon
         else -> colorScheme.surfaceVariant to colorScheme.onSurfaceVariantSummary
     }
     Chip(text = mode, bgColor = bgColor, contentColor = contentColor)
@@ -1053,14 +1054,14 @@ private fun SegmentCell(segment: SegmentStatus, modifier: Modifier = Modifier) {
     val bgColor = when (segment.status) {
         "Heard" -> colorScheme.primaryContainer
         "Telemetry Only" -> colorScheme.secondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer
+        "Not Heard" -> SafeColors.errorContainer
         "Crew Active" -> colorScheme.tertiaryContainer
         else -> colorScheme.surfaceVariant
     }
     val contentColor = when (segment.status) {
         "Heard" -> colorScheme.onPrimaryContainer
         "Telemetry Only" -> colorScheme.onSecondaryContainer
-        "Not Heard" -> colorScheme.onErrorContainer
+        "Not Heard" -> SafeColors.errorIcon
         "Crew Active" -> colorScheme.onTertiaryContainer
         else -> colorScheme.onSurfaceVariantSummary
     }
