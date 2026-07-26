@@ -311,7 +311,7 @@ private fun AboutContent(
                                 )
                             } else Modifier
                         ),
-                    painter = painterResource(id = R.drawable.ic_logo),
+                    painter = painterResource(id = R.mipmap.ic_launcher),
                     contentDescription = null,
                 )
             }
