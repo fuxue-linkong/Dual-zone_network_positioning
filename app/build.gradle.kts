@@ -215,10 +215,22 @@ android {
         checkReleaseBuilds = false
     }
 
-    // JaCoCo 覆盖率报告配置：排除自动生成与框架代码，聚焦业务逻辑
+    // 单元测试配置：并行 fork + JVM 调优 + JaCoCo 覆盖率
     testOptions {
         unitTests {
             all {
+                // 并行 fork：利用多核 CPU，每个 fork 运行一个测试类
+                it.maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                // 每个 fork 的 JVM 堆内存（避免 OOM，也避免过大导致 GC 停顿）
+                it.setJvmArgs(
+                    listOf(
+                        "-Xmx2048m",
+                        "-XX:+UseG1GC",
+                        "-XX:MaxGCPauseMillis=200",
+                    )
+                )
+                // 每个 fork 运行 N 个测试类后回收（防止内存泄漏累积）
+                it.forkEvery = 100
                 it.extensions.configure<JacocoTaskExtension> {
                     isIncludeNoLocationClasses = true
                     excludes = listOf(

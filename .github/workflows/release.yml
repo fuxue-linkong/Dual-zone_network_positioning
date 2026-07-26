@@ -62,7 +62,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=false"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=true"
   GRADLE_VERSION: '9.4.1'
 
 jobs:
@@ -246,6 +246,7 @@ jobs:
           set -o pipefail
           gradle assembleRelease \
             --console=plain \
+            --continue \
             --stacktrace \
             --no-daemon 2>&1 | tee build.log
 

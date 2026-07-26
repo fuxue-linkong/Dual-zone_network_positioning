@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=false"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=true"
   GRADLE_VERSION: '9.4.1'
 
 jobs:
@@ -74,13 +74,14 @@ jobs:
             ~/.gradle/caches/modules-2/files-2.1/org.robolectric
           key: robolectric-sdk-${{ runner.os }}-v1
 
-      # 单元测试：复用已编译产物，Gradle 缓存命中后直接执行测试
+      # 单元测试：并行 + continue（失败时继续执行，汇总所有失败）
       - name: Run unit tests
         id: test
         run: |
           set -o pipefail
           gradle :app:testDebugUnitTest \
             --console=plain \
+            --continue \
             --stacktrace \
             --no-daemon 2>&1 | tee test-output.log
 
