@@ -267,4 +267,8 @@
     <string name="morsecode_copied" translatable="false">已复制</string>
     <string name="morsecode_codec" translatable="false">摩斯电码编解码</string>
     <string name="morsecode_codec_desc" translatable="false">文本书写与摩斯电码的相互转换</string>
+
+    <!-- APRS模块 -->
+    <string name="aprs" translatable="false">APRS</string>
+    <string name="aprs_desc" translatable="false">业余无线电自动位置报告系统</string>
 </resources>

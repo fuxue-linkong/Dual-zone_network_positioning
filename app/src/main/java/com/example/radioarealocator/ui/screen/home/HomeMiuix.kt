@@ -135,6 +135,8 @@ fun HomePagerMiuix(
                         }
                         // CW 练习入口
                         CwEntryCardMiuix(actions.onCWPracticeClick)
+                        // APRS 入口
+                        AprsEntryCardMiuix(actions.onAprsClick)
                     }
                     Spacer(Modifier.height(bottomInnerPadding))
                 }
@@ -461,6 +463,17 @@ private fun CwEntryCardMiuix(onClick: () -> Unit) {
         BasicComponent(
             title = stringResource(R.string.cw_practice),
             summary = stringResource(R.string.cw_practice_desc),
+            onClick = onClick
+        )
+    }
+}
+
+@Composable
+private fun AprsEntryCardMiuix(onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        BasicComponent(
+            title = stringResource(R.string.aprs),
+            summary = stringResource(R.string.aprs_desc),
             onClick = onClick
         )
     }

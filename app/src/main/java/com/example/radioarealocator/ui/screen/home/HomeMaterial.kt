@@ -109,6 +109,7 @@ fun HomePagerMaterial(
                         )
                     }
                     CwEntryCard(actions.onCWPracticeClick)
+                    AprsEntryCard(actions.onAprsClick)
                 }
             }
             Spacer(Modifier.height(bottomInnerPadding))
@@ -452,6 +453,28 @@ private fun CwEntryCard(onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.cw_practice_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun AprsEntryCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.aprs),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.aprs_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

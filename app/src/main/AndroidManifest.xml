@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- APRS 前台 Service：连接期间保活 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <!-- 应用内更新：安装 APK（Android 8+ 需显式声明） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -65,6 +69,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+
+        <!-- APRS 前台 Service：连接期间保活 + 状态通知 -->
+        <service
+            android:name=".data.aprs.AprsService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- 接收 AlarmManager 触发的过境提醒广播 -->
         <receiver

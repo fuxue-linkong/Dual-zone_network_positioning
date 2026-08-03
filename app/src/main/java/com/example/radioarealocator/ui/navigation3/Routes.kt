@@ -53,4 +53,34 @@ sealed interface Route : NavKey, Parcelable {
     @Parcelize
     @Serializable
     data object LocationDetail : Route
+
+    /** APRS 主入口 */
+    @Parcelize
+    @Serializable
+    data object AprsMain : Route
+
+    /** APRS 设置 */
+    @Parcelize
+    @Serializable
+    data object AprsSettings : Route
+
+    /** APRS 站点列表 */
+    @Parcelize
+    @Serializable
+    data object AprsStations : Route
+
+    /** APRS 消息 */
+    @Parcelize
+    @Serializable
+    data object AprsMessages : Route
+
+    /** APRS 站点地图 */
+    @Parcelize
+    @Serializable
+    data object AprsMap : Route
+
+    /** APRS 符号选择器 */
+    @Parcelize
+    @Serializable
+    data object AprsSymbolPicker : Route
 }

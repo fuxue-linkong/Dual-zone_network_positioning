@@ -40,4 +40,5 @@ data class HomeActions(
     val onSatelliteManagementClick: () -> Unit = {},
     val onCWPracticeClick: () -> Unit = {},
     val onLocationDetailClick: () -> Unit = {},
+    val onAprsClick: () -> Unit = {},
 )

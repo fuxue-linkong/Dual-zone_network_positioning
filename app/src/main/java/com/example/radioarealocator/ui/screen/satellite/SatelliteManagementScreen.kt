@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -381,16 +382,21 @@ private fun ActionRow(
             enabled = enabled,
             colors = ButtonDefaults.buttonColorsPrimary()
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                        foregroundColor = colorScheme.onPrimary
-                    )
+            Box(contentAlignment = Alignment.Center) {
+                // 文字始终占位保留按钮宽度，加载时透明，spinner 叠加居中
+                Text(
+                    buttonText,
+                    color = if (isLoading) Color.Transparent else colorScheme.onPrimary
                 )
-            } else {
-                Text(buttonText)
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                            foregroundColor = colorScheme.onPrimary
+                        )
+                    )
+                }
             }
         }
         Column(modifier = Modifier.weight(1f)) {

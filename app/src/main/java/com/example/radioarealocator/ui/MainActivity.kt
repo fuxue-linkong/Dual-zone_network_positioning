@@ -79,6 +79,12 @@ import com.example.radioarealocator.ui.screen.permission.PermissionScreen
 import com.example.radioarealocator.ui.screen.reminder.ReminderListRouteScreen
 import com.example.radioarealocator.ui.screen.satellite.SatelliteManagementScreen
 import com.example.radioarealocator.ui.screen.settings.SettingPager
+import com.example.radioarealocator.ui.screen.aprs.AprsMainScreen
+import com.example.radioarealocator.ui.screen.aprs.AprsSettingsScreen
+import com.example.radioarealocator.ui.screen.aprs.AprsStationListScreen
+import com.example.radioarealocator.ui.screen.aprs.AprsMapScreen
+import com.example.radioarealocator.ui.screen.aprs.AprsMessageScreen
+import com.example.radioarealocator.ui.screen.aprs.AprsSymbolPickerScreen
 import com.example.radioarealocator.ui.screen.settings.SettingsScreenActions
 import com.example.radioarealocator.ui.screen.settings.UpdateDialogs
 import com.example.radioarealocator.ui.theme.RadioAreaLocatorTheme
@@ -186,6 +192,12 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.SatelliteManagement> { WithApplicationViewModelStoreOwner { SatelliteManagementScreen() } }
                                 entry<Route.ReminderList> { WithApplicationViewModelStoreOwner { ReminderListRouteScreen() } }
                                 entry<Route.LocationDetail> { WithApplicationViewModelStoreOwner { LocationDetailScreen() } }
+                                entry<Route.AprsMain> { WithApplicationViewModelStoreOwner { AprsMainScreen(onNavigate = { navigator.push(it) }, onNavigateBack = { navigator.pop() }) } }
+                                entry<Route.AprsSettings> { WithApplicationViewModelStoreOwner { AprsSettingsScreen(onNavigateBack = { navigator.pop() }, onNavigate = { navigator.push(it) }) } }
+                                entry<Route.AprsStations> { WithApplicationViewModelStoreOwner { AprsStationListScreen(onNavigateBack = { navigator.pop() }) } }
+                                entry<Route.AprsMessages> { WithApplicationViewModelStoreOwner { AprsMessageScreen(onNavigateBack = { navigator.pop() }) } }
+                                entry<Route.AprsMap> { WithApplicationViewModelStoreOwner { AprsMapScreen(onNavigateBack = { navigator.pop() }) } }
+                                entry<Route.AprsSymbolPicker> { WithApplicationViewModelStoreOwner { AprsSymbolPickerScreen(onNavigateBack = { navigator.pop() }) } }
                             }
                         )
                     }

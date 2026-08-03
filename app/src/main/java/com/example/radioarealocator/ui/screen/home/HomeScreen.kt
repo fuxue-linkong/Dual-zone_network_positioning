@@ -81,6 +81,7 @@ fun HomePager(
         onSatelliteManagementClick = { navigator.push(Route.SatelliteManagement) },
         onCWPracticeClick = { navigator.push(Route.CWPractice) },
         onLocationDetailClick = { navigator.push(Route.LocationDetail) },
+        onAprsClick = { navigator.push(Route.AprsMain) },
     )
 
     // 计算下一次过境卫星，用于天气卡显示
