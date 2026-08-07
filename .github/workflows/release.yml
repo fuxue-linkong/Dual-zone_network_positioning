@@ -1,7 +1,11 @@
 name: Release Build APK
 
 # ─────────────────────────────────────────────────────────────
-# 发布工作流（对应发布流程第3-5步）
+# ⚠️ 已禁用（2026-08-08）
+# Release 打包/发布已彻底关闭：本地打包后手动上传。
+# 请勿恢复 `on:` 触发器，除非重新启用 CI 发布流程。
+#
+# 原发布工作流（对应发布流程第3-5步）
 #   3. 发布 beta 版（tag: v1.2.0-beta.1）
 #   4. 根据反馈继续发布 beta（tag: v1.2.0-beta.2）
 #   5. 稳定后发布正式版（tag: v1.2.0）
@@ -23,34 +27,36 @@ name: Release Build APK
 #   - Release notes 自动生成（generate_release_notes）
 #   - bot 提交跳过，避免循环触发
 # ─────────────────────────────────────────────────────────────
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag（例如 v1.2.0 或 v1.2.0-beta.1）'
-        required: true
-        type: string
-      version_name:
-        description: '版本名称（例如 1.2.0），留空则自动从 tag 推断'
-        required: false
-        type: string
-      version_code:
-        description: '版本代号（整数），留空则自动在现有基础上+1'
-        required: false
-        type: string
-      commit_version:
-        description: '是否将版本更新提交回仓库（仅手动触发时生效）'
-        required: false
-        type: boolean
-        default: true
-      prerelease:
-        description: '是否为预发布（留空则根据 tag 自动判断）'
-        required: false
-        type: boolean
-        default: false
+
+# ── 触发器已移除，工作流处于禁用状态 ──
+# on:
+#   push:
+#     tags:
+#       - 'v*'
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: 'Release tag（例如 v1.2.0 或 v1.2.0-beta.1）'
+#         required: true
+#         type: string
+#       version_name:
+#         description: '版本名称（例如 1.2.0），留空则自动从 tag 推断'
+#         required: false
+#         type: string
+#       version_code:
+#         description: '版本代号（整数），留空则自动在现有基础上+1'
+#         required: false
+#         type: string
+#       commit_version:
+#         description: '是否将版本更新提交回仓库（仅手动触发时生效）'
+#         required: false
+#         type: boolean
+#         default: true
+#       prerelease:
+#         description: '是否为预发布（留空则根据 tag 自动判断）'
+#         required: false
+#         type: boolean
+#         default: false
 
 # workflow 级最小权限，build job 按需提升
 permissions:

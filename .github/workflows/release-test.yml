@@ -1,7 +1,11 @@
 name: Release Build Test
 
 # ─────────────────────────────────────────────────────────────
-# Release 构建测试工作流（不发布、不更新版本号）
+# ⚠️ 已禁用（2026-08-08）
+# Release 打包/发布已彻底关闭：本地打包后手动上传。
+# 请勿恢复 `on:` 触发器，除非重新启用 CI 发布流程。
+#
+# 原 Release 构建测试工作流（不发布、不更新版本号）
 #
 # 用途：手动触发，用与生产一致的 release 构建流程产出 APK，
 #       仅供测试 release 构建后的应用性能与 bug。
@@ -17,14 +21,15 @@ name: Release Build Test
 # 主分支：miuix（与 release.yml 一致）
 # ─────────────────────────────────────────────────────────────
 
-on:
-  workflow_dispatch:
-    inputs:
-      run_tests:
-        description: '构建前运行单元测试（推荐开启）'
-        required: false
-        type: boolean
-        default: true
+# ── 触发器已移除，工作流处于禁用状态 ──
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       run_tests:
+#         description: '构建前运行单元测试（推荐开启）'
+#         required: false
+#         type: boolean
+#         default: true
 
 permissions:
   contents: read
