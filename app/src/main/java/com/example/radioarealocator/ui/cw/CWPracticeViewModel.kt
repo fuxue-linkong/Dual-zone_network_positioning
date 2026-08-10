@@ -7,8 +7,10 @@ import com.example.radioarealocator.data.cw.CWProgressStore
 import com.example.radioarealocator.data.cw.CWSettings
 import com.example.radioarealocator.data.cw.CWSettingsStore
 import com.example.radioarealocator.data.cw.CharacterSet
+import com.example.radioarealocator.data.cw.LcwoAudioFetcher
 import com.example.radioarealocator.data.cw.MorseCodeGenerator
 import com.example.radioarealocator.data.cw.MorseCodePlayer
+import com.example.radioarealocator.data.cw.NetworkMorsePlayer
 import com.example.radioarealocator.data.cw.PlayMode
 import com.example.radioarealocator.radioApp
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,14 @@ class CWPracticeViewModel : ViewModel() {
     private val progressStore = CWProgressStore(app)
     private val generator = MorseCodeGenerator()
     private val player = MorseCodePlayer()
+    private val fetcher = LcwoAudioFetcher()
+    private val networkPlayer = NetworkMorsePlayer(app)
+
+    private val _tutorialAudioData = MutableStateFlow<ByteArray?>(null)
+    val tutorialAudioData: StateFlow<ByteArray?> = _tutorialAudioData.asStateFlow()
+
+    private val _isAudioLoading = MutableStateFlow(false)
+    val isAudioLoading: StateFlow<Boolean> = _isAudioLoading.asStateFlow()
 
     private val _settings = MutableStateFlow(CWSettings())
     val settings: StateFlow<CWSettings> = _settings.asStateFlow()
@@ -131,36 +141,59 @@ class CWPracticeViewModel : ViewModel() {
         _isPaused.value = false
         _userInput.value = ""
 
-        val settings = _settings.value
-        player.playMorseCode(
-            morseCode = _morseCode.value,
-            wpm = settings.wpm,
-            frequency = settings.frequency,
-            playMode = settings.playMode,
-            onComplete = {
+        if (_currentCourseId.value > 0) {
+            val audioData = _tutorialAudioData.value
+            if (audioData != null) {
+                networkPlayer.playAudio(audioData) {
+                    _isPlaying.value = false
+                }
+            } else {
                 _isPlaying.value = false
             }
-        )
+        } else {
+            val settings = _settings.value
+            player.playMorseCode(
+                morseCode = _morseCode.value,
+                wpm = settings.wpm,
+                frequency = settings.frequency,
+                playMode = settings.playMode,
+                onComplete = {
+                    _isPlaying.value = false
+                }
+            )
+        }
     }
 
     fun pausePractice() {
         if (!_isPlaying.value) return
 
         _isPaused.value = true
-        player.pause()
+        if (_currentCourseId.value > 0) {
+            networkPlayer.pause()
+        } else {
+            player.pause()
+        }
     }
 
     fun resumePractice() {
         if (!_isPlaying.value || !_isPaused.value) return
 
         _isPaused.value = false
-        player.resume()
+        if (_currentCourseId.value > 0) {
+            networkPlayer.resume()
+        } else {
+            player.resume()
+        }
     }
 
     fun stopPractice() {
         _isPlaying.value = false
         _isPaused.value = false
-        player.stop()
+        if (_currentCourseId.value > 0) {
+            networkPlayer.stop()
+        } else {
+            player.stop()
+        }
     }
 
     fun updateUserInput(input: String) {
@@ -239,6 +272,8 @@ class CWPracticeViewModel : ViewModel() {
             _accuracy.value = 0f
             updateLessonInfo()
             loadCourseProgress()
+
+            fetchTutorialAudio(text)
         }
     }
 
@@ -315,16 +350,31 @@ class CWPracticeViewModel : ViewModel() {
             _userInput.value = ""
             _accuracy.value = 0f
             updateLessonInfo()
+
+            viewModelScope.launch {
+                fetchTutorialAudio(text)
+            }
         }
 
-        // 重新加载课程进度
         viewModelScope.launch {
             loadCourseProgress()
         }
     }
 
+    private suspend fun fetchTutorialAudio(text: String) {
+        if (text.isEmpty()) return
+        _isAudioLoading.value = true
+        _tutorialAudioData.value = null
+
+        val settings = _settings.value
+        val audioData = fetcher.fetchAudio(text, settings.wpm, settings.frequency)
+        _tutorialAudioData.value = audioData
+        _isAudioLoading.value = false
+    }
+
     override fun onCleared() {
         super.onCleared()
         player.stop()
+        networkPlayer.stop()
     }
 }
