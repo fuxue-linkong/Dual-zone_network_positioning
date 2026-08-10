@@ -20,10 +20,13 @@ import com.example.radioarealocator.data.reminder.RepeatMode
 import com.example.radioarealocator.data.satellite.AmsatStatusApiService
 import com.example.radioarealocator.data.satellite.AmsatPageScraper
 import com.example.radioarealocator.data.satellite.FavoriteSatellitesStore
+import com.example.radioarealocator.data.satellite.RadioInfo
+import com.example.radioarealocator.data.satellite.RadioInfoRepository
 import com.example.radioarealocator.data.satellite.SatelliteCacheStore
 import com.example.radioarealocator.data.satellite.SatelliteCatalog
 import com.example.radioarealocator.data.satellite.SatelliteDataSource
 import com.example.radioarealocator.data.satellite.SatelliteInfo
+import com.example.radioarealocator.data.satellite.SatelliteListItem
 import com.example.radioarealocator.data.satellite.SatellitePredictCacheStore
 import com.example.radioarealocator.data.satellite.SatellitePredictor
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
@@ -78,6 +81,8 @@ class MainViewModel : ViewModel() {
     private val locationHelper = LocationHelper(app)
     private val satelliteDataSource = SatelliteDataSource()
     private val satellitePredictor = SatellitePredictor()
+    // SatNOGS 转发器频率库：卫星列表展示多收发器（频率/模式/状态）
+    private val radioInfoRepository = RadioInfoRepository(app)
     // AMSAT 状态独立抓取服务：供状态跟踪器 5 分钟定时拉取，不依赖 TLE 拉取周期
     private val amsatStatusApi = AmsatStatusApiService()
     // AMSAT 页面抓取器：作为 API 的备选数据源
@@ -130,6 +135,29 @@ class MainViewModel : ViewModel() {
 
     private val _satelliteState = mutableStateOf(SatelliteUiState())
     val satelliteState: State<SatelliteUiState> = _satelliteState
+
+    /** 转发器频率库（NORAD → 转发器列表，含 active/inactive） */
+    private val _radioMap = mutableStateOf<Map<Int, List<RadioInfo>>>(emptyMap())
+    val radioMap: State<Map<Int, List<RadioInfo>>> = _radioMap
+
+    /**
+     * 卫星列表项（TLE 全量 + 过境预测 + 转发器）：
+     * 以缓存 TLE 为底（"卫星太少"：不再只显示有过境的卫星），
+     * 预测结果按 NORAD 匹配附加，转发器按 NORAD 匹配。
+     * 由 [satelliteState] 与 [radioMap] 派生，供卫星管理页使用。
+     */
+    val satelliteItems: List<SatelliteListItem>
+        get() {
+            val passes = _satelliteState.value.satellites.associateBy { it.catalogNumber }
+            val radios = _radioMap.value
+            return _satelliteState.value.cachedTles.map { sourcedTle ->
+                SatelliteListItem(
+                    tle = sourcedTle,
+                    pass = passes[sourcedTle.tle.catnum],
+                    radios = radios[sourcedTle.tle.catnum].orEmpty()
+                )
+            }
+        }
 
     // CW练习状态
     private val _cwSettings = mutableStateOf(CWSettings())
@@ -217,11 +245,6 @@ class MainViewModel : ViewModel() {
 
     private val _timeCardMaskColor = mutableStateOf(Color(ImageColorExtractor.DEFAULT_MASK_COLOR))
     val timeCardMaskColor: State<Color> = _timeCardMaskColor
-
-    // 取色去重：记录上次取色的文件 lastModified，相同则跳过，避免每次 resume 重复 decode
-    private var lastMaskColorFileLastModified: Long = -1L
-    // 取色协程：新的取色请求到来时取消上一次未完成的，避免并发竞态与遮罩色闪烁
-    private var maskColorJob: Job? = null
 
     /**
      * 刷新天气数据。
@@ -343,25 +366,13 @@ class MainViewModel : ViewModel() {
             extractAndUpdateMaskColor(effectiveFile)
         } else {
             _timeCardBackgroundFile.value = null
-            // 无背景时重置遮罩色为默认值，避免下次设置新背景取色完成前残留旧色
-            _timeCardMaskColor.value = Color(ImageColorExtractor.DEFAULT_MASK_COLOR)
-            lastMaskColorFileLastModified = -1L
-            maskColorJob?.cancel()
-            maskColorJob = null
         }
     }
 
     private fun extractAndUpdateMaskColor(imageFile: File) {
-        // 去重：同一文件（lastModified 相同）不重复取色
-        val currentLastModified = imageFile.lastModified()
-        if (currentLastModified == lastMaskColorFileLastModified) return
-
-        // 取消上一次未完成的取色，避免并发竞态与遮罩色闪烁
-        maskColorJob?.cancel()
-        maskColorJob = viewModelScope.launch {
-            var bitmap: android.graphics.Bitmap? = null
+        viewModelScope.launch {
             try {
-                bitmap = withContext(Dispatchers.IO) {
+                val bitmap = withContext(Dispatchers.IO) {
                     val options = android.graphics.BitmapFactory.Options().apply {
                         inSampleSize = 4
                     }
@@ -371,16 +382,16 @@ class MainViewModel : ViewModel() {
                     _timeCardMaskColor.value = withContext(Dispatchers.IO) {
                         ImageColorExtractor.extractDominantColor(bitmap)
                     }
-                    lastMaskColorFileLastModified = currentLastModified
+                    bitmap.recycle()
                 }
-            } catch (e: Exception) {
-                // CancellationException 重新抛出以保留协程取消语义
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                // 其他异常静默，保留默认遮罩色
-            } finally {
-                bitmap?.recycle()
+            } catch (_: Exception) {
             }
         }
+    }
+
+    fun clearCustomBackground() {
+        landscapeImageStore.clearCustomImage()
+        _timeCardBackgroundFile.value = null
     }
 
     companion object {
@@ -531,6 +542,20 @@ class MainViewModel : ViewModel() {
                 cachedTles = cachedTle.tles,
                 lastSatelliteUpdateTime = cachedTle.updatedAt
             )
+        }
+
+        // 加载转发器频率库（SatNOGS）：供卫星列表展示多收发器/频率/状态，
+        // 并决定过境预测范围（只对有活跃转发器/目录的卫星预测）。
+        // 必须先于首次预测完成，否则预测范围会退化为仅目录卫星。
+        // 静默失败（网络不可用时仅保留本地缓存或空数据），不阻塞主流程。
+        try {
+            if (settingsStore.useSatnogsTransmitters) {
+                _radioMap.value = radioInfoRepository.getAllRadios()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // 转发器库加载失败不影响其它功能
         }
 
         // 优先用预测缓存即时回填：坐标接近 + 2h 内有效 → 直接显示，跳过 SGP4
@@ -830,6 +855,11 @@ class MainViewModel : ViewModel() {
         satelliteOnlyJob = viewModelScope.launch {
             try {
                 val tles = fetchAndCacheTLEs()
+                // 同步刷新转发器频率库（与 TLE 源同源更新）
+                if (settingsStore.useSatnogsTransmitters) {
+                    radioInfoRepository.refresh()
+                    _radioMap.value = radioInfoRepository.getAllRadios()
+                }
                 val current = _locationState.value.result
                 if (current != null) {
                     // 有定位：重新预测
@@ -893,10 +923,15 @@ class MainViewModel : ViewModel() {
 
     /**
      * 拉取 TLE 并写入本地缓存，返回最新 TLE 列表。
+     * 数据源按设置页开关（amateur/satnogs/active）组合。
      * 缓存写入（JSON 序列化）放在 IO 调度器执行，避免阻塞主线程。
      */
     private suspend fun fetchAndCacheTLEs(): List<SourcedTLE> {
-        val tles = satelliteDataSource.fetchAmateurTLEs()
+        val tles = satelliteDataSource.fetchAmateurTLEs(
+            enableAmateur = settingsStore.tleSourceAmateur,
+            enableSatnogs = settingsStore.tleSourceSatnogs,
+            enableActive = settingsStore.tleSourceActive
+        )
         val now = Instant.now()
         withContext(Dispatchers.IO) { satelliteCache.save(tles, now) }
         return tles
@@ -959,9 +994,14 @@ class MainViewModel : ViewModel() {
             }
 
             _satelliteState.value = _satelliteState.value.copy(isSatelliteLoading = true)
+            // 预测范围：仅对"有活跃转发器数据 OR 在硬编码目录中"的卫星计算过境。
+            // active 源全量可达 9000+ 颗（含 Starlink 等非业余卫星），全量预测
+            // 会长时间占用 CPU；列表展示仍用全量 TLE（卫星太少问题），
+            // 无转发器数据的卫星仅显示信息、不预测过境。
+            val predictable = filterPredictableTles(tles)
             val satellites = withContext(Dispatchers.Default) {
                 satellitePredictor.predictUpcomingPasses(
-                    sourcedTles = tles,
+                    sourcedTles = predictable,
                     latitude = latitude,
                     longitude = longitude
                 )
@@ -995,6 +1035,24 @@ class MainViewModel : ViewModel() {
                 isSatelliteLoading = false,
                 satelliteError = e.message ?: "卫星过境预测失败"
             )
+        }
+    }
+
+    /**
+     * 过滤出需要做过境预测的 TLE：有活跃转发器（SatNOGS 频率库）或
+     * 在硬编码 [SatelliteCatalog] 中的卫星。
+     *
+     * 转发器库尚未加载（空 map）时回退为目录集合，保证至少对已知业余卫星预测；
+     * 返回空列表时调用方按"无可用预测目标"处理。
+     */
+    private fun filterPredictableTles(tles: List<SourcedTLE>): List<SourcedTLE> {
+        if (tles.isEmpty()) return emptyList()
+        val radios = _radioMap.value
+        val catalogIds = SatelliteCatalog.catalogNumbers
+        return tles.filter { stle ->
+            val catnum = stle.tle.catnum
+            catnum in catalogIds ||
+                radios[catnum].orEmpty().any { it.isActive }
         }
     }
 
@@ -1324,6 +1382,31 @@ data class SatelliteFilter(
     val isActive: Boolean
         get() = modes.isNotEmpty() || nameQuery.isNotBlank() ||
             onlyUpcoming || onlyInPass || onlyAmsat || onlyFavorites
+}
+
+/**
+ * 应用筛选条件到卫星列表（[SatelliteListItem] 版本，基于转发器模式）。
+ */
+fun List<SatelliteListItem>.applyFilterToItems(
+    filter: SatelliteFilter,
+    favorites: Set<Int> = emptySet()
+): List<SatelliteListItem> {
+    if (!filter.isActive) return this
+    val query = filter.nameQuery.trim()
+    return this.filter { sat ->
+        // 模式匹配：选""表示匹配未知模式（effectiveModes 为空）
+        val modeOk = filter.modes.isEmpty() || filter.modes.any { mode ->
+            if (mode.isEmpty()) sat.effectiveModes.isEmpty() else mode in sat.effectiveModes
+        }
+        val nameOk = query.isBlank() ||
+            sat.name.contains(query, ignoreCase = true) ||
+            sat.catalogNumber.toString().contains(query)
+        val upcomingOk = !filter.onlyUpcoming || !sat.isCurrentlyVisible
+        val inPassOk = !filter.onlyInPass || sat.isCurrentlyVisible
+        val amsatOk = !filter.onlyAmsat || sat.status.isNotBlank()
+        val favoriteOk = !filter.onlyFavorites || sat.catalogNumber in favorites
+        modeOk && nameOk && upcomingOk && inPassOk && amsatOk && favoriteOk
+    }
 }
 
 /**

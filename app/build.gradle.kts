@@ -344,10 +344,10 @@ dependencies {
     implementation(libs.hiddenapibypass)
     implementation(libs.material.kolor)
 
-    // Satellite prediction
-    implementation(libs.predict4java)
-    // predict4java 运行时依赖 Apache Commons Logging
-    implementation(libs.commons.logging)
+    // predict4java 仅用于差分测试：验证自研 SGP4/SDP4 引擎（data/satellite/predict）的
+    // 输出与其一致性。JVM 下 commons-logging 默认实现可用（无需 Android SPI hack）。
+    testImplementation(libs.predict4java)
+    testImplementation(libs.commons.logging)
 
     // Image loading (GitHub avatars in About)
     implementation(libs.coil.compose)

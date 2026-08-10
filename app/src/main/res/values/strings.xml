@@ -162,6 +162,13 @@
     <string name="time_remaining" translatable="false">剩余</string>
     <string name="in_pass" translatable="false">在境</string>
     <string name="upcoming" translatable="false">即将入境</string>
+    <string name="no_pass_window" translatable="false">暂无过境</string>
+    <string name="no_pass_hint" translatable="false">预测窗口内无过境</string>
+    <string name="transceiver_count" translatable="false">📻 %1$d/%2$d</string>
+    <string name="transceiver_unnamed" translatable="false">未命名转发器</string>
+    <string name="transceiver_active" translatable="false">活跃</string>
+    <string name="transceiver_inactive" translatable="false">停用</string>
+    <string name="transceiver_future" translatable="false">未启用</string>
     <string name="satellite_need_location" translatable="false">获取定位后将显示近期过境卫星</string>
     <string name="no_satellites" translatable="false">暂无近期过境卫星</string>
     <string name="satellite_load_failed" translatable="false">卫星信息加载失败：%s</string>
@@ -206,6 +213,22 @@
     <string name="reminder_auto_added_title" translatable="false">已自动添加提醒</string>
     <string name="reminder_auto_added_text" translatable="false">%1$s：下次过境 %2$s，已添加提醒</string>
     <string name="reminder_permission_required" translatable="false">需要通知权限才能显示提醒，请前往系统设置开启</string>
+
+    <!-- 卫星数据设置（Phase 3/4） -->
+    <string name="satellite_section_title" translatable="false">卫星数据</string>
+    <string name="satellite_section_desc" translatable="false">TLE 数据源与过境预测设置</string>
+    <string name="satellite_hours_ahead" translatable="false">预测窗口</string>
+    <string name="satellite_hours_ahead_summary" translatable="false">过境预测覆盖的未来小时数</string>
+    <string name="satellite_min_elevation" translatable="false">最小仰角</string>
+    <string name="satellite_min_elevation_summary" translatable="false">低于该仰角的过境不显示（预留设置）</string>
+    <string name="satellite_source_amateur" translatable="false">CelesTrak 业余卫星分组</string>
+    <string name="satellite_source_amateur_summary" translatable="false">启用 amateur 分组 TLE 源（约 90 颗业余卫星）</string>
+    <string name="satellite_source_satnogs" translatable="false">SatNOGS 分组</string>
+    <string name="satellite_source_satnogs_summary" translatable="false">启用 satnogs 分组 TLE 源（约 650 颗可观测卫星）</string>
+    <string name="satellite_source_active" translatable="false">全部活跃卫星分组</string>
+    <string name="satellite_source_active_summary" translatable="false">启用 active 分组补全非业余卫星（含 GEO/深空特判）</string>
+    <string name="satellite_use_transmitters" translatable="false">SatNOGS 转发器数据库</string>
+    <string name="satellite_use_transmitters_summary" translatable="false">使用 db.satnogs.org 转发器频率，离线时回退本地缓存</string>
 
     <!-- 天气模块 -->
     <string name="weather_refresh" translatable="false">刷新天气</string>

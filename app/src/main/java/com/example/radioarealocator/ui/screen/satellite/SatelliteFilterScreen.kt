@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.radioarealocator.R
+import com.example.radioarealocator.data.satellite.SatelliteModes
 import com.example.radioarealocator.ui.LocalMainViewModel
 import com.example.radioarealocator.ui.LocalUiMode
 import com.example.radioarealocator.ui.SatelliteFilter
@@ -87,15 +88,11 @@ private fun SatelliteFilterContentMiuix(
     val onFilterChange: (SatelliteFilter) -> Unit = mainViewModel::updateSatelliteFilter
 
     val unknownModeLabel = stringResource(R.string.filter_mode_unknown)
-    val modeOptions = listOf(
-        "FM" to "FM",
-        "SSTV" to "SSTV",
-        "DSTAR" to "D-Star",
-        "CW" to "CW",
-        "USB" to "USB",
-        "LSB" to "LSB",
-        "" to unknownModeLabel
-    )
+    // 完整模式列表（对齐 Look4Sat 60 种）+ 未知模式选项
+    val modeOptions: List<Pair<String, String>> = buildList {
+        SatelliteModes.ALL.forEach { mode -> add(mode to mode) }
+        add("" to unknownModeLabel)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -275,15 +272,11 @@ private fun SatelliteFilterContentMaterial(
     val onFilterChange: (SatelliteFilter) -> Unit = mainViewModel::updateSatelliteFilter
 
     val unknownModeLabel = stringResource(R.string.filter_mode_unknown)
-    val modeOptions = listOf(
-        "FM" to "FM",
-        "SSTV" to "SSTV",
-        "DSTAR" to "D-Star",
-        "CW" to "CW",
-        "USB" to "USB",
-        "LSB" to "LSB",
-        "" to unknownModeLabel
-    )
+    // 完整模式列表（对齐 Look4Sat 60 种）+ 未知模式选项
+    val modeOptions: List<Pair<String, String>> = buildList {
+        SatelliteModes.ALL.forEach { mode -> add(mode to mode) }
+        add("" to unknownModeLabel)
+    }
 
     LazyColumn(
         modifier = Modifier

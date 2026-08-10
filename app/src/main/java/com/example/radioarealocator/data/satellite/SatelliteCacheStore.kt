@@ -3,7 +3,7 @@ package com.example.radioarealocator.data.satellite
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
-import com.github.amsacode.predict4java.TLE
+import com.example.radioarealocator.data.satellite.predict.TleElements
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -38,7 +38,7 @@ class SatelliteCacheStore(context: Context) {
                 val status = obj.optString("status", "")
                 list.add(
                     SourcedTLE(
-                        tle = TLE(arrayOf(tle0, tle1, tle2)),
+                        tle = TleElements.fromThreeLines(arrayOf(tle0, tle1, tle2)),
                         source = source,
                         status = status,
                         rawLines = arrayOf(tle0, tle1, tle2)

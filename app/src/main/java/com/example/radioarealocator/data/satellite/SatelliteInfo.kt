@@ -21,5 +21,9 @@ data class SatelliteInfo(
     /** 数据来源标签：CT / SNOGS / ALL */
     val source: String = "",
     /** AMSAT 状态报告：Heard / Telemetry Only / Not Heard / Crew Active */
-    val status: String = ""
+    val status: String = "",
+    /** 是否为 GEO/深空卫星（对地面站恒定可见或永不可见，由预测器特判） */
+    val isGeo: Boolean = false,
+    /** 是否为白天日照过境（过境期间地面站处于白天） */
+    val isDaylightPass: Boolean = false
 )

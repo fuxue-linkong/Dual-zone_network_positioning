@@ -157,8 +157,7 @@ data class CachedPrediction(
      * 缓存是否在有效期内（[CACHE_TTL_MINUTES] 小时）。
      */
     fun isFresh(now: Instant = Instant.now()): Boolean {
-        val age = java.time.Duration.between(predictedAt, now)
-        return !age.isNegative && age.toMinutes() < SatellitePredictCacheStore.CACHE_TTL_MINUTES
+        return java.time.Duration.between(predictedAt, now).toMinutes() < SatellitePredictCacheStore.CACHE_TTL_MINUTES
     }
 
     /**

@@ -1,4 +1,4 @@
-package com.example.radioarealocator.ui.screen.satellite
+﻿package com.example.radioarealocator.ui.screen.satellite
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -68,8 +70,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
 import com.example.radioarealocator.R
+import com.example.radioarealocator.data.satellite.RadioInfo
 import com.example.radioarealocator.data.satellite.SatelliteCatalog
 import com.example.radioarealocator.data.satellite.SatelliteInfo
+import com.example.radioarealocator.data.satellite.SatelliteListItem
 import com.example.radioarealocator.data.satellite.SatelliteStatusSegmenter
 import com.example.radioarealocator.data.satellite.SatelliteStatusTracker
 import com.example.radioarealocator.data.satellite.SegmentStatus
@@ -77,9 +81,10 @@ import com.example.radioarealocator.ui.LocationUiState
 import com.example.radioarealocator.ui.SatelliteFilter
 import com.example.radioarealocator.ui.SatelliteUiState
 import com.example.radioarealocator.ui.LocalMainViewModel
-import com.example.radioarealocator.ui.applyFilter
+import com.example.radioarealocator.ui.applyFilterToItems
 import com.example.radioarealocator.ui.isSatelliteSourceExpired
 import com.example.radioarealocator.ui.navigation3.LocalNavigator
+import com.example.radioarealocator.ui.navigation3.Route
 
 import com.example.radioarealocator.ui.theme.LocalCardAlpha
 import kotlinx.coroutines.delay
@@ -87,6 +92,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 卫星管理页 Material3 风格。
@@ -124,10 +130,14 @@ fun SatelliteManagementMaterial() {
         SatelliteManagementContentMaterial(
             locationState = locationState,
             satelliteState = satelliteState,
+            satelliteItems = mainViewModel.satelliteItems,
             filter = filter,
             favorites = favorites,
             statusTracker = mainViewModel.statusTracker,
             onToggleFavorite = mainViewModel::toggleFavorite,
+            onSatelliteClick = { catalogNumber ->
+                navigator.push(Route.SatelliteDetail(catalogNumber))
+            },
             onNameQueryChange = { query ->
                 mainViewModel.updateSatelliteFilter(filter.copy(nameQuery = query))
             },
@@ -155,10 +165,12 @@ fun SatelliteManagementMaterial() {
 private fun SatelliteManagementContentMaterial(
     locationState: LocationUiState,
     satelliteState: SatelliteUiState,
+    satelliteItems: List<SatelliteListItem>,
     filter: SatelliteFilter,
     favorites: Set<Int>,
     statusTracker: SatelliteStatusTracker,
     onToggleFavorite: (Int) -> Unit,
+    onSatelliteClick: (Int) -> Unit,
     onNameQueryChange: (String) -> Unit,
     onShowFilterDialog: () -> Unit,
     onGetLocation: () -> Unit,
@@ -169,20 +181,20 @@ private fun SatelliteManagementContentMaterial(
     @Suppress("UnusedVariable")
     val statusEntries = statusTracker.statusMap.value
 
-    val filteredSatellites = remember(satelliteState.satellites, filter, favorites) {
-        satelliteState.satellites.applyFilter(filter, favorites)
+    val filteredSatellites = remember(satelliteItems, filter, favorites) {
+        satelliteItems.applyFilterToItems(filter, favorites)
     }
-    val totalCount = satelliteState.satellites.size
-    val favoriteCount = satelliteState.satellites.count { it.catalogNumber in favorites }
+    val totalCount = satelliteItems.size
+    val favoriteCount = satelliteItems.count { it.catalogNumber in favorites }
 
-    // 统一倒计时时钟
+    // 统一倒计时时钟：有任意过境卫星时每秒更新，及时检测过境结束
     var inPassNowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val hasInPassSatellites = filteredSatellites.any { it.isCurrentlyVisible }
-    LaunchedEffect(hasInPassSatellites) {
-        if (hasInPassSatellites) {
+    val hasSatellitesWithPasses = filteredSatellites.any { it.pass != null }
+    LaunchedEffect(hasSatellitesWithPasses) {
+        if (hasSatellitesWithPasses) {
             while (true) {
                 inPassNowMillis = System.currentTimeMillis()
-                delay(5000)
+                delay(1000)
             }
         }
     }
@@ -198,12 +210,13 @@ private fun SatelliteManagementContentMaterial(
         }
     }
 
-    // 排序
+    // 排序：收藏优先 → 在境优先 → 有活跃转发器 → AOS 升序（无过境的排最后）
     val sortedSatellites = remember(filteredSatellites, favorites) {
         filteredSatellites.sortedWith(
-            compareByDescending<SatelliteInfo> { it.catalogNumber in favorites }
+            compareByDescending<SatelliteListItem> { it.catalogNumber in favorites }
                 .thenByDescending { it.isCurrentlyVisible }
-                .thenBy { it.aosTime }
+                .thenByDescending { it.hasActiveTransmitter }
+                .thenBy { it.pass?.aosTime ?: Instant.MAX }
         )
     }
 
@@ -276,9 +289,10 @@ private fun SatelliteManagementContentMaterial(
                         effectiveStatus = effectiveStatus,
                         isFavorite = sat.catalogNumber in favorites,
                         isStatusInherited = isInherited,
-                        nowMillis = if (sat.isCurrentlyVisible) inPassNowMillis else 0L,
+                        nowMillis = inPassNowMillis,
                         statusSegments = satelliteState.segmentStatuses[sat.catalogNumber],
-                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) }
+                        onToggleFavorite = { onToggleFavorite(sat.catalogNumber) },
+                        onSatelliteClick = { onSatelliteClick(sat.catalogNumber) }
                     )
                 }
             }
@@ -520,29 +534,40 @@ private fun SatelliteFilterButtonMaterial(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SatelliteItemMaterial(
-    satellite: SatelliteInfo,
+    satellite: SatelliteListItem,
     effectiveStatus: String,
     isFavorite: Boolean,
     isStatusInherited: Boolean,
     nowMillis: Long,
     statusSegments: List<SegmentStatus>?,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onSatelliteClick: () -> Unit
 ) {
-    // 分段时间线默认折叠，点击卡片展开
+    // 分段时间线默认折叠，点击展开按钮展开
     var expanded by rememberSaveable(satellite.catalogNumber) { mutableStateOf(false) }
 
-    val timeInfo = remember(satellite.aosTime, satellite.losTime, satellite.isCurrentlyVisible, nowMillis) {
+    val pass = satellite.pass
+    val timeInfo = remember(pass?.aosTime, pass?.losTime, nowMillis) {
         val formatter = satelliteTimeFormatterM
         val zone = ZoneId.systemDefault()
-        if (satellite.isCurrentlyVisible) {
-            val losTime = satellite.losTime.atZone(zone).format(formatter)
-            val now = if (nowMillis > 0) Instant.ofEpochMilli(nowMillis) else Instant.now()
-            val remainingSeconds = Duration.between(now, satellite.losTime).seconds
-            val remainingText = formatRemainingTimeM(remainingSeconds)
-            SatelliteTimeInfoM.InPass(losTime, remainingText)
-        } else {
-            val aosTime = satellite.aosTime.atZone(zone).format(formatter)
-            SatelliteTimeInfoM.Upcoming(aosTime)
+        when {
+            pass == null -> null
+            else -> {
+                val now = if (nowMillis > 0) Instant.ofEpochMilli(nowMillis) else Instant.now()
+                when {
+                    now < pass.aosTime -> {
+                        SatelliteTimeInfoM.Upcoming(pass.aosTime.atZone(zone).format(formatter))
+                    }
+                    now < pass.losTime -> {
+                        val losTime = pass.losTime.atZone(zone).format(formatter)
+                        val remainingSeconds = Duration.between(now, pass.losTime).seconds
+                        SatelliteTimeInfoM.InPass(losTime, formatRemainingTimeM(remainingSeconds))
+                    }
+                    else -> {
+                        SatelliteTimeInfoM.Ended
+                    }
+                }
+            }
         }
     }
 
@@ -559,7 +584,7 @@ private fun SatelliteItemMaterial(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (satellite.isCurrentlyVisible) {
+                if (timeInfo is SatelliteTimeInfoM.InPass) {
                     Modifier.border(
                         width = 1.5.dp,
                         color = MaterialTheme.colorScheme.primary,
@@ -575,10 +600,7 @@ private fun SatelliteItemMaterial(
                     Modifier
                 }
             )
-            .clickable(onClick = {
-                // 点击切换展开/折叠，分段时间线默认隐藏，降低卡片高度
-                expanded = !expanded
-            }),
+            .clickable(onClick = onSatelliteClick),
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor.copy(alpha = LocalCardAlpha.current),
             contentColor = cardContentColor
@@ -589,28 +611,38 @@ private fun SatelliteItemMaterial(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // 第一行：名 + 仰角 + 收藏按钮（删除重复星标和状态点）
+            // 第一行：名 + 编号 + 仰角 + 收藏 + 展开按钮（点击卡片进入详情页）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = satellite.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = cardContentColor
-                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = satellite.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = cardContentColor,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "#%05d".format(Locale.US, satellite.catalogNumber),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "${satellite.maxElevation.toInt()}°",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = cardContentColor
-                    )
+                    if (pass != null) {
+                        Text(
+                            text = "${pass.maxElevation.toInt()}°",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = cardContentColor
+                        )
+                    }
                     IconButton(onClick = onToggleFavorite, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
@@ -618,6 +650,15 @@ private fun SatelliteItemMaterial(
                             modifier = Modifier.size(18.dp),
                             tint = if (isFavorite) MaterialTheme.colorScheme.tertiary
                             else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // 转发器/时间线展开按钮（卡片点击已改为进入详情页）
+                    IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -633,21 +674,38 @@ private fun SatelliteItemMaterial(
                 if (effectiveStatus.isNotEmpty()) {
                     StatusChipM(status = effectiveStatus, isStatusInherited = isStatusInherited)
                 }
-                if (satellite.modes.isEmpty()) {
+                val modes = satellite.effectiveModes
+                if (modes.isEmpty()) {
                     ModeChipM(mode = stringResource(R.string.mode_unknown))
                 } else {
-                    satellite.modes.forEach { mode -> ModeChipM(mode = mode) }
+                    modes.take(4).forEach { mode -> ModeChipM(mode = mode) }
+                    if (modes.size > 4) {
+                        ModeChipM(mode = "+${modes.size - 4}")
+                    }
+                }
+                if (satellite.radios.isNotEmpty()) {
+                    TransceiverCountChipM(
+                        active = satellite.radios.count { it.isActive },
+                        total = satellite.radios.size
+                    )
                 }
             }
 
-            // BJT 分段状态时间线：默认折叠，点击卡片展开
+            // 展开区：转发器列表 + BJT 分段状态时间线
             if (expanded) {
-                SatelliteStatusSegmentsM(statusSegments)
+                if (satellite.radios.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    TransceiverListM(satellite.radios)
+                }
+                if (statusSegments != null) {
+                    Spacer(Modifier.height(10.dp))
+                    SatelliteStatusSegmentsM(statusSegments)
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // 时间徽章 + 在境进度条
+            // 时间徽章 + 在境进度条（无过境的卫星显示占位）
             when (timeInfo) {
                 is SatelliteTimeInfoM.InPass -> {
                     Row(
@@ -673,10 +731,119 @@ private fun SatelliteItemMaterial(
                         isActive = false
                     )
                 }
+                is SatelliteTimeInfoM.Ended -> {
+                    TimeBadgeM(
+                        label = stringResource(R.string.in_pass),
+                        value = "过境已结束",
+                        isActive = false
+                    )
+                }
+                null -> {
+                    TimeBadgeM(
+                        label = stringResource(R.string.no_pass_window),
+                        value = stringResource(R.string.no_pass_hint),
+                        isActive = false
+                    )
+                }
             }
         }
     }
 }
+
+/** 转发器数量徽章（Material 版） */
+@Composable
+private fun TransceiverCountChipM(active: Int, total: Int) {
+    val (bgColor, contentColor) = if (active > 0) {
+        MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    ChipM(text = stringResource(R.string.transceiver_count, active, total), bgColor = bgColor, contentColor = contentColor)
+}
+
+/** 展开区：该卫星的全部转发器（Material 版） */
+@Composable
+private fun TransceiverListM(radios: List<RadioInfo>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        radios.forEach { radio ->
+            TransceiverRowM(radio)
+        }
+    }
+}
+
+/** 单条转发器行（Material 版） */
+@Composable
+private fun TransceiverRowM(radio: RadioInfo) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val title = if (radio.inverted) "INV: ${radio.name}" else radio.name
+            Text(
+                text = title.ifEmpty { stringResource(R.string.transceiver_unnamed) },
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            RadioStatusBadgeM(radio)
+        }
+        val freqText = listOfNotNull(
+            radio.downlinkHz?.let { "RX ${formatMHzM(it)}" },
+            radio.uplinkHz?.let { "TX ${formatMHzM(it)}" },
+            radio.mode.takeIf { it.isNotBlank() }
+        ).joinToString("  ")
+        if (freqText.isNotEmpty()) {
+            Text(
+                text = freqText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** 转发器状态徽章（Material 版） */
+@Composable
+private fun RadioStatusBadgeM(radio: RadioInfo) {
+    val (label, bgColor, contentColor) = when (radio.status) {
+        RadioInfo.STATUS_ACTIVE ->
+            Triple(
+                stringResource(R.string.transceiver_active),
+                MaterialTheme.colorScheme.primaryContainer,
+                MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        RadioInfo.STATUS_FUTURE ->
+            Triple(
+                stringResource(R.string.transceiver_future),
+                MaterialTheme.colorScheme.secondaryContainer,
+                MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        else ->
+            Triple(
+                stringResource(R.string.transceiver_inactive),
+                MaterialTheme.colorScheme.surfaceVariant,
+                MaterialTheme.colorScheme.onSurfaceVariant
+            )
+    }
+    ChipM(text = label, bgColor = bgColor, contentColor = contentColor)
+}
+
+/** 频率（Hz）→ 可读文本（MHz，3 位小数） */
+private fun formatMHzM(hz: Long): String = "%.3f".format(Locale.US, hz / 1_000_000.0)
 
 // ---- 时间相关辅助 ----
 
@@ -685,6 +852,7 @@ private val satelliteTimeFormatterM = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 private sealed class SatelliteTimeInfoM {
     data class InPass(val losTime: String, val remainingText: String) : SatelliteTimeInfoM()
     data class Upcoming(val aosTime: String) : SatelliteTimeInfoM()
+    data object Ended : SatelliteTimeInfoM()
 }
 
 private fun formatRemainingTimeM(seconds: Long): String {

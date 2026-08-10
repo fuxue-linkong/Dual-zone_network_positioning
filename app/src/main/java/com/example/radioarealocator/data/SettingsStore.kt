@@ -61,11 +61,80 @@ class SettingsStore(context: Context) {
             prefs.edit().putLong(KEY_DAILY_QUOTE_EPOCH_DAY, value).apply()
         }
 
+    // ── 卫星数据设置（Phase 3/4） ──
+    // 注：以下字段当前由设置页提供配置入口；预测器/数据源的接线（读取这些值
+    // 并传入 SatellitePredictor / SatelliteDataSource）由未来版本在
+    // MainViewModel 与 ReminderRefreshWorker 中完成，UI 侧仅持久化。
+
+    /**
+     * 卫星过境预测窗口（小时）。默认 48。
+     * 未来由 MainViewModel / ReminderRefreshWorker 传给
+     * [com.example.radioarealocator.data.satellite.SatellitePredictor.predictUpcomingPasses]。
+     */
+    var satelliteHoursAhead: Int
+        get() = prefs.getInt(KEY_SAT_HOURS_AHEAD, 48)
+        set(value) {
+            prefs.edit().putInt(KEY_SAT_HOURS_AHEAD, value.coerceIn(12, 168)).apply()
+        }
+
+    /**
+     * 卫星过境最小仰角（度），低于该仰角的过境不显示。默认 0。
+     * 使用 String 存储 Double，避免 Float 精度丢失。
+     */
+    var minSatelliteElevation: Double
+        get() = prefs.getString(KEY_SAT_MIN_ELEVATION, null)?.toDoubleOrNull() ?: 0.0
+        set(value) {
+            prefs.edit().putString(KEY_SAT_MIN_ELEVATION, value.toString()).apply()
+        }
+
+    /**
+     * 是否启用 CelesTrak amateur 分组 TLE 源。默认 true。
+     */
+    var tleSourceAmateur: Boolean
+        get() = prefs.getBoolean(KEY_TLE_SOURCE_AMATEUR, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_TLE_SOURCE_AMATEUR, value).apply()
+        }
+
+    /**
+     * 是否启用 CelesTrak satnogs 分组 TLE 源。默认 true。
+     */
+    var tleSourceSatnogs: Boolean
+        get() = prefs.getBoolean(KEY_TLE_SOURCE_SATNOGS, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_TLE_SOURCE_SATNOGS, value).apply()
+        }
+
+    /**
+     * 是否启用 CelesTrak active 分组 TLE 源（全部活跃卫星，含非业余）。默认 true。
+     * 启用后卫星列表覆盖全部在轨活跃卫星（"卫星太少"问题：不再只显示业余分组）。
+     */
+    var tleSourceActive: Boolean
+        get() = prefs.getBoolean(KEY_TLE_SOURCE_ACTIVE, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_TLE_SOURCE_ACTIVE, value).apply()
+        }
+
+    /**
+     * 是否使用 SatNOGS DB 转发器频率数据库（db.satnogs.org）。默认 true。
+     */
+    var useSatnogsTransmitters: Boolean
+        get() = prefs.getBoolean(KEY_USE_SATNOGS_TRANSMITTERS, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_USE_SATNOGS_TRANSMITTERS, value).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "radio_area_settings"
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LON = "last_lon"
         private const val KEY_DAILY_QUOTE_EPOCH_DAY = "daily_quote_epoch_day"
         private const val KEY_AMSAT_STATUS_ENABLED = "amsat_status_enabled"
+        private const val KEY_SAT_HOURS_AHEAD = "sat_hours_ahead"
+        private const val KEY_SAT_MIN_ELEVATION = "sat_min_elevation"
+        private const val KEY_TLE_SOURCE_AMATEUR = "tle_source_amateur"
+        private const val KEY_TLE_SOURCE_SATNOGS = "tle_source_satnogs"
+        private const val KEY_TLE_SOURCE_ACTIVE = "tle_source_active"
+        private const val KEY_USE_SATNOGS_TRANSMITTERS = "use_satnogs_transmitters"
     }
 }

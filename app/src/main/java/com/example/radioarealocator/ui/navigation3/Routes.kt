@@ -49,6 +49,21 @@ sealed interface Route : NavKey, Parcelable {
     @Serializable
     data object SatelliteFilter : Route
 
+    /** 卫星详情：实时追踪面板 + 多普勒 + 蚀状态 */
+    @Parcelize
+    @Serializable
+    data class SatelliteDetail(val catalogNumber: Int) : Route
+
+    /** 卫星雷达图：仰角环 + 方位刻度 + 罗盘 */
+    @Parcelize
+    @Serializable
+    data class SatelliteRadar(val catalogNumber: Int) : Route
+
+    /** 卫星轨道地图：星下点 + 地面轨迹 + 覆盖圆 */
+    @Parcelize
+    @Serializable
+    data class SatelliteMap(val catalogNumber: Int) : Route
+
     /** 提醒列表：查看与管理过境提醒 */
     @Parcelize
     @Serializable

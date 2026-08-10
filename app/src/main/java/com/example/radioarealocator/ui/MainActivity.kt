@@ -62,6 +62,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.example.radioarealocator.R
+import com.example.radioarealocator.RadioAreaLocatorApplication
 import com.example.radioarealocator.ui.component.bottombar.BottomBar
 import com.example.radioarealocator.ui.component.bottombar.MainPagerState
 import com.example.radioarealocator.ui.component.bottombar.SideRail
@@ -79,6 +80,9 @@ import com.example.radioarealocator.ui.screen.permission.PermissionScreen
 import com.example.radioarealocator.ui.screen.reminder.ReminderListRouteScreen
 import com.example.radioarealocator.ui.screen.satellite.SatelliteFilterScreen
 import com.example.radioarealocator.ui.screen.satellite.SatelliteManagementScreen
+import com.example.radioarealocator.ui.screen.satellite.SatelliteDetailScreen
+import com.example.radioarealocator.ui.screen.satellite.SatelliteRadarScreen
+import com.example.radioarealocator.ui.screen.satellite.SatelliteMapScreen
 import com.example.radioarealocator.ui.screen.settings.SettingPager
 import com.example.radioarealocator.ui.screen.aprs.AprsMainScreen
 import com.example.radioarealocator.ui.screen.aprs.AprsSettingsScreen
@@ -194,6 +198,21 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.CWPractice> { WithApplicationViewModelStoreOwner { CWPracticeRouteScreen() } }
                                 entry<Route.SatelliteManagement> { WithApplicationViewModelStoreOwner { SatelliteManagementScreen() } }
                                 entry<Route.SatelliteFilter> { WithApplicationViewModelStoreOwner { SatelliteFilterScreen() } }
+                                entry<Route.SatelliteDetail> { route ->
+                                    WithApplicationViewModelStoreOwner {
+                                        SatelliteDetailScreen(catalogNumber = route.catalogNumber, onBack = { navigator.pop() })
+                                    }
+                                }
+                                entry<Route.SatelliteRadar> { route ->
+                                    WithApplicationViewModelStoreOwner {
+                                        SatelliteRadarScreen(catalogNumber = route.catalogNumber, onBack = { navigator.pop() })
+                                    }
+                                }
+                                entry<Route.SatelliteMap> { route ->
+                                    WithApplicationViewModelStoreOwner {
+                                        SatelliteMapScreen(catalogNumber = route.catalogNumber, onBack = { navigator.pop() })
+                                    }
+                                }
                                 entry<Route.ReminderList> { WithApplicationViewModelStoreOwner { ReminderListRouteScreen() } }
                                 entry<Route.LocationDetail> { WithApplicationViewModelStoreOwner { LocationDetailScreen() } }
                                 entry<Route.AprsMain> { WithApplicationViewModelStoreOwner { AprsMainScreen(onNavigate = { navigator.push(it) }, onNavigateBack = { navigator.pop() }) } }
@@ -484,4 +503,23 @@ inline fun <reified VM : ViewModel> appViewModel(
     @Suppress("DEPRECATION")
     val factory = remember { ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application) }
     return viewModel(key = key, factory = factory)
+}
+
+/**
+ * 创建 Application 作用域的 [ViewModel]，跨页面/导航实例共享。
+ *
+ * 常规 [appViewModel] 的 ViewModel 作用域取决于当前 [LocalViewModelStoreOwner]，
+ * Navigation3 每个 entry 有独立 owner，导致不同页面创建不同 ViewModel 实例。
+ * 本函数使用 [RadioAreaLocatorApplication]（实现 [ViewModelStoreOwner]）作为 owner，
+ * ViewModel 生命周期与 Application 一致，适合 APRS 等需跨页面持久运行的连接。
+ */
+@Composable
+inline fun <reified VM : ViewModel> applicationScopedViewModel(
+    key: String? = null,
+): VM {
+    val context = LocalContext.current
+    val application = context.applicationContext as RadioAreaLocatorApplication
+    @Suppress("DEPRECATION")
+    val factory = remember { ViewModelProvider.AndroidViewModelFactory(application) }
+    return viewModel(viewModelStoreOwner = application, key = key, factory = factory)
 }
