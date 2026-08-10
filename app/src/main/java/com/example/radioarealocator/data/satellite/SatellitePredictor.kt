@@ -11,6 +11,38 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.util.Date
+import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.exp
+import kotlin.math.ln
+
+/**
+ * 地球半径（km），与 Look4Sat / PREDICT 对齐。
+ */
+private const val EARTH_RADIUS_KM = 6378.137
+
+/**
+ * 判断卫星是否可能从地面站纬度可见（几何可达性预检）。
+ *
+ * 移植自 Look4Sat 的 [OrbitalObject.willBeSeen] 算法：
+ * 由平均运动求出半长轴与远地点高度，再与轨道倾角共同判定其覆盖纬度范围能否
+ * 覆盖观测者纬度。无法覆盖 → 本站永不可见过境，直接跳过，避免无效的 SGP4 扫描。
+ *
+ * meanmo ≈ 0 视为已衰变 / 无效 TLE，返回 false。
+ */
+internal fun willBeSeenAt(
+    meanMotion: Double,
+    eccentricity: Double,
+    inclinationDeg: Double,
+    observerLatDeg: Double
+): Boolean {
+    if (meanMotion < 1e-8) return false
+    val sma = 331.25 * exp(ln(1440.0 / meanMotion) * (2.0 / 3.0))
+    val apogee = sma * (1.0 + eccentricity) - EARTH_RADIUS_KM
+    var lin = inclinationDeg
+    if (lin >= 90.0) lin = 180.0 - lin
+    return acos(EARTH_RADIUS_KM / (apogee + EARTH_RADIUS_KM)) + Math.toRadians(lin) > abs(Math.toRadians(observerLatDeg))
+}
 
 /**
  * 基于 predict4java 计算卫星过境信息。
@@ -87,6 +119,20 @@ class SatellitePredictor {
          * 二分法精化 AOS/LOS 的时间精度（毫秒）。10 秒精度足以满足 UI 显示与提醒调度。
          */
         private const val BISECTION_PRECISION_MS = 10_000L
+
+        /**
+         * 单次过境最大持续时间（毫秒）：取该卫星轨道周期的 1.5 倍。
+         *
+         * SGP4 传播器在 TLE 过期 / 近再入时可能因数值不稳定产生假性恒定仰角，
+         * 使 [findNextPass] 找不到 LOS，AOS-LOS 直接跨到 searchEndMs（最长 48h），
+         * UI 上表现为"在境 48 小时"等荒谬时长。以轨道周期动态设上限，而非固定小时数，
+         * 对近地 / 中高轨卫星都能精确滤除这类异常，同时不影响真实长过境（HEO/Molniya）。
+         */
+        private fun maxPassDurationMs(meanMotion: Double): Long {
+            if (meanMotion <= 0.0) return 3L * 60L * 60L * 1000L
+            val periodMinutes = 1440.0 / meanMotion
+            return ((periodMinutes * 1.5) * 60L * 1000L).toLong()
+        }
     }
 
     private fun predictSinglePass(
@@ -107,6 +153,11 @@ class SatellitePredictor {
                 if (periodMinutes > GEO_PERIOD_THRESHOLD_MINUTES) return null
             }
 
+            // 几何可达性预检（参照 Look4Sat willBeSeen）：
+            // 远地点 + 轨道倾角无法覆盖观测者纬度 → 本站永不可见，直接跳过。
+            // 同时过滤 meanmo ≈ 0 的已衰变 / 无效 TLE。
+            if (!willBeSeenAt(meanMotion, tle.eccn, tle.incl, groundStation.latitude)) return null
+
             val predictor = PassPredictor(tle, groundStation)
             val nowMs = now.time
 
@@ -120,6 +171,11 @@ class SatellitePredictor {
             val aosMs = pass.aosMs
             val losMs = pass.losMs
             if (aosMs >= searchEndMs) return null
+
+            // 动态过境时长校验：基于轨道周期而非固定小时数。
+            // SGP4 在 TLE 过期 / 近再入时可能假性恒定可见，AOS-LOS 跨整个搜索窗口，
+            // 以 1.5 × 轨道周期为上限滤除，避免 UI 显示荒谬的过境时长。
+            if (losMs - aosMs > maxPassDurationMs(meanMotion)) return null
 
             SatelliteInfo(
                 name = tle.name.trim().ifEmpty { tle.catnum.toString() },
